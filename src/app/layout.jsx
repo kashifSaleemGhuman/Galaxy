@@ -1,0 +1,21 @@
+import './globals.css'
+import { SessionProvider } from '@/components/providers/SessionProvider'
+
+export const metadata = {
+  title: 'Galaxy ERP System',
+  description: 'Comprehensive Enterprise Resource Planning System',
+}
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body className="font-sans">
+        <SessionProvider>
+          <div className="min-h-screen bg-gray-50">
+            {children}
+          </div>
+        </SessionProvider>
+      </body>
+    </html>
+  )
+} 

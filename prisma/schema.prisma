@@ -1,0 +1,272 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Core entities
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  domain    String?  @unique
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  users       User[]
+  customers   Customer[]
+  products    Product[]
+  orders      Order[]
+  leads       Lead[]
+  employees   Employee[]
+  departments Department[]
+  inventoryItems InventoryItem[]
+  stockMovements StockMovement[]
+  chartOfAccounts ChartOfAccount[]
+  journalEntries JournalEntry[]
+  
+  @@map("tenants")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  firstName    String   @map("first_name")
+  lastName     String   @map("last_name")
+  roleId       String   @map("role_id")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  role         Role     @relation(fields: [roleId], references: [id])
+  employee     Employee?
+  
+  // Relations for created records
+  createdCustomers Customer[] @relation("CreatedBy")
+  createdOrders    Order[]    @relation("CreatedBy")
+  createdLeads     Lead[]     @relation("CreatedBy")
+  createdStockMovements StockMovement[] @relation("CreatedBy")
+  createdJournalEntries JournalEntry[] @relation("CreatedBy")
+  
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  permissions Json
+  users       User[]
+  
+  @@map("roles")
+}
+
+// CRM Module
+model Customer {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  companyName  String?  @map("company_name")
+  contactPerson String? @map("contact_person")
+  email        String?
+  phone        String?
+  address      String?
+  status       String   @default("active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  createdBy    String   @map("created_by")
+  
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  creator      User     @relation("CreatedBy", fields: [createdBy], references: [id])
+  leads        Lead[]
+  orders       Order[]
+  
+  @@map("customers")
+}
+
+model Lead {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  customerId  String?  @map("customer_id")
+  title       String
+  description String?
+  value       Decimal? @db.Decimal(15, 2)
+  stage       String   @default("new")
+  assignedTo  String?  @map("assigned_to")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdBy   String   @map("created_by")
+  
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  customer    Customer? @relation(fields: [customerId], references: [id])
+  creator     User     @relation("CreatedBy", fields: [createdBy], references: [id])
+  
+  @@map("leads")
+}
+
+// Sales Module
+model Product {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  name        String
+  sku         String?  @unique
+  description String?
+  price       Decimal  @db.Decimal(15, 2)
+  cost        Decimal? @db.Decimal(15, 2)
+  categoryId  String?  @map("category_id")
+  isActive    Boolean  @default(true) @map("is_active")
+  
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  inventoryItems InventoryItem[]
+  
+  @@map("products")
+}
+
+model Order {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  customerId   String   @map("customer_id")
+  orderNumber  String   @unique @map("order_number")
+  status       String   @default("pending")
+  totalAmount  Decimal  @map("total_amount") @db.Decimal(15, 2)
+  createdBy    String   @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+  
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  customer     Customer @relation(fields: [customerId], references: [id])
+  creator      User     @relation("CreatedBy", fields: [createdBy], references: [id])
+  
+  @@map("orders")
+}
+
+// Inventory Module
+model InventoryItem {
+  id              String   @id @default(cuid())
+  tenantId        String   @map("tenant_id")
+  productId       String   @map("product_id")
+  warehouseId     String?  @map("warehouse_id")
+  quantityOnHand  Int      @default(0) @map("quantity_on_hand")
+  reorderPoint    Int      @default(0) @map("reorder_point")
+  maxStock        Int?     @map("max_stock")
+  location        String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  tenant          Tenant         @relation(fields: [tenantId], references: [id])
+  product         Product        @relation(fields: [productId], references: [id])
+  stockMovements  StockMovement[]
+  
+  @@map("inventory_items")
+}
+
+model StockMovement {
+  id              String   @id @default(cuid())
+  tenantId        String   @map("tenant_id")
+  inventoryItemId String   @map("inventory_item_id")
+  movementType    String   @map("movement_type") // 'in', 'out', 'transfer'
+  quantity        Int
+  referenceType   String?  @map("reference_type") // 'order', 'adjustment', 'transfer'
+  referenceId     String?  @map("reference_id")
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  createdBy       String   @map("created_by")
+  
+  tenant          Tenant         @relation(fields: [tenantId], references: [id])
+  inventoryItem   InventoryItem  @relation(fields: [inventoryItemId], references: [id])
+  user            User           @relation("CreatedBy", fields: [createdBy], references: [id])
+  
+  @@map("stock_movements")
+}
+
+// HRM Module
+model Employee {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  userId       String   @unique @map("user_id")
+  employeeId   String   @unique @map("employee_id")
+  departmentId String?  @map("department_id")
+  position     String
+  hireDate     DateTime @map("hire_date")
+  salary       Decimal? @db.Decimal(10, 2)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  
+  tenant       Tenant     @relation(fields: [tenantId], references: [id])
+  user         User       @relation(fields: [userId], references: [id])
+  department   Department? @relation("DepartmentEmployees", fields: [departmentId], references: [id])
+  managedDepartment Department? @relation("DepartmentManager")
+  
+  @@map("employees")
+}
+
+model Department {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  name        String
+  description String?
+  managerId   String?  @unique @map("manager_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  tenant      Tenant     @relation(fields: [tenantId], references: [id])
+  manager     Employee?  @relation("DepartmentManager", fields: [managerId], references: [id])
+  employees   Employee[] @relation("DepartmentEmployees")
+  
+  @@map("departments")
+}
+
+// Accounting Module
+model ChartOfAccount {
+  id              String   @id @default(cuid())
+  tenantId        String   @map("tenant_id")
+  accountCode     String   @map("account_code")
+  accountName     String   @map("account_name")
+  accountType     String   @map("account_type") // 'asset', 'liability', 'equity', 'revenue', 'expense'
+  parentAccountId String?  @map("parent_account_id")
+  isActive        Boolean  @default(true) @map("is_active")
+  
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  parentAccount  ChartOfAccount? @relation("ParentChild", fields: [parentAccountId], references: [id])
+  childAccounts  ChartOfAccount[] @relation("ParentChild")
+  journalEntryLines JournalEntryLine[]
+  
+  @@map("chart_of_accounts")
+}
+
+model JournalEntry {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  entryNumber  String   @unique @map("entry_number")
+  entryDate    DateTime @map("entry_date")
+  description  String?
+  reference    String?
+  createdBy    String   @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+  
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  creator      User     @relation("CreatedBy", fields: [createdBy], references: [id])
+  lines        JournalEntryLine[]
+  
+  @@map("journal_entries")
+}
+
+model JournalEntryLine {
+  id               String   @id @default(cuid())
+  journalEntryId   String   @map("journal_entry_id")
+  accountId        String   @map("account_id")
+  debitAmount      Decimal  @default(0) @map("debit_amount") @db.Decimal(15, 2)
+  creditAmount     Decimal  @default(0) @map("credit_amount") @db.Decimal(15, 2)
+  description      String?
+  
+  journalEntry    JournalEntry    @relation(fields: [journalEntryId], references: [id])
+  account         ChartOfAccount  @relation(fields: [accountId], references: [id])
+  
+  @@map("journal_entry_lines")
+} 
