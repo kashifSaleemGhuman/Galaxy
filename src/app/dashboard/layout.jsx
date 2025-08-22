@@ -2,14 +2,27 @@
 
 import { useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
+import { 
+  ChevronDownIcon,
+  HomeIcon,
+  UserGroupIcon,
+  ShoppingBagIcon,
+  CubeIcon,
+  UsersIcon,
+  CalculatorIcon,
+  ChartBarIcon,
+  Cog6ToothIcon
+} from '@heroicons/react/24/outline'
 
 export default function DashboardLayout({ children }) {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [expandedMenus, setExpandedMenus] = useState(new Set())
 
   // Redirect to login if not authenticated
   if (status === 'loading') {
@@ -26,18 +39,145 @@ export default function DashboardLayout({ children }) {
   }
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: '📊' },
-    { name: 'CRM', href: '/dashboard/crm', icon: '👥' },
-    { name: 'Sales', href: '/dashboard/sales', icon: '🛍️' },
-    { name: 'Inventory', href: '/dashboard/inventory', icon: '📦' },
-    { name: 'HRM', href: '/dashboard/hrm', icon: '👨‍💼' },
-    { name: 'Accounting', href: '/dashboard/accounting', icon: '💰' },
-    { name: 'Analytics', href: '/dashboard/analytics', icon: '📈' },
-    { name: 'Settings', href: '/dashboard/settings', icon: '⚙️' },
+    { 
+      name: 'Dashboard', 
+      href: '/dashboard', 
+      icon: HomeIcon,
+      current: pathname === '/dashboard'
+    },
+    { 
+      name: 'CRM', 
+      href: '/dashboard/crm', 
+      icon: UserGroupIcon,
+      current: pathname.startsWith('/dashboard/crm'),
+      children: [
+        { name: 'Overview', href: '/dashboard/crm', current: pathname === '/dashboard/crm' },
+        { name: 'Customers', href: '/dashboard/crm/customers', current: pathname === '/dashboard/crm/customers' },
+        { name: 'Leads', href: '/dashboard/crm/leads', current: pathname === '/dashboard/crm/leads' },
+        { name: 'Opportunities', href: '/dashboard/crm/opportunities', current: pathname === '/dashboard/crm/opportunities' },
+        { name: 'Contacts', href: '/dashboard/crm/contacts', current: pathname === '/dashboard/crm/contacts' }
+      ]
+    },
+    { 
+      name: 'Sales', 
+      href: '/dashboard/sales', 
+      icon: ShoppingBagIcon,
+      current: pathname.startsWith('/dashboard/sales'),
+      children: [
+        { name: 'Orders', href: '/dashboard/sales/orders', current: pathname === '/dashboard/sales/orders' },
+        { name: 'Quotes', href: '/dashboard/sales/quotes', current: pathname === '/dashboard/sales/quotes' },
+        { name: 'Invoices', href: '/dashboard/sales/invoices', current: pathname === '/dashboard/sales/invoices' }
+      ]
+    },
+    { 
+      name: 'Inventory', 
+      href: '/dashboard/inventory', 
+      icon: CubeIcon,
+      current: pathname.startsWith('/dashboard/inventory'),
+      children: [
+        { name: 'Products', href: '/dashboard/inventory/products', current: pathname === '/dashboard/inventory/products' },
+        { name: 'Stock', href: '/dashboard/inventory/stock', current: pathname === '/dashboard/inventory/stock' },
+        { name: 'Movements', href: '/dashboard/inventory/movements', current: pathname === '/dashboard/inventory/movements' }
+      ]
+    },
+    { 
+      name: 'HRM', 
+      href: '/dashboard/hrm', 
+      icon: UsersIcon,
+      current: pathname.startsWith('/dashboard/hrm'),
+      children: [
+        { name: 'Employees', href: '/dashboard/hrm/employees', current: pathname === '/dashboard/hrm/employees' },
+        { name: 'Departments', href: '/dashboard/hrm/departments', current: pathname === '/dashboard/hrm/departments' },
+        { name: 'Payroll', href: '/dashboard/hrm/payroll', current: pathname === '/dashboard/hrm/payroll' }
+      ]
+    },
+    { 
+      name: 'Accounting', 
+      href: '/dashboard/accounting', 
+      icon: CalculatorIcon,
+      current: pathname.startsWith('/dashboard/accounting'),
+      children: [
+        { name: 'Chart of Accounts', href: '/dashboard/accounting/accounts', current: pathname === '/dashboard/accounting/accounts' },
+        { name: 'Journal Entries', href: '/dashboard/accounting/journal', current: pathname === '/dashboard/accounting/journal' },
+        { name: 'Reports', href: '/dashboard/accounting/reports', current: pathname === '/dashboard/accounting/reports' }
+      ]
+    },
+    { 
+      name: 'Analytics', 
+      href: '/dashboard/analytics', 
+      icon: ChartBarIcon,
+      current: pathname === '/dashboard/analytics'
+    },
+    { 
+      name: 'Settings', 
+      href: '/dashboard/settings', 
+      icon: Cog6ToothIcon,
+      current: pathname === '/dashboard/settings'
+    },
   ]
+
+  const toggleMenu = (menuName) => {
+    const newExpanded = new Set(expandedMenus)
+    if (newExpanded.has(menuName)) {
+      newExpanded.delete(menuName)
+    } else {
+      newExpanded.add(menuName)
+    }
+    setExpandedMenus(newExpanded)
+  }
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
+  }
+
+  const renderNavItem = (item) => {
+    const isExpanded = expandedMenus.has(item.name)
+    const hasChildren = item.children && item.children.length > 0
+    const IconComponent = item.icon
+
+    return (
+      <div key={item.name}>
+        <div
+          className={`flex items-center justify-between px-4 py-3 text-gray-700 rounded-lg cursor-pointer transition-all duration-200 ${
+            item.current 
+              ? 'bg-blue-50 text-blue-700 shadow-sm' 
+              : 'hover:bg-blue-50 hover:text-blue-700 hover:shadow-sm'
+          }`}
+          onClick={() => hasChildren ? toggleMenu(item.name) : router.push(item.href)}
+        >
+          <div className="flex items-center">
+            {IconComponent && <IconComponent className="h-5 w-5 mr-3" />}
+            <span>{item.name}</span>
+          </div>
+          {hasChildren && (
+            <ChevronDownIcon 
+              className={`h-4 w-4 transition-transform duration-200 ${
+                isExpanded ? 'rotate-180' : ''
+              }`} 
+            />
+          )}
+        </div>
+        
+        {hasChildren && isExpanded && (
+          <div className="ml-6 mt-2 space-y-1">
+            {item.children.map((child) => (
+              <Link
+                key={child.name}
+                href={child.href}
+                className={`block px-4 py-2 text-sm rounded-lg transition-all duration-200 ${
+                  child.current
+                    ? 'bg-blue-100 text-blue-700 font-medium'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                }`}
+                onClick={() => setSidebarOpen(false)}
+              >
+                {child.name}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -75,17 +215,7 @@ export default function DashboardLayout({ children }) {
 
         <nav className="mt-8 px-4">
           <div className="space-y-2">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 hover:shadow-sm"
-                onClick={() => setSidebarOpen(false)}
-              >
-                <span className="text-xl mr-3">{item.icon}</span>
-                {item.name}
-              </Link>
-            ))}
+            {navigation.map(renderNavItem)}
           </div>
         </nav>
 
@@ -130,7 +260,7 @@ export default function DashboardLayout({ children }) {
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+            </svg>
             </button>
             
             <div className="flex-1 lg:hidden"></div>

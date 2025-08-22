@@ -34,6 +34,18 @@ services:
       timeout: 5s
       retries: 5
 
+  # Redis Commander (Web UI for Redis)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: galaxy-redis-commander
+    environment:
+      REDIS_HOSTS: local:localhost:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    network_mode: "host"
+
   # pgAdmin (Optional - Database Management)
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -41,12 +53,11 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@galaxy.com
       PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "5050:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:
       - postgres
+    network_mode: "host"
 
 volumes:
   postgres_data:
