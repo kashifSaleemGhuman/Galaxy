@@ -51,10 +51,10 @@ npm install
 Copy the environment template and configure your variables:
 
 ```bash
-cp env.example .env.local
+cp env.example .env
 ```
 
-Update `.env.local` with your configuration:
+Update `.env` with your configuration:
 
 ```env
 # Database Configuration
