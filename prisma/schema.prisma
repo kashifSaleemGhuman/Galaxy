@@ -123,12 +123,25 @@ model Product {
   sku         String?  @unique
   description String?
   price       Decimal  @db.Decimal(15, 2)
+  // Purchase fields (optional to align with ERD)
+  unitOfMeasure String? @map("unit_of_measure")
+  defaultPrice  Decimal? @map("default_price") @db.Decimal(15, 2)
   cost        Decimal? @db.Decimal(15, 2)
   categoryId  String?  @map("category_id")
   isActive    Boolean  @default(true) @map("is_active")
   
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
   inventoryItems InventoryItem[]
+  // Purchase relations
+  rfqLines   RFQ_Line[]
+  poLines    PO_Line[]
+  // New back-relations
+  packagings Packaging[]
+  variants   ProductVariant[]
+  priceLists SupplierPriceList[]
+  purchaseAgreementLines PurchaseAgreementLine[]
+  internalMoves InternalMove[]
+  reorderRules ReorderRule[]
   
   @@map("products")
 }
@@ -275,3 +288,248 @@ model JournalEntryLine {
   
   @@map("journal_entry_lines")
 } 
+
+// Purchase Module (based on provided ERD)
+
+model Supplier {
+  supplierId   String   @id @map("supplier_id")
+  name         String
+  contactInfo  String?  @map("contact_info")
+  email        String
+  phone        String?
+
+  rfqs             RequestForQtn[]
+  purchaseOrders   PurchaseOrder[]
+  priceLists       SupplierPriceList[]
+  agreements       PurchaseAgreement[]
+  reorderRules     ReorderRule[]
+
+  @@map("suppliers")
+}
+
+model RequestForQtn {
+  rfqId       String   @id @map("rfq_id")
+  supplierId  String   @map("supplier_id")
+  dateCreated DateTime @default(now()) @map("date_created")
+  status      String
+
+  supplier Supplier @relation(fields: [supplierId], references: [supplierId])
+  lines    RFQ_Line[]
+  purchaseOrders PurchaseOrder[]
+
+  @@map("request_for_qtn")
+}
+
+model RFQ_Line {
+  rfqLineId String  @id @map("rfq_line_id")
+  rfqId     String  @map("rfq_id")
+  productId String  @map("product_id")
+  quantity  Int
+  price     Decimal @db.Decimal(15, 2)
+
+  rfq     RequestForQtn @relation(fields: [rfqId], references: [rfqId])
+  product Product       @relation(fields: [productId], references: [id])
+
+  @@map("rfq_lines")
+}
+
+model PurchaseOrder {
+  poId        String   @id @map("po_id")
+  rfqId       String?  @map("rfq_id")
+  supplierId  String   @map("supplier_id")
+  dateCreated DateTime @default(now()) @map("date_created")
+  status      String
+
+  supplier Supplier       @relation(fields: [supplierId], references: [supplierId])
+  rfq      RequestForQtn? @relation(fields: [rfqId], references: [rfqId])
+  lines    PO_Line[]
+  receipts GoodsReceipt[]
+  bills    VendorBill[]
+  approvals ApprovalRequest[]
+
+  @@map("purchase_orders")
+}
+
+model PO_Line {
+  poLineId          String  @id @map("po_line_id")
+  poId              String  @map("po_id")
+  productId         String  @map("product_id")
+  quantityOrdered   Int     @map("quantity_ordered")
+  quantityReceived  Int     @default(0) @map("quantity_received")
+  price             Decimal @db.Decimal(15, 2)
+
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
+  product       Product       @relation(fields: [productId], references: [id])
+
+  @@map("po_lines")
+}
+
+model GoodsReceipt {
+  receiptId   String   @id @map("receipt_id")
+  poId        String   @map("po_id")
+  dateReceived DateTime @map("date_received")
+  status      String
+
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
+
+  @@map("goods_receipts")
+}
+
+model VendorBill {
+  billId     String   @id @map("bill_id")
+  poId       String   @map("po_id")
+  dateBilled DateTime @map("date_billed")
+  amount     Decimal  @db.Decimal(15, 2)
+  status     String
+
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
+
+  @@map("vendor_bills")
+}
+
+// =====================
+// Purchase Extensions
+// =====================
+
+// Units of Measure and Packaging
+model UnitOfMeasure {
+  id        String   @id @default(cuid())
+  name      String
+  symbol    String?
+  ratio     Decimal  @db.Decimal(20, 8) // relative to reference unit in a category
+  category  String
+
+  // Note: linked from Product by name for now; no FK relation enforced
+  @@map("uom")
+}
+
+model Packaging {
+  id          String   @id @default(cuid())
+  name        String
+  quantity    Int
+  productId   String   @map("product_id")
+  product     Product  @relation(fields: [productId], references: [id])
+  @@map("packaging")
+}
+
+// Product variants (simple attributes)
+model ProductVariant {
+  id          String   @id @default(cuid())
+  productId   String   @map("product_id")
+  attributes  Json
+  sku         String?  @unique
+  priceDelta  Decimal? @db.Decimal(15, 2)
+
+  product     Product  @relation(fields: [productId], references: [id])
+  @@map("product_variants")
+}
+
+// Supplier price lists and discounts
+model SupplierPriceList {
+  id           String   @id @default(cuid())
+  supplierId   String   @map("supplier_id")
+  productId    String   @map("product_id")
+  minQty       Int      @default(1) @map("min_qty")
+  price        Decimal  @db.Decimal(15, 2)
+  currency     String   @default("USD")
+  validFrom    DateTime? @map("valid_from")
+  validTo      DateTime? @map("valid_to")
+  discountPct  Decimal? @map("discount_pct") @db.Decimal(7, 4)
+
+  supplier     Supplier @relation(fields: [supplierId], references: [supplierId])
+  product      Product  @relation(fields: [productId], references: [id])
+  @@map("supplier_pricelists")
+}
+
+// Purchase Agreements / Blanket Orders
+model PurchaseAgreement {
+  id          String   @id @default(cuid())
+  agreementNo String   @unique @map("agreement_no")
+  supplierId  String   @map("supplier_id")
+  startDate   DateTime @map("start_date")
+  endDate     DateTime @map("end_date")
+  status      String   @default("active")
+
+  supplier    Supplier @relation(fields: [supplierId], references: [supplierId])
+  lines       PurchaseAgreementLine[]
+  @@map("purchase_agreements")
+}
+
+model PurchaseAgreementLine {
+  id           String   @id @default(cuid())
+  agreementId  String   @map("agreement_id")
+  productId    String   @map("product_id")
+  price        Decimal  @db.Decimal(15, 2)
+  minQty       Int      @map("min_qty")
+  maxQty       Int?     @map("max_qty")
+
+  agreement PurchaseAgreement @relation(fields: [agreementId], references: [id])
+  product   Product           @relation(fields: [productId], references: [id])
+  @@map("purchase_agreement_lines")
+}
+
+// Approvals
+model ApprovalRule {
+  id           String   @id @default(cuid())
+  name         String
+  minAmount    Decimal  @db.Decimal(15, 2) @map("min_amount")
+  maxAmount    Decimal? @db.Decimal(15, 2) @map("max_amount")
+  approverRole String   @map("approver_role")
+  active       Boolean  @default(true)
+  requests     ApprovalRequest[]
+  @@map("approval_rules")
+}
+
+model ApprovalRequest {
+  id         String   @id @default(cuid())
+  poId       String   @map("po_id")
+  ruleId     String   @map("rule_id")
+  status     String   @default("pending")
+  requestedAt DateTime @default(now()) @map("requested_at")
+
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
+  rule          ApprovalRule  @relation(fields: [ruleId], references: [id])
+  @@map("approval_requests")
+}
+
+// Warehousing: locations and internal moves
+model Location {
+  id        String   @id @default(cuid())
+  name      String
+  code      String?  @unique
+  parentId  String?  @map("parent_id")
+  parent    Location? @relation("LocationChildren", fields: [parentId], references: [id])
+  children  Location[] @relation("LocationChildren")
+  fromMoves InternalMove[] @relation("FromLocation")
+  toMoves   InternalMove[] @relation("ToLocation")
+  @@map("locations")
+}
+
+model InternalMove {
+  id          String   @id @default(cuid())
+  productId   String   @map("product_id")
+  quantity    Int
+  fromId      String?  @map("from_id")
+  toId        String?  @map("to_id")
+  reference   String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id])
+  from    Location? @relation("FromLocation", fields: [fromId], references: [id])
+  to      Location? @relation("ToLocation", fields: [toId], references: [id])
+  @@map("internal_moves")
+}
+
+// Reordering / Procurement rules
+model ReorderRule {
+  id              String   @id @default(cuid())
+  productId       String   @map("product_id")
+  minQty          Int      @default(0) @map("min_qty")
+  maxQty          Int?     @map("max_qty")
+  preferredSupplierId String? @map("preferred_supplier_id")
+  active          Boolean  @default(true)
+
+  product   Product  @relation(fields: [productId], references: [id])
+  supplier  Supplier? @relation(fields: [preferredSupplierId], references: [supplierId])
+  @@map("reorder_rules")
+}

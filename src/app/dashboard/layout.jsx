@@ -46,6 +46,21 @@ export default function DashboardLayout({ children }) {
       current: pathname === '/dashboard'
     },
     { 
+      name: 'Purchase', 
+      href: '/dashboard/purchase', 
+      icon: ShoppingBagIcon,
+      current: pathname.startsWith('/dashboard/purchase'),
+      children: [
+        { name: 'Overview', href: '/dashboard/purchase', current: pathname === '/dashboard/purchase' },
+        { name: 'Suppliers', href: '/dashboard/purchase/suppliers', current: pathname === '/dashboard/purchase/suppliers' },
+        { name: 'Products', href: '/dashboard/purchase/products', current: pathname === '/dashboard/purchase/products' },
+        { name: 'RFQs', href: '/dashboard/purchase/rfqs', current: pathname.startsWith('/dashboard/purchase/rfqs') },
+        { name: 'Purchase Orders', href: '/dashboard/purchase/purchase-orders', current: pathname === '/dashboard/purchase/purchase-orders' },
+        { name: 'Receipts', href: '/dashboard/purchase/receipts', current: pathname === '/dashboard/purchase/receipts' },
+        { name: 'Vendor Bills', href: '/dashboard/purchase/bills', current: pathname === '/dashboard/purchase/bills' }
+      ]
+    },
+    { 
       name: 'CRM', 
       href: '/dashboard/crm', 
       icon: UserGroupIcon,

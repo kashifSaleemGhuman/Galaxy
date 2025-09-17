@@ -13,6 +13,10 @@
 # testing
 /coverage
 
+# data
+redis_data/
+postgres_data/
+
 # next.js
 /.next/
 /out/

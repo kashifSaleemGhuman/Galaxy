@@ -68,6 +68,32 @@ NEXTAUTH_SECRET="your-secret-key-here"
 REDIS_URL="redis://localhost:6379"
 ```
 
+### 4. Start Postgres and Redis (without docker-compose)
+
+If `docker-compose` is not available, you can run the infrastructure directly with `docker run`:
+
+```bash
+# Postgres
+docker run -d --name galaxy-postgres \
+  -e POSTGRES_DB=galaxy_erp \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -p 5432:5432 \
+  -v "$PWD/postgres_data":/var/lib/postgresql/data \
+  -v "$PWD/init.sql":/docker-entrypoint-initdb.d/init.sql \
+  postgres:15-alpine
+
+# Redis
+docker run -d --name galaxy-redis \
+  -p 6379:6379 \
+  -v "$PWD/redis_data":/data \
+  redis:7-alpine
+
+# If containers already exist (created earlier), just start them:
+docker start galaxy-postgres || true
+docker start galaxy-redis || true
+```
+
 ### 4. Database Setup
 
 ```bash
