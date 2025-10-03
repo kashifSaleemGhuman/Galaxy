@@ -68,7 +68,17 @@ NEXTAUTH_SECRET="your-secret-key-here"
 REDIS_URL="redis://localhost:6379"
 ```
 
-### 4. Start Postgres and Redis (without docker-compose)
+### 4. Start Postgres and Redis
+
+#### Option A) With docker-compose (recommended)
+
+```bash
+docker compose up -d postgres redis
+```
+
+Use `docker compose ps` to verify both services are healthy.
+
+#### Option B) Without docker-compose
 
 If `docker-compose` is not available, you can run the infrastructure directly with `docker run`:
 
