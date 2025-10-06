@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { mockVendors, mockProducts } from './mockData';
+// import { mockVendors, mockProducts } from './mockData'; // replaced by API
 import ChevronIcon from './ChevronIcon';
 
 export default function RfqForm({ onSubmit, onCancel }) {
@@ -17,13 +17,37 @@ export default function RfqForm({ onSubmit, onCancel }) {
   // Search states
   const [vendorSearch, setVendorSearch] = useState('');
   const [showVendorDropdown, setShowVendorDropdown] = useState(false);
-  const [filteredVendors, setFilteredVendors] = useState(mockVendors);
+  const [filteredVendors, setFilteredVendors] = useState([]);
   const [productSearches, setProductSearches] = useState(['']);
   const [showProductDropdowns, setShowProductDropdowns] = useState([false]);
-  const [filteredProducts, setFilteredProducts] = useState([mockProducts]);
+  const [filteredProducts, setFilteredProducts] = useState([[]]);
   
   const vendorRef = useRef(null);
   const productRefs = useRef([]);
+
+  // Fetch vendors from API
+  const fetchVendors = async (q = '') => {
+    const res = await fetch(`/api/vendors?q=${encodeURIComponent(q)}&limit=20`);
+    if (!res.ok) throw new Error('Failed to fetch vendors');
+    const data = await res.json();
+    setFilteredVendors(data.vendors || []);
+  };
+
+  // Fetch products from API
+  const fetchProducts = async (q = '', index = 0) => {
+    const res = await fetch(`/api/products?q=${encodeURIComponent(q)}&limit=20`);
+    if (!res.ok) throw new Error('Failed to fetch products');
+    const data = await res.json();
+    const newFiltered = [...filteredProducts];
+    newFiltered[index] = data.products || [];
+    setFilteredProducts(newFiltered);
+  };
+
+  // Initial prefetch
+  useEffect(() => {
+    fetchVendors('').catch(() => {});
+    fetchProducts('', 0).catch(() => {});
+  }, []);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -48,10 +72,7 @@ export default function RfqForm({ onSubmit, onCancel }) {
   const handleVendorSearch = (value) => {
     setVendorSearch(value);
     setShowVendorDropdown(true);
-    const filtered = mockVendors.filter(vendor => 
-      vendor.name.toLowerCase().includes(value.toLowerCase())
-    );
-    setFilteredVendors(filtered);
+    fetchVendors(value).catch(() => {});
   };
 
   // Handle vendor selection
@@ -75,12 +96,7 @@ export default function RfqForm({ onSubmit, onCancel }) {
     newDropdowns[index] = true;
     setShowProductDropdowns(newDropdowns);
 
-    const filtered = mockProducts.filter(product =>
-      product.name.toLowerCase().includes(value.toLowerCase())
-    );
-    const newFilteredProducts = [...filteredProducts];
-    newFilteredProducts[index] = filtered;
-    setFilteredProducts(newFilteredProducts);
+    fetchProducts(value, index).catch(() => {});
   };
 
   // Handle product selection
@@ -90,7 +106,7 @@ export default function RfqForm({ onSubmit, onCancel }) {
       ...newProducts[index],
       productId: product.id,
       name: product.name,
-      unit: product.defaultUnit
+      unit: product.unit || product.defaultUnit || ''
     };
     setFormData({ ...formData, products: newProducts });
     
@@ -127,11 +143,17 @@ export default function RfqForm({ onSubmit, onCancel }) {
       ...formData,
       products: [...formData.products, { name: '', quantity: '', unit: '' }]
     });
+    setProductSearches((prev) => [...prev, '']);
+    setShowProductDropdowns((prev) => [...prev, false]);
+    setFilteredProducts((prev) => [...prev, []]);
   };
 
   const removeProduct = (index) => {
     const newProducts = formData.products.filter((_, i) => i !== index);
     setFormData({ ...formData, products: newProducts });
+    setProductSearches((prev) => prev.filter((_, i) => i !== index));
+    setShowProductDropdowns((prev) => prev.filter((_, i) => i !== index));
+    setFilteredProducts((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
@@ -140,7 +162,35 @@ export default function RfqForm({ onSubmit, onCancel }) {
     setError(null);
 
     try {
-      await onSubmit(formData);
+      // Basic validations
+      if (!formData.vendorId) throw new Error('Please select a vendor');
+      if (!formData.orderDeadline) throw new Error('Please select order deadline');
+      if (!formData.products.length || formData.products.some(p => !p.productId || !p.quantity || !p.unit)) {
+        throw new Error('Please add at least one product with quantity and unit');
+      }
+
+      // Call parent onSubmit or default to API create
+      if (onSubmit) {
+        await onSubmit(formData);
+      } else {
+        const res = await fetch('/api/rfqs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            vendorId: formData.vendorId,
+            orderDeadline: formData.orderDeadline,
+            items: formData.products.map(p => ({
+              productId: p.productId,
+              quantity: p.quantity,
+              unit: p.unit
+            }))
+          })
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'Failed to create RFQ');
+        }
+      }
     } catch (err) {
       setError(err.message || 'Failed to create RFQ');
     } finally {
@@ -174,7 +224,7 @@ export default function RfqForm({ onSubmit, onCancel }) {
                   required
                   placeholder="Search for vendor"
                   onFocus={() => setShowVendorDropdown(true)}
-                  className="pr-10" // Make room for the chevron
+                  className="pr-10"
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                   <ChevronIcon isOpen={showVendorDropdown} />
@@ -226,7 +276,7 @@ export default function RfqForm({ onSubmit, onCancel }) {
                         onChange={(e) => handleInputChange(e, index)}
                         placeholder="Search for product"
                         required
-                        className="pr-10" // Make room for the chevron
+                        className="pr-10"
                         onFocus={() => {
                           const newDropdowns = [...showProductDropdowns];
                           newDropdowns[index] = true;
@@ -247,7 +297,7 @@ export default function RfqForm({ onSubmit, onCancel }) {
                           >
                             <div className="font-medium">{product.name}</div>
                             <div className="text-sm text-gray-500">
-                              {product.description} - {product.category}
+                              {product.description} {product.category ? `- ${product.category}` : ''}
                             </div>
                           </div>
                         ))}
@@ -258,7 +308,8 @@ export default function RfqForm({ onSubmit, onCancel }) {
                 <div className="w-24">
                   <Input
                     type="number"
-                    name={`product.quantity`}
+                    name={`product.quantity`
+                    }
                     value={product.quantity}
                     onChange={(e) => handleInputChange(e, index)}
                     placeholder="Qty"

@@ -1,16 +1,39 @@
-import React from 'react';
-import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth/next';
-import { PERMISSIONS } from '@/lib/constants/roles';
-import PendingApprovals from './_components/PendingApprovals';
+'use client';
 
-export default async function ApprovalsPage() {
-  const session = await getServerSession();
-  
-  // Check if user has approval permissions
-  if (!session?.user?.permissions?.includes(PERMISSIONS.PURCHASE.APPROVE_RFQ)) {
-    redirect('/dashboard');
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { ROLES } from '@/lib/constants/roles';
+import RFQApprovalsList from './_components/RFQApprovalsList';
+
+export default function ApprovalsPage() {
+  const router = useRouter();
+  const { data: session } = useSession({
+    required: true,
+    onUnauthenticated() {
+      router.push('/login');
+    },
+  });
+
+  useEffect(() => {
+    if (session?.user && ![ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER].includes(session.user.role)) {
+      router.push('/dashboard');
+    }
+  }, [session, router]);
+
+  if (!session?.user || ![ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER].includes(session.user.role)) {
+    return null;
   }
 
-  return <PendingApprovals />;
+  return (
+    <div className="p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-gray-900">RFQ Approvals</h1>
+        <p className="mt-1 text-sm text-gray-600">
+          Review and approve/reject RFQs from vendors.
+        </p>
+      </div>
+      <RFQApprovalsList />
+    </div>
+  );
 }

@@ -40,6 +40,7 @@ export default function DashboardLayout({ children }) {
 
   // Check if user is admin
   const isAdmin = session?.user?.role === 'super_admin' || session?.user?.role === 'admin'
+  const isPurchaseManager = session?.user?.role === 'purchase_manager'
 
   const navigation = [
     { 

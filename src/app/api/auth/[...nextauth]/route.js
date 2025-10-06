@@ -52,32 +52,37 @@ const handler = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        // Find user in database
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
-        });
-
-        if (!user) return null;
-
-        // Verify password
-        const isValidPassword = await compare(credentials.password, user.password);
-        
-        if (isValidPassword) {
-          // Create audit log for successful login
-          await prisma.auditLog.create({
-            data: {
-              userId: user.id,
-              action: 'LOGIN',
-              details: 'User logged in successfully'
-            }
+        try {
+          // Find user in database
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email }
           });
 
-          // Never send the password
-          const { password, ...userWithoutPass } = user;
-          return userWithoutPass;
-        }
+          if (!user) return null;
 
-        return null;
+          // Verify password
+          const isValidPassword = await compare(credentials.password, user.password);
+          
+          if (isValidPassword) {
+            // Create audit log for successful login
+            await prisma.auditLog.create({
+              data: {
+                userId: user.id,
+                action: 'LOGIN',
+                details: 'User logged in successfully'
+              }
+            });
+
+            // Never send the password
+            const { password, ...userWithoutPass } = user;
+            return userWithoutPass;
+          }
+
+          return null;
+        } catch (error) {
+          console.error('Auth error:', error);
+          return null;
+        }
       }
     })
   ],

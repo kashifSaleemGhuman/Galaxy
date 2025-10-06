@@ -247,11 +247,11 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
             ← Back
           </Button>
           <h2 className="text-xl font-semibold">
-            RFQ Details - {rfq.vendor}
+            RFQ Details - {rfq.vendor?.name || rfq.vendor || 'Vendor'}
           </h2>
         </div>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${RFQ_STATUS_LABELS[rfq.status].color}`}>
-          {RFQ_STATUS_LABELS[rfq.status].label}
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${RFQ_STATUS_LABELS[rfq.status]?.color || 'bg-gray-100 text-gray-800'}`}>
+          {RFQ_STATUS_LABELS[rfq.status]?.label || rfq.status}
         </span>
       </div>
 
@@ -274,7 +274,7 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
             <dl className="space-y-2">
               <div>
                 <dt className="text-sm text-gray-500">Vendor</dt>
-                <dd>{rfq.vendor}</dd>
+                <dd>{rfq.vendor?.name || rfq.vendor}</dd>
               </div>
               <div>
                 <dt className="text-sm text-gray-500">Order Deadline</dt>
@@ -321,11 +321,11 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {rfq.products.map((product, index) => (
+              {(rfq.items || []).map((item, index) => (
                 <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.quantity}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.unit}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.product?.name || item.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.quantity}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.unit}</td>
                 </tr>
               ))}
             </tbody>

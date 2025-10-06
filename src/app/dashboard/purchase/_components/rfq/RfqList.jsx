@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/Button';
-import { RFQ_STATUS_LABELS } from './constants';
+import { RFQ_STATUS_LABELS, RFQ_STATUS } from './constants';
 import RfqFilter from './RfqFilter';
 
 export default function RfqList({ rfqs, onCreateNew, onSelectRfq, activeFilter, onFilterChange }) {
@@ -11,13 +11,13 @@ export default function RfqList({ rfqs, onCreateNew, onSelectRfq, activeFilter, 
       const now = new Date();
       return rfqs.filter(rfq => {
         const deadline = new Date(rfq.orderDeadline);
-        return deadline < now && rfq.status !== RFQ_STATUS.ACCEPTED;
+        return deadline < now && rfq.status !== RFQ_STATUS?.ACCEPTED;
       });
     }
     if (activeFilter === 'lateReceipt') {
       return rfqs.filter(rfq => 
-        rfq.status === RFQ_STATUS.SENT && 
-        new Date(rfq.sentDate) < new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7 days old
+        (rfq.status === RFQ_STATUS?.SENT || rfq.status === 'sent') && 
+        rfq.sentDate && new Date(rfq.sentDate) < new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
       );
     }
     return rfqs.filter(rfq => rfq.status === activeFilter);
@@ -39,7 +39,7 @@ export default function RfqList({ rfqs, onCreateNew, onSelectRfq, activeFilter, 
                     ? 'Late RFQs' 
                     : activeFilter === 'lateReceipt' 
                       ? 'Late Receipt RFQs'
-                      : RFQ_STATUS_LABELS[activeFilter]?.label + ' RFQs'
+                      : (RFQ_STATUS_LABELS[activeFilter]?.label || activeFilter) + ' RFQs'
                 } (${filteredRfqs.length})`
             }
           </div>
@@ -90,34 +90,34 @@ export default function RfqList({ rfqs, onCreateNew, onSelectRfq, activeFilter, 
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredRfqs.map((rfq, index) => (
               <tr 
-                key={index} 
+                key={rfq.id || index} 
                 className="hover:bg-gray-50 cursor-pointer" 
                 onClick={() => onSelectRfq(rfq)}
               >
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  RFQ{String(index + 1).padStart(4, '0')}
+                  {rfq.rfqNumber || `RFQ${String(index + 1).padStart(4, '0')}`}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {rfq.vendor}
+                  {rfq.vendor?.name || rfq.vendor || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {new Date(rfq.orderDeadline).toLocaleDateString()}
+                  {rfq.orderDeadline ? new Date(rfq.orderDeadline).toLocaleDateString() : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {rfq.sentDate ? new Date(rfq.sentDate).toLocaleDateString() : '-'}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500">
                   <ul className="list-disc list-inside">
-                    {rfq.products.map((product, pIndex) => (
-                      <li key={pIndex}>
-                        {product.name} ({product.quantity} {product.unit})
+                    {(rfq.items || []).map((item, pIndex) => (
+                      <li key={item.id || pIndex}>
+                        {(item.product?.name || item.name) ?? 'Product'} ({item.quantity} {item.unit})
                       </li>
                     ))}
                   </ul>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${RFQ_STATUS_LABELS[rfq.status].color}`}>
-                    {RFQ_STATUS_LABELS[rfq.status].label}
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${RFQ_STATUS_LABELS[rfq.status]?.color || 'bg-gray-100 text-gray-800'}`}>
+                    {RFQ_STATUS_LABELS[rfq.status]?.label || rfq.status}
                   </span>
                 </td>
               </tr>

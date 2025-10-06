@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/Button';
 import RfqForm from './rfq/RfqForm';
 import RfqList from './rfq/RfqList';
@@ -57,29 +57,49 @@ export default function Dashboard() {
   const [selectedRfq, setSelectedRfq] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all');
 
+  const fetchRfqs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/rfqs?status=all&limit=100');
+      if (!res.ok) {
+        throw new Error('Failed to fetch RFQs');
+      }
+      const data = await res.json();
+      setRfqs(data.rfqs || []);
+    } catch (e) {
+      console.error('Error loading RFQs:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRfqs();
+  }, [fetchRfqs]);
+
   // Update stats whenever RFQs change
   useEffect(() => {
     const now = new Date();
     setStats({
-      new: rfqs.filter(rfq => rfq.status === RFQ_STATUS.DRAFT).length,
-      rfqSent: rfqs.filter(rfq => rfq.status === RFQ_STATUS.SENT).length,
+      new: rfqs.filter(rfq => rfq.status === RFQ_STATUS.DRAFT || rfq.status === 'draft').length,
+      rfqSent: rfqs.filter(rfq => rfq.status === RFQ_STATUS.SENT || rfq.status === 'sent').length,
       lateRFQ: rfqs.filter(rfq => {
         const deadline = new Date(rfq.orderDeadline);
-        return deadline < now && rfq.status !== RFQ_STATUS.ACCEPTED;
+        return deadline < now && !(rfq.status === RFQ_STATUS.ACCEPTED || rfq.status === 'accepted');
       }).length,
-      notAcknowledged: rfqs.filter(rfq => rfq.status === RFQ_STATUS.SENT).length,
+      notAcknowledged: rfqs.filter(rfq => rfq.status === RFQ_STATUS.SENT || rfq.status === 'sent').length,
       lateReceipt: 0,
       daysToOrder: calculateAverageDaysToOrder(rfqs)
     });
   }, [rfqs]);
 
   const calculateAverageDaysToOrder = (rfqs) => {
-    const completedRfqs = rfqs.filter(rfq => rfq.status === RFQ_STATUS.ACCEPTED);
+    const completedRfqs = rfqs.filter(rfq => rfq.status === RFQ_STATUS.ACCEPTED || rfq.status === 'approved');
     if (completedRfqs.length === 0) return '0.00';
 
     const totalDays = completedRfqs.reduce((sum, rfq) => {
-      const start = new Date(rfq.sentDate);
-      const end = new Date(rfq.acceptedDate);
+      const start = rfq.sentDate ? new Date(rfq.sentDate) : new Date(rfq.createdAt);
+      const end = new Date(rfq.approvedAt || rfq.acceptedDate || rfq.updatedAt);
       return sum + (end - start) / (1000 * 60 * 60 * 24);
     }, 0);
 
@@ -90,8 +110,41 @@ export default function Dashboard() {
     setShowForm(true);
   };
 
-  // If loading, show loading state
-  if (loading) {
+  const handleCreateRfq = async (formData) => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/rfqs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorId: formData.vendorId,
+          orderDeadline: formData.orderDeadline,
+          items: formData.products.map(p => ({
+            productId: p.productId,
+            quantity: parseInt(p.quantity, 10),
+            unit: p.unit
+          }))
+        })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to create RFQ');
+      }
+      const { rfq } = await res.json();
+      // Refresh list from server to ensure consistency
+      await fetchRfqs();
+      setShowForm(false);
+      setActiveFilter('all');
+      // Optionally select created RFQ
+      setSelectedRfq(rfq);
+    } catch (error) {
+      console.error('Error creating RFQ:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading && rfqs.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
@@ -150,24 +203,10 @@ export default function Dashboard() {
             {/* RFQ List or Form will be rendered here */}
             {showForm ? (
               <RfqForm 
-                onSubmit={async (formData) => {
-                  try {
-                    // Add the new RFQ to the list with initial status
-                    const newRfq = {
-                      ...formData,
-                      status: RFQ_STATUS.DRAFT,
-                      createdDate: new Date().toISOString()
-                    };
-                    setRfqs(prevRfqs => [...prevRfqs, newRfq]);
-                    setShowForm(false);
-                    setActiveFilter('all'); // Reset filter after creating new RFQ
-                  } catch (error) {
-                    console.error('Error creating RFQ:', error);
-                  }
-                }}
+                onSubmit={handleCreateRfq}
                 onCancel={() => {
                   setShowForm(false);
-                  setActiveFilter('all'); // Reset filter when canceling
+                  setActiveFilter('all');
                 }}
               />
             ) : selectedRfq ? (
@@ -175,12 +214,11 @@ export default function Dashboard() {
                 rfq={selectedRfq}
                 onBack={() => {
                   setSelectedRfq(null);
-                  // Keep the current filter when going back
                 }}
                 onUpdateRfq={(updatedRfq) => {
                   setRfqs(prevRfqs => 
                     prevRfqs.map(rfq => 
-                      rfq === selectedRfq ? updatedRfq : rfq
+                      rfq.id === updatedRfq.id ? updatedRfq : rfq
                     )
                   );
                   setSelectedRfq(updatedRfq);

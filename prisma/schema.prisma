@@ -24,6 +24,11 @@ model User {
   // Audit trail
   passwordHistory PasswordHistory[]
   auditLogs      AuditLog[]
+  
+  // RFQ Relations
+  createdRfqs   RFQ[]
+  approvedRfqs  RFQ[]           @relation("RFQApprovals")
+  rfqApprovals  RFQApproval[]
 }
 
 // Keep track of password changes
@@ -45,4 +50,94 @@ model AuditLog {
   userAgent String?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+}
+
+// Vendor model
+model Vendor {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String?
+  address     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  rfqs        RFQ[]
+}
+
+// Product model
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String?
+  unit        String   // pcs, kg, m, etc.
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  rfqItems    RFQItem[]
+}
+
+// RFQ (Request for Quotation) model
+model RFQ {
+  id                String   @id @default(cuid())
+  rfqNumber         String   @unique
+  vendorId          String
+  vendor            Vendor   @relation(fields: [vendorId], references: [id])
+  createdById       String
+  createdBy         User     @relation(fields: [createdById], references: [id])
+  
+  // RFQ Details
+  orderDeadline     DateTime
+  sentDate          DateTime?
+  status            String   @default("draft") // draft, sent, received, approved, rejected, cancelled
+  
+  // Vendor Quote Details
+  vendorPrice       Decimal?
+  expectedDelivery  DateTime?
+  vendorNotes       String?
+  
+  // Approval Details
+  approvedById      String?
+  approvedBy        User?    @relation("RFQApprovals", fields: [approvedById], references: [id])
+  approvedAt        DateTime?
+  rejectionReason   String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  items             RFQItem[]
+  approvals         RFQApproval[]
+}
+
+// RFQ Items (Products in RFQ)
+model RFQItem {
+  id        String   @id @default(cuid())
+  rfqId     String
+  rfq       RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  unit      String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// RFQ Approval tracking
+model RFQApproval {
+  id          String   @id @default(cuid())
+  rfqId       String
+  rfq         RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  approvedBy  String
+  approver    User     @relation(fields: [approvedBy], references: [id])
+  status      String   // pending, approved, rejected
+  comments    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
