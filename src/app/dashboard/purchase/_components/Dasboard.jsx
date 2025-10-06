@@ -4,6 +4,7 @@ import RfqForm from './rfq/RfqForm';
 import RfqList from './rfq/RfqList';
 import RfqDetails from './rfq/RfqDetails';
 import { RFQ_STATUS } from './rfq/constants';
+import api from '@/lib/api/service';
 
 // Stats card component for displaying RFQ metrics
 const StatsCard = ({ title, value, onClick, isActive }) => (
@@ -57,14 +58,20 @@ export default function Dashboard() {
   const [selectedRfq, setSelectedRfq] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all');
 
+  const fetchStats = useCallback(async () => {
+    try {
+      const data = await api.get('/api/purchase/stats');
+      if (data?.stats) setStats(data.stats);
+    } catch (e) {
+      // Fallback to client-side calculation if stats API fails
+      setStats((prev) => ({ ...prev }));
+    }
+  }, []);
+
   const fetchRfqs = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/rfqs?status=all&limit=100');
-      if (!res.ok) {
-        throw new Error('Failed to fetch RFQs');
-      }
-      const data = await res.json();
+      const data = await api.get('/api/rfqs', { status: 'all', limit: 100 });
       setRfqs(data.rfqs || []);
     } catch (e) {
       console.error('Error loading RFQs:', e);
@@ -75,23 +82,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchRfqs();
-  }, [fetchRfqs]);
-
-  // Update stats whenever RFQs change
-  useEffect(() => {
-    const now = new Date();
-    setStats({
-      new: rfqs.filter(rfq => rfq.status === RFQ_STATUS.DRAFT || rfq.status === 'draft').length,
-      rfqSent: rfqs.filter(rfq => rfq.status === RFQ_STATUS.SENT || rfq.status === 'sent').length,
-      lateRFQ: rfqs.filter(rfq => {
-        const deadline = new Date(rfq.orderDeadline);
-        return deadline < now && !(rfq.status === RFQ_STATUS.ACCEPTED || rfq.status === 'accepted');
-      }).length,
-      notAcknowledged: rfqs.filter(rfq => rfq.status === RFQ_STATUS.SENT || rfq.status === 'sent').length,
-      lateReceipt: 0,
-      daysToOrder: calculateAverageDaysToOrder(rfqs)
-    });
-  }, [rfqs]);
+    fetchStats();
+  }, [fetchRfqs, fetchStats]);
 
   const calculateAverageDaysToOrder = (rfqs) => {
     const completedRfqs = rfqs.filter(rfq => rfq.status === RFQ_STATUS.ACCEPTED || rfq.status === 'approved');
@@ -113,29 +105,19 @@ export default function Dashboard() {
   const handleCreateRfq = async (formData) => {
     try {
       setLoading(true);
-      const res = await fetch('/api/rfqs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          vendorId: formData.vendorId,
-          orderDeadline: formData.orderDeadline,
-          items: formData.products.map(p => ({
-            productId: p.productId,
-            quantity: parseInt(p.quantity, 10),
-            unit: p.unit
-          }))
-        })
+      const { rfq } = await api.post('/api/rfqs', {
+        vendorId: formData.vendorId,
+        orderDeadline: formData.orderDeadline,
+        items: formData.products.map(p => ({
+          productId: p.productId,
+          quantity: parseInt(p.quantity, 10),
+          unit: p.unit
+        }))
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to create RFQ');
-      }
-      const { rfq } = await res.json();
-      // Refresh list from server to ensure consistency
-      await fetchRfqs();
+      // Refresh list and stats from server to ensure consistency
+      await Promise.all([fetchRfqs(), fetchStats()]);
       setShowForm(false);
       setActiveFilter('all');
-      // Optionally select created RFQ
       setSelectedRfq(rfq);
     } catch (error) {
       console.error('Error creating RFQ:', error);
@@ -221,7 +203,8 @@ export default function Dashboard() {
                       rfq.id === updatedRfq.id ? updatedRfq : rfq
                     )
                   );
-                  setSelectedRfq(updatedRfq);
+                	setSelectedRfq(updatedRfq);
+                	fetchStats();
                 }}
               />
             ) : (

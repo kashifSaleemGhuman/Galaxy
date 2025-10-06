@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 // import { mockVendors, mockProducts } from './mockData'; // replaced by API
 import ChevronIcon from './ChevronIcon';
+import api from '@/lib/api/service';
 
 export default function RfqForm({ onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
@@ -27,17 +28,13 @@ export default function RfqForm({ onSubmit, onCancel }) {
 
   // Fetch vendors from API
   const fetchVendors = async (q = '') => {
-    const res = await fetch(`/api/vendors?q=${encodeURIComponent(q)}&limit=20`);
-    if (!res.ok) throw new Error('Failed to fetch vendors');
-    const data = await res.json();
+    const data = await api.get('/api/vendors', { q, limit: 20 });
     setFilteredVendors(data.vendors || []);
   };
 
   // Fetch products from API
   const fetchProducts = async (q = '', index = 0) => {
-    const res = await fetch(`/api/products?q=${encodeURIComponent(q)}&limit=20`);
-    if (!res.ok) throw new Error('Failed to fetch products');
-    const data = await res.json();
+    const data = await api.get('/api/products', { q, limit: 20 });
     const newFiltered = [...filteredProducts];
     newFiltered[index] = data.products || [];
     setFilteredProducts(newFiltered);

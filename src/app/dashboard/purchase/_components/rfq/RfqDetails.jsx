@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { RFQ_STATUS, RFQ_STATUS_LABELS } from './constants';
-import { rfqService } from './rfqService';
+// import { rfqService } from './rfqService';
 import PurchaseOrder from '../po/PurchaseOrder';
 import PermissionGuard from '@/components/guards/PermissionGuard';
 import { PERMISSIONS } from '@/lib/constants/roles';
+import api from '@/lib/api/service';
 
 export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
   const [quoteDetails, setQuoteDetails] = useState({
@@ -27,13 +28,11 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
     clearMessages();
     
     try {
-      const res = await fetch(`/api/rfqs/${rfq.id}/send`, { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to send RFQ');
+      const data = await api.post(`/api/rfqs/${rfq.id}/send`);
       setSuccessMessage('RFQ sent successfully to vendor');
       await onUpdateRfq({ ...rfq, ...data.rfq });
     } catch (err) {
-      setError(err.message || 'Failed to send RFQ to vendor');
+      setError(err.error || err.message || 'Failed to send RFQ to vendor');
     } finally {
       setLoading(false);
     }
@@ -56,21 +55,15 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
     }
 
     try {
-      const res = await fetch(`/api/rfqs/${rfq.id}/quote`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          vendorPrice: quoteDetails.vendorPrice,
-          expectedDeliveryDate: quoteDetails.expectedDeliveryDate,
-          vendorNotes: quoteDetails.vendorNotes,
-        })
+      const data = await api.post(`/api/rfqs/${rfq.id}/quote`, {
+        vendorPrice: quoteDetails.vendorPrice,
+        expectedDeliveryDate: quoteDetails.expectedDeliveryDate,
+        vendorNotes: quoteDetails.vendorNotes,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to record vendor quote');
       setSuccessMessage('Vendor quote recorded successfully');
       await onUpdateRfq({ ...rfq, ...data.rfq });
     } catch (err) {
-      setError(err.message || 'Failed to record vendor quote');
+      setError(err.error || err.message || 'Failed to record vendor quote');
     } finally {
       setLoading(false);
     }

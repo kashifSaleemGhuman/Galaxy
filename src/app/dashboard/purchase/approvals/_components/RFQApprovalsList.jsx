@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import api from '@/lib/api/service';
 
 const STATUS_LABELS = {
   draft: { label: 'Draft', color: 'bg-gray-100 text-gray-800' },
@@ -20,19 +21,16 @@ export default function RFQApprovalsList() {
   const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState('pending');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRfq, setSelectedRfq] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
 
   const fetchApprovals = async (status = 'pending') => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/rfqs/approvals?status=${status}&limit=50`);
-      if (!response.ok) throw new Error('Failed to fetch approvals');
-      const data = await response.json();
+      const data = await api.get('/api/rfqs/approvals', { status, limit: 50 });
       setRfqs(data.rfqs);
       setCounts(data.counts);
     } catch (err) {
-      setError(err.message);
+      setError(err.error || err.message);
     } finally {
       setLoading(false);
     }
@@ -45,21 +43,10 @@ export default function RFQApprovalsList() {
   const handleApprove = async (rfqId) => {
     try {
       setActionLoading(rfqId);
-      const response = await fetch(`/api/rfqs/${rfqId}/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'approve' })
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to approve RFQ');
-      }
-
-      // Refresh the list
+      await api.post(`/api/rfqs/${rfqId}/approve`, { action: 'approve' });
       await fetchApprovals(activeFilter);
     } catch (err) {
-      setError(err.message);
+      setError(err.error || err.message);
     } finally {
       setActionLoading(null);
     }
@@ -71,21 +58,10 @@ export default function RFQApprovalsList() {
 
     try {
       setActionLoading(rfqId);
-      const response = await fetch(`/api/rfqs/${rfqId}/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reject', comments: reason })
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to reject RFQ');
-      }
-
-      // Refresh the list
+      await api.post(`/api/rfqs/${rfqId}/approve`, { action: 'reject', comments: reason });
       await fetchApprovals(activeFilter);
     } catch (err) {
-      setError(err.message);
+      setError(err.error || err.message);
     } finally {
       setActionLoading(null);
     }
