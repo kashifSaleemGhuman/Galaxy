@@ -27,18 +27,11 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
     clearMessages();
     
     try {
-      const response = await rfqService.sendToVendor(rfq);
-      
-      if (response.success) {
-        setSuccessMessage('RFQ sent successfully to vendor');
-        await onUpdateRfq({
-          ...response.data,
-          status: RFQ_STATUS.SENT,
-        });
-
-        // Log the email that would be sent (for demo purposes)
-        console.log('Email Preview:', response.data.emailContent);
-      }
+      const res = await fetch(`/api/rfqs/${rfq.id}/send`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send RFQ');
+      setSuccessMessage('RFQ sent successfully to vendor');
+      await onUpdateRfq({ ...rfq, ...data.rfq });
     } catch (err) {
       setError(err.message || 'Failed to send RFQ to vendor');
     } finally {
@@ -63,16 +56,19 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
     }
 
     try {
-      const response = await rfqService.recordQuote(rfq, quoteDetails);
-      
-      if (response.success) {
-        setSuccessMessage('Vendor quote recorded successfully');
-        await onUpdateRfq({
-          ...response.data,
-          status: RFQ_STATUS.RECEIVED,
-          quoteReceivedDate: new Date().toISOString(),
-        });
-      }
+      const res = await fetch(`/api/rfqs/${rfq.id}/quote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorPrice: quoteDetails.vendorPrice,
+          expectedDeliveryDate: quoteDetails.expectedDeliveryDate,
+          vendorNotes: quoteDetails.vendorNotes,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to record vendor quote');
+      setSuccessMessage('Vendor quote recorded successfully');
+      await onUpdateRfq({ ...rfq, ...data.rfq });
     } catch (err) {
       setError(err.message || 'Failed to record vendor quote');
     } finally {
