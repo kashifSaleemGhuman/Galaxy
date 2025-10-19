@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { RFQ_STATUS, RFQ_STATUS_LABELS } from './constants';
-// import { rfqService } from './rfqService';
 import PurchaseOrder from '../po/PurchaseOrder';
 import PermissionGuard from '@/components/guards/PermissionGuard';
 import { PERMISSIONS } from '@/lib/constants/roles';
 import api from '@/lib/api/service';
+import { notificationService } from '@/lib/notifications';
 
 export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
   const [quoteDetails, setQuoteDetails] = useState({
@@ -62,6 +62,18 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
       });
       setSuccessMessage('Vendor quote recorded successfully');
       await onUpdateRfq({ ...rfq, ...data.rfq });
+      
+      // Emit notification to alert managers only
+      notificationService.emit('rfq_update', {
+        rfqId: rfq.id,
+        rfqNumber: rfq.rfqNumber,
+        status: 'received',
+        previousStatus: 'sent',
+        message: `New quote received for RFQ ${rfq.rfqNumber} - $${quoteDetails.vendorPrice}`,
+        vendorPrice: quoteDetails.vendorPrice,
+        expectedDeliveryDate: quoteDetails.expectedDeliveryDate,
+        targetRole: 'manager' // Only show to managers
+      });
     } catch (err) {
       setError(err.error || err.message || 'Failed to record vendor quote');
     } finally {
@@ -75,33 +87,69 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
     setLoading(true);
     clearMessages();
     try {
-      const response = await rfqService.acceptQuote(rfq);
+      const response = await api.post(`/api/rfqs/${rfq.id}/approve`, {
+        action: 'approve'
+      });
       
-      if (response.success) {
-        setSuccessMessage('Quote accepted successfully. Generating Purchase Order...');
-        await onUpdateRfq({
-          ...rfq,
-          status: RFQ_STATUS.ACCEPTED,
-          acceptedDate: new Date().toISOString(),
-        });
-        // Show PO generation interface
-        setShowPurchaseOrder(true);
-      }
+      setSuccessMessage('Quote approved successfully');
+      await onUpdateRfq({
+        ...rfq,
+        ...response.rfq,
+        status: 'approved',
+        approvedAt: new Date().toISOString(),
+      });
+      
+      // Emit notification to user
+      notificationService.emit('rfq_update', {
+        rfqId: rfq.id,
+        rfqNumber: rfq.rfqNumber,
+        status: 'approved',
+        previousStatus: 'received',
+        message: `RFQ ${rfq.rfqNumber} has been approved`,
+        targetRole: 'user' // Show to purchase user
+      });
+      
+      // Show PO generation interface
+      setShowPurchaseOrder(true);
     } catch (err) {
-      setError(err.message || 'Failed to accept quote');
+      setError(err.error || err.message || 'Failed to approve quote');
     } finally {
       setLoading(false);
     }
   };
 
   const handleRejectQuote = async () => {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (!reason) return;
+
     setLoading(true);
+    clearMessages();
     try {
+      const response = await api.post(`/api/rfqs/${rfq.id}/approve`, {
+        action: 'reject',
+        comments: reason
+      });
+      
+      setSuccessMessage('Quote rejected successfully');
       await onUpdateRfq({
         ...rfq,
-        status: RFQ_STATUS.REJECTED,
-        rejectedDate: new Date().toISOString(),
+        ...response.rfq,
+        status: 'rejected',
+        rejectionReason: reason,
+        approvedAt: new Date().toISOString(),
       });
+      
+      // Emit notification to user
+      notificationService.emit('rfq_update', {
+        rfqId: rfq.id,
+        rfqNumber: rfq.rfqNumber,
+        status: 'rejected',
+        previousStatus: 'received',
+        message: `RFQ ${rfq.rfqNumber} has been rejected`,
+        targetRole: 'user' // Show to purchase user
+      });
+    } catch (err) {
+      setError(err.error || err.message || 'Failed to reject quote');
     } finally {
       setLoading(false);
     }
