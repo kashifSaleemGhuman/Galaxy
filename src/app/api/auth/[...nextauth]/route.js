@@ -5,7 +5,7 @@ import { ROLES, ROLE_PERMISSIONS } from '@/lib/constants/roles';
 import prisma from '@/lib/db';
 
 // Mock users for demonstration (In real app, this would be your database)
-export let users = [
+const users = [
   {
     id: 1,
     email: 'admin@galaxy.com',
@@ -33,7 +33,7 @@ export let users = [
 ];
 
 // Function to update user data (in real app, this would be a database update)
-export const updateUser = (email, updates) => {
+const updateUser = (email, updates) => {
   const userIndex = users.findIndex(u => u.email === email);
   if (userIndex === -1) return null;
   
