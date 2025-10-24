@@ -51,12 +51,13 @@
     "tailwindcss": "^3.3.3",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.31",
-    "zustand": "^4.4.1"
-  },
-  "devDependencies": {
+    "tailwindcss-animate": "^1.0.7",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.19",
+    "zustand": "^4.4.1"
+  },
+  "devDependencies": {
     "@types/bcryptjs": "^2.4.4",
     "@types/node": "^20.8.4",
     "@types/react": "^18",
@@ -64,7 +65,6 @@
     "eslint": "^8",
     "eslint-config-next": "13.5.4",
     "prisma": "^5.4.2",
-    "tailwindcss-animate": "^1.0.7",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"
   }
