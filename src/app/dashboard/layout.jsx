@@ -38,6 +38,10 @@ export default function DashboardLayout({ children }) {
     return null
   }
 
+  // Check if user is admin
+  const isAdmin = session?.user?.role === 'super_admin' || session?.user?.role === 'admin'
+  const isPurchaseManager = session?.user?.role === 'purchase_manager'
+
   const navigation = [
     { 
       name: 'Dashboard', 
@@ -45,6 +49,12 @@ export default function DashboardLayout({ children }) {
       icon: HomeIcon,
       current: pathname === '/dashboard'
     },
+    ...(isAdmin ? [{
+      name: 'Users',
+      href: '/dashboard/users',
+      icon: UsersIcon,
+      current: pathname.startsWith('/dashboard/users')
+    }] : []),
     { 
       name: 'Purchase', 
       href: '/dashboard/purchase', 
