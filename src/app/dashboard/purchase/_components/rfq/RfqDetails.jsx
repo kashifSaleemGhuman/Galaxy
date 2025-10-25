@@ -7,6 +7,7 @@ import PermissionGuard from '@/components/guards/PermissionGuard';
 import { PERMISSIONS } from '@/lib/constants/roles';
 import api from '@/lib/api/service';
 import { notificationService } from '@/lib/notifications';
+import { Toast } from '@/components/ui/Toast';
 
 export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
   const [quoteDetails, setQuoteDetails] = useState({
@@ -17,10 +18,58 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [creatingPO, setCreatingPO] = useState(false);
+  const [toast, setToast] = useState(null);
 
   const clearMessages = () => {
     setError(null);
     setSuccessMessage(null);
+  };
+
+  const handleCreatePurchaseOrder = async () => {
+    setCreatingPO(true);
+    clearMessages();
+    
+    try {
+      const response = await fetch('/api/purchase/purchase-orders/from-rfq', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          rfqId: rfq.id,
+          poNumber: `PO-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
+          notes: `Created from RFQ ${rfq.rfqNumber}`
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setToast({
+          type: 'success',
+          message: `Purchase Order ${result.data.poId} created successfully! Redirecting to PO details...`
+        });
+        
+        // Redirect to the created PO after a short delay
+        setTimeout(() => {
+          window.location.href = `/dashboard/purchase/purchase-orders/${result.data.poId}`;
+        }, 2000);
+      } else {
+        setToast({
+          type: 'error',
+          message: result.error || 'Failed to create purchase order'
+        });
+      }
+    } catch (err) {
+      setToast({
+        type: 'error',
+        message: 'Failed to create purchase order'
+      });
+      console.error('Error creating purchase order:', err);
+    } finally {
+      setCreatingPO(false);
+    }
   };
 
   const handleSendToVendor = async () => {
@@ -262,6 +311,21 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
               </PermissionGuard>
           </div>
         );
+      case RFQ_STATUS.APPROVED:
+        return (
+          <div className="space-x-4">
+            <Button
+              onClick={handleCreatePurchaseOrder}
+              disabled={creatingPO}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {creatingPO ? 'Creating PO...' : 'Create Purchase Order'}
+            </Button>
+            <div className="text-sm text-gray-500">
+              This RFQ has been approved and is ready for purchase order creation
+            </div>
+          </div>
+        );
       default:
         return null;
     }
@@ -373,6 +437,14 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
           {renderActionButtons()}
         </div>
       </div>
+
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }
