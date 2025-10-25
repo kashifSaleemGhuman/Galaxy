@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { usePolling } from '@/hooks/usePolling';
+import { useDebouncedPolling } from '@/hooks/useDebouncedPolling';
 import api from '@/lib/api/service';
 
 export default function UserPollingPage() {
@@ -41,11 +41,12 @@ export default function UserPollingPage() {
     }
   };
 
-  // Poll every 10 seconds for user's RFQs
-  const { isPolling, error: pollingError } = usePolling(
+  // Poll every 15 seconds for user's RFQs with debounce
+  const { isPolling, error: pollingError } = useDebouncedPolling(
     checkForMyRfqs,
-    10000, // Poll every 10 seconds
-    true // Enabled
+    15000, // Poll every 15 seconds
+    true, // Enabled
+    2000 // Debounce for 2 seconds
   );
 
   // Check immediately on mount

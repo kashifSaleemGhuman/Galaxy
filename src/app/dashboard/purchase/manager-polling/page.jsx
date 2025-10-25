@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { usePolling } from '@/hooks/usePolling';
+import { useDebouncedPolling } from '@/hooks/useDebouncedPolling';
 import api from '@/lib/api/service';
 
 export default function ManagerPollingPage() {
@@ -31,11 +31,12 @@ export default function ManagerPollingPage() {
     }
   };
 
-  // Poll every 5 seconds for pending approvals
-  const { isPolling, error: pollingError } = usePolling(
+  // Poll every 10 seconds for pending approvals with debounce
+  const { isPolling, error: pollingError } = useDebouncedPolling(
     checkForPendingApprovals,
-    5000, // Poll every 5 seconds
-    true // Enabled
+    10000, // Poll every 10 seconds
+    true, // Enabled
+    2000 // Debounce for 2 seconds
   );
 
   // Check immediately on mount

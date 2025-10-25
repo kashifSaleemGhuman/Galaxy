@@ -4,6 +4,7 @@ export const RFQ_STATUS = {
   RECEIVED: 'received',
   IN_NEGOTIATION: 'in_negotiation',
   ACCEPTED: 'accepted',
+  APPROVED: 'approved',
   REJECTED: 'rejected',
   CANCELLED: 'cancelled'
 };
@@ -25,6 +26,7 @@ export const RFQ_STATUS_LABELS = {
   [RFQ_STATUS.RECEIVED]: { label: 'Quote Received', color: 'bg-yellow-100 text-yellow-800' },
   [RFQ_STATUS.IN_NEGOTIATION]: { label: 'In Negotiation', color: 'bg-purple-100 text-purple-800' },
   [RFQ_STATUS.ACCEPTED]: { label: 'Accepted', color: 'bg-green-100 text-green-800' },
+  [RFQ_STATUS.APPROVED]: { label: 'Approved', color: 'bg-green-100 text-green-800' },
   [RFQ_STATUS.REJECTED]: { label: 'Rejected', color: 'bg-red-100 text-red-800' },
   [RFQ_STATUS.CANCELLED]: { label: 'Cancelled', color: 'bg-gray-100 text-gray-800' }
 };

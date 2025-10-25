@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-export function usePolling(callback, interval = 5000, enabled = true) {
+export function useDebouncedPolling(callback, interval = 5000, enabled = true, debounceMs = 1000) {
   const [isPolling, setIsPolling] = useState(false);
   const [error, setError] = useState(null);
   const intervalRef = useRef(null);
   const timeoutRef = useRef(null);
+  const debounceTimeoutRef = useRef(null);
   const callbackRef = useRef(callback);
   const isPollingRef = useRef(false);
+  const lastPollTimeRef = useRef(0);
 
   // Update callback ref when callback changes
   useEffect(() => {
@@ -14,9 +16,17 @@ export function usePolling(callback, interval = 5000, enabled = true) {
   }, [callback]);
 
   const poll = useCallback(async () => {
+    const now = Date.now();
+    
     // Prevent overlapping polls
     if (isPollingRef.current) {
       console.log('Polling already in progress, skipping...');
+      return;
+    }
+
+    // Debounce: don't poll if we've polled recently
+    if (now - lastPollTimeRef.current < debounceMs) {
+      console.log('Polling debounced, too recent...');
       return;
     }
 
@@ -24,6 +34,7 @@ export function usePolling(callback, interval = 5000, enabled = true) {
       isPollingRef.current = true;
       setIsPolling(true);
       setError(null);
+      lastPollTimeRef.current = now;
       await callbackRef.current();
     } catch (err) {
       console.error('Polling error:', err);
@@ -32,7 +43,7 @@ export function usePolling(callback, interval = 5000, enabled = true) {
       isPollingRef.current = false;
       setIsPolling(false);
     }
-  }, []);
+  }, [debounceMs]);
 
   const startPolling = useCallback(() => {
     // Clear any existing intervals
@@ -46,12 +57,27 @@ export function usePolling(callback, interval = 5000, enabled = true) {
       timeoutRef.current = null;
     }
 
-    // Initial poll
-    poll();
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
+    }
+
+    // Initial poll with debounce
+    debounceTimeoutRef.current = setTimeout(() => {
+      poll();
+    }, debounceMs);
 
     // Set up interval for subsequent polls
-    intervalRef.current = setInterval(poll, interval);
-  }, [poll, interval]);
+    intervalRef.current = setInterval(() => {
+      // Add debounce to interval polls too
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      debounceTimeoutRef.current = setTimeout(() => {
+        poll();
+      }, debounceMs);
+    }, interval);
+  }, [poll, interval, debounceMs]);
 
   const stopPolling = useCallback(() => {
     if (intervalRef.current) {
@@ -61,6 +87,10 @@ export function usePolling(callback, interval = 5000, enabled = true) {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
+    }
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
     }
     isPollingRef.current = false;
     setIsPolling(false);

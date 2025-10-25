@@ -1,43 +1,174 @@
-import { NextResponse } from 'next/server'
-import prisma from '@/lib/db'
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import prisma from '@/lib/db';
+import { ROLES } from '@/lib/constants/roles';
 
-export async function GET() {
+export async function GET(req) {
   try {
-    const data = await prisma.purchaseOrder.findMany({ include: { supplier: true } })
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Check permissions
+    const canViewPO = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER, ROLES.PURCHASE_USER].includes(currentUser.role);
+    if (!canViewPO) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const status = searchParams.get('status');
+    const supplierId = searchParams.get('supplier_id');
+    const limit = parseInt(searchParams.get('limit')) || 50;
+
+    let whereClause = {};
+    
+    if (status) {
+      whereClause.status = status;
+    }
+    
+    if (supplierId) {
+      whereClause.supplierId = supplierId;
+    }
+
+    const data = await prisma.purchaseOrder.findMany({ 
+      where: whereClause,
+      include: { 
+        supplier: true,
+        lines: {
+          include: {
+            product: true
+          }
+        }
+      },
+      orderBy: { dateCreated: 'desc' },
+      take: limit
+    });
+
     const shaped = data.map(p => ({
       po_id: p.poId,
       rfq_id: p.rfqId,
       supplier_id: p.supplierId,
+      supplier_name: p.supplier?.name,
       date_created: p.dateCreated.toISOString().split('T')[0],
       status: p.status,
-      supplier_name: p.supplier?.name,
-    }))
-    return NextResponse.json({ success: true, data: shaped })
+      total_amount: p.lines.reduce((sum, line) => 
+        sum + (line.quantityOrdered * line.price), 0
+      ),
+      line_count: p.lines.length
+    }));
+
+    return NextResponse.json({ success: true, data: shaped });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    console.error('Error fetching purchase orders:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 export async function POST(request) {
   try {
-    const body = await request.json()
-    const { po_id, rfq_id, supplier_id, status = 'Draft' } = body
-
-    if (!supplier_id) {
-      return NextResponse.json({ success: false, error: 'supplier_id is required' }, { status: 400 })
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const created = await prisma.purchaseOrder.create({
-      data: {
-        poId: po_id ?? undefined,
-        rfqId: rfq_id ?? null,
-        supplierId: supplier_id,
-        status,
-      },
-    })
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    });
 
-    return NextResponse.json({ success: true, data: { po_id: created.poId, rfq_id: created.rfqId, supplier_id: created.supplierId, date_created: created.dateCreated.toISOString().split('T')[0], status: created.status } }, { status: 201 })
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Check permissions
+    const canCreatePO = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER, ROLES.PURCHASE_USER].includes(currentUser.role);
+    if (!canCreatePO) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { po_id, rfq_id, supplier_id, status = 'draft', lines = [] } = body;
+
+    if (!supplier_id) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'supplier_id is required' 
+      }, { status: 400 });
+    }
+
+    // Validate supplier exists
+    const supplier = await prisma.supplier.findUnique({
+      where: { supplierId: supplier_id }
+    });
+
+    if (!supplier) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Supplier not found' 
+      }, { status: 404 });
+    }
+
+    // Generate PO ID if not provided
+    const finalPOId = po_id || `PO-${Date.now()}`;
+
+    // Create purchase order with lines in transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const created = await tx.purchaseOrder.create({
+        data: {
+          poId: finalPOId,
+          rfqId: rfq_id || null,
+          supplierId: supplier_id,
+          status,
+          dateCreated: new Date()
+        }
+      });
+
+      // Create PO lines if provided
+      if (lines && lines.length > 0) {
+        const poLines = await Promise.all(
+          lines.map(async (line) => {
+            return await tx.pOLine.create({
+              data: {
+                poLineId: `POL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                poId: created.poId,
+                productId: line.product_id,
+                quantityOrdered: line.quantity_ordered,
+                quantityReceived: line.quantity_received || 0,
+                price: line.price
+              }
+            });
+          })
+        );
+        return { po: created, lines: poLines };
+      }
+
+      return { po: created, lines: [] };
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      data: { 
+        po_id: result.po.poId, 
+        rfq_id: result.po.rfqId, 
+        supplier_id: result.po.supplierId, 
+        date_created: result.po.dateCreated.toISOString().split('T')[0], 
+        status: result.po.status,
+        lines_created: result.lines.length
+      } 
+    }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    console.error('Error creating purchase order:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message 
+    }, { status: 500 });
   }
 }

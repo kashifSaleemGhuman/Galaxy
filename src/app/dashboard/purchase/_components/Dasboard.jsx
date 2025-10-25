@@ -6,7 +6,7 @@ import RfqList from './rfq/RfqList';
 import RfqDetails from './rfq/RfqDetails';
 import { RFQ_STATUS } from './rfq/constants';
 import api from '@/lib/api/service';
-import { usePolling } from '@/hooks/usePolling';
+import { useDebouncedPolling } from '@/hooks/useDebouncedPolling';
 import { notificationService } from '@/lib/notifications';
 
 // Stats card component for displaying RFQ metrics
@@ -84,49 +84,54 @@ export default function Dashboard() {
       const newRfqs = data.rfqs || [];
       
       // Detect status changes and emit notifications
-      if (previousRfqs.length > 0) {
-        newRfqs.forEach(newRfq => {
-          const oldRfq = previousRfqs.find(r => r.id === newRfq.id);
-          if (oldRfq && oldRfq.status !== newRfq.status) {
-            // Create unique notification key to prevent duplicates
-            const notificationKey = `${newRfq.id}-${oldRfq.status}-${newRfq.status}`;
-            
-            // Only emit notification if we haven't already sent this specific status change
-            if (!sentNotifications.has(notificationKey)) {
-              console.log('RFQ status changed:', {
-                rfqNumber: newRfq.rfqNumber,
-                from: oldRfq.status,
-                to: newRfq.status
-              });
+      setPreviousRfqs(prevRfqs => {
+        if (prevRfqs.length > 0) {
+          newRfqs.forEach(newRfq => {
+            const oldRfq = prevRfqs.find(r => r.id === newRfq.id);
+            if (oldRfq && oldRfq.status !== newRfq.status) {
+              // Create unique notification key to prevent duplicates
+              const notificationKey = `${newRfq.id}-${oldRfq.status}-${newRfq.status}`;
               
-              notificationService.emit('rfq_update', {
-                rfqId: newRfq.id,
-                rfqNumber: newRfq.rfqNumber,
-                status: newRfq.status,
-                previousStatus: oldRfq.status,
-                targetRole: 'user' // Show to purchase user
-              });
+              // Only emit notification if we haven't already sent this specific status change
+              setSentNotifications(prevNotifications => {
+                if (!prevNotifications.has(notificationKey)) {
+                  console.log('RFQ status changed:', {
+                    rfqNumber: newRfq.rfqNumber,
+                    from: oldRfq.status,
+                    to: newRfq.status
+                  });
+                  
+                  notificationService.emit('rfq_update', {
+                    rfqId: newRfq.id,
+                    rfqNumber: newRfq.rfqNumber,
+                    status: newRfq.status,
+                    previousStatus: oldRfq.status,
+                    targetRole: 'user' // Show to purchase user
+                  });
 
-              // Mark this notification as sent
-              setSentNotifications(prev => new Set([...prev, notificationKey]));
+                  // Check if manager responded (approved/rejected) - refresh the page
+                  if ((oldRfq.status === 'sent' || oldRfq.status === 'received') && 
+                      (newRfq.status === 'approved' || newRfq.status === 'rejected')) {
+                    if (!isRedirecting) {
+                      setIsRedirecting(true);
+                      setRedirectMessage(`Manager ${newRfq.status} your RFQ ${newRfq.rfqNumber}! Refreshing page...`);
+                      setTimeout(() => {
+                        window.location.reload();
+                      }, 2000);
+                    }
+                  }
 
-              // Check if manager responded (approved/rejected) - refresh the page
-              if ((oldRfq.status === 'sent' || oldRfq.status === 'received') && 
-                  (newRfq.status === 'approved' || newRfq.status === 'rejected')) {
-                if (!isRedirecting) {
-                  setIsRedirecting(true);
-                  setRedirectMessage(`Manager ${newRfq.status} your RFQ ${newRfq.rfqNumber}! Refreshing page...`);
-                  setTimeout(() => {
-                    window.location.reload();
-                  }, 2000);
+                  // Mark this notification as sent
+                  return new Set([...prevNotifications, notificationKey]);
                 }
-              }
+                return prevNotifications;
+              });
             }
-          }
-        });
-      }
+          });
+        }
+        return newRfqs;
+      });
       
-      setPreviousRfqs(newRfqs);
       setRfqs(newRfqs);
       setLastUpdated(new Date());
     } catch (e) {
@@ -134,7 +139,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [previousRfqs]);
+  }, [isRedirecting]);
 
   useEffect(() => {
     fetchRfqs();
@@ -204,10 +209,11 @@ export default function Dashboard() {
   }, [fetchRfqs, fetchStats]);
 
   // Set up polling for real-time updates - stop when redirecting
-  const { isPolling, error: pollingError } = usePolling(
+  const { isPolling, error: pollingError } = useDebouncedPolling(
     handleRefresh,
-    10000, // Poll every 10 seconds
-    !isRedirecting // Disabled when redirecting
+    15000, // Poll every 15 seconds
+    !isRedirecting, // Disabled when redirecting
+    2000 // Debounce for 2 seconds
   );
 
 
