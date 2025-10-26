@@ -56,6 +56,16 @@ export default function DashboardLayout({ children }) {
       }
     ]
 
+    // Add Users section for admin users
+    if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') {
+      baseNavigation.push({
+        name: 'Users',
+        href: '/dashboard/users',
+        icon: UsersIcon,
+        current: pathname.startsWith('/dashboard/users')
+      })
+    }
+
     // Super Admin gets access to all modules
     if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') {
       baseNavigation.push(
@@ -144,6 +154,9 @@ export default function DashboardLayout({ children }) {
         current: pathname.startsWith('/dashboard/inventory'),
         children: [
           { name: 'Overview', href: '/dashboard/inventory', current: pathname === '/dashboard/inventory' },
+          { name: 'Products', href: '/dashboard/inventory/products', current: pathname === '/dashboard/inventory/products' },
+          { name: 'Stock', href: '/dashboard/inventory/stock', current: pathname === '/dashboard/inventory/stock' },
+          { name: 'Movements', href: '/dashboard/inventory/movements', current: pathname === '/dashboard/inventory/movements' },
           { name: 'Goods Receipts', href: '/dashboard/inventory/incoming-shipments', current: pathname === '/dashboard/inventory/incoming-shipments' },
           { name: 'Warehouse Operations', href: '/dashboard/inventory/warehouse-operator', current: pathname === '/dashboard/inventory/warehouse-operator' }
         ]
