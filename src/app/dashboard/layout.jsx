@@ -14,8 +14,12 @@ import {
   UsersIcon,
   CalculatorIcon,
   ChartBarIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  TruckIcon,
+  ClipboardDocumentListIcon,
+  BuildingOfficeIcon
 } from '@heroicons/react/24/outline'
+import { ROLES, hasPermission, PERMISSIONS } from '@/lib/permissions'
 
 export default function DashboardLayout({ children }) {
   const { data: session, status } = useSession()
@@ -38,98 +42,118 @@ export default function DashboardLayout({ children }) {
     return null
   }
 
-  const navigation = [
-    { 
-      name: 'Dashboard', 
-      href: '/dashboard', 
-      icon: HomeIcon,
-      current: pathname === '/dashboard'
-    },
-    { 
-      name: 'Purchase', 
-      href: '/dashboard/purchase', 
-      icon: ShoppingBagIcon,
-      current: pathname.startsWith('/dashboard/purchase'),
-      children: [
-        { name: 'Overview', href: '/dashboard/purchase', current: pathname === '/dashboard/purchase' },
-        { name: 'Suppliers', href: '/dashboard/purchase/suppliers', current: pathname === '/dashboard/purchase/suppliers' },
-        { name: 'Products', href: '/dashboard/purchase/products', current: pathname === '/dashboard/purchase/products' },
-        { name: 'RFQs', href: '/dashboard/purchase/rfqs', current: pathname.startsWith('/dashboard/purchase/rfqs') },
-        { name: 'Purchase Orders', href: '/dashboard/purchase/purchase-orders', current: pathname === '/dashboard/purchase/purchase-orders' },
-        { name: 'Receipts', href: '/dashboard/purchase/receipts', current: pathname === '/dashboard/purchase/receipts' },
-        { name: 'Vendor Bills', href: '/dashboard/purchase/bills', current: pathname === '/dashboard/purchase/bills' }
-      ]
-    },
-    { 
-      name: 'CRM', 
-      href: '/dashboard/crm', 
-      icon: UserGroupIcon,
-      current: pathname.startsWith('/dashboard/crm'),
-      children: [
-        { name: 'Overview', href: '/dashboard/crm', current: pathname === '/dashboard/crm' },
-        { name: 'Customers', href: '/dashboard/crm/customers', current: pathname === '/dashboard/crm/customers' },
-        { name: 'Leads', href: '/dashboard/crm/leads', current: pathname === '/dashboard/crm/leads' },
-        { name: 'Opportunities', href: '/dashboard/crm/opportunities', current: pathname === '/dashboard/crm/opportunities' },
-        { name: 'Contacts', href: '/dashboard/crm/contacts', current: pathname === '/dashboard/crm/contacts' }
-      ]
-    },
-    { 
-      name: 'Sales', 
-      href: '/dashboard/sales', 
-      icon: ShoppingBagIcon,
-      current: pathname.startsWith('/dashboard/sales'),
-      children: [
-        { name: 'Orders', href: '/dashboard/sales/orders', current: pathname === '/dashboard/sales/orders' },
-        { name: 'Quotes', href: '/dashboard/sales/quotes', current: pathname === '/dashboard/sales/quotes' },
-        { name: 'Invoices', href: '/dashboard/sales/invoices', current: pathname === '/dashboard/sales/invoices' }
-      ]
-    },
-    { 
-      name: 'Inventory', 
-      href: '/dashboard/inventory', 
-      icon: CubeIcon,
-      current: pathname.startsWith('/dashboard/inventory'),
-      children: [
-        { name: 'Products', href: '/dashboard/inventory/products', current: pathname === '/dashboard/inventory/products' },
-        { name: 'Stock', href: '/dashboard/inventory/stock', current: pathname === '/dashboard/inventory/stock' },
-        { name: 'Movements', href: '/dashboard/inventory/movements', current: pathname === '/dashboard/inventory/movements' }
-      ]
-    },
-    { 
-      name: 'HRM', 
-      href: '/dashboard/hrm', 
-      icon: UsersIcon,
-      current: pathname.startsWith('/dashboard/hrm'),
-      children: [
-        { name: 'Employees', href: '/dashboard/hrm/employees', current: pathname === '/dashboard/hrm/employees' },
-        { name: 'Departments', href: '/dashboard/hrm/departments', current: pathname === '/dashboard/hrm/departments' },
-        { name: 'Payroll', href: '/dashboard/hrm/payroll', current: pathname === '/dashboard/hrm/payroll' }
-      ]
-    },
-    { 
-      name: 'Accounting', 
-      href: '/dashboard/accounting', 
-      icon: CalculatorIcon,
-      current: pathname.startsWith('/dashboard/accounting'),
-      children: [
-        { name: 'Chart of Accounts', href: '/dashboard/accounting/accounts', current: pathname === '/dashboard/accounting/accounts' },
-        { name: 'Journal Entries', href: '/dashboard/accounting/journal', current: pathname === '/dashboard/accounting/journal' },
-        { name: 'Reports', href: '/dashboard/accounting/reports', current: pathname === '/dashboard/accounting/reports' }
-      ]
-    },
-    { 
-      name: 'Analytics', 
-      href: '/dashboard/analytics', 
-      icon: ChartBarIcon,
-      current: pathname === '/dashboard/analytics'
-    },
-    { 
-      name: 'Settings', 
-      href: '/dashboard/settings', 
-      icon: Cog6ToothIcon,
-      current: pathname === '/dashboard/settings'
-    },
-  ]
+  // Get user role from session
+  const userRole = session?.user?.role || 'PURCHASE_MANAGER'
+
+  // Build navigation based on user permissions
+  const getNavigation = () => {
+    const baseNavigation = [
+      { 
+        name: 'Dashboard', 
+        href: '/dashboard', 
+        icon: HomeIcon,
+        current: pathname === '/dashboard'
+      }
+    ]
+
+    // Super Admin gets access to all modules
+    if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') {
+      baseNavigation.push(
+        { 
+          name: 'Purchase', 
+          href: '/dashboard/purchase', 
+          icon: ShoppingBagIcon,
+          current: pathname.startsWith('/dashboard/purchase'),
+          children: [
+            { name: 'Overview', href: '/dashboard/purchase', current: pathname === '/dashboard/purchase' },
+            { name: 'Suppliers', href: '/dashboard/purchase/suppliers', current: pathname === '/dashboard/purchase/suppliers' },
+            { name: 'Products', href: '/dashboard/purchase/products', current: pathname === '/dashboard/purchase/products' },
+            { name: 'RFQs', href: '/dashboard/purchase/rfqs', current: pathname.startsWith('/dashboard/purchase/rfqs') },
+            { name: 'Purchase Orders', href: '/dashboard/purchase/purchase-orders', current: pathname === '/dashboard/purchase/purchase-orders' },
+            { name: 'Receipts', href: '/dashboard/purchase/receipts', current: pathname === '/dashboard/purchase/receipts' },
+            { name: 'Vendor Bills', href: '/dashboard/purchase/bills', current: pathname === '/dashboard/purchase/bills' }
+          ]
+        },
+        { 
+          name: 'CRM', 
+          href: '/dashboard/crm', 
+          icon: UserGroupIcon,
+          current: pathname.startsWith('/dashboard/crm'),
+          children: [
+            { name: 'Overview', href: '/dashboard/crm', current: pathname === '/dashboard/crm' },
+            { name: 'Customers', href: '/dashboard/crm/customers', current: pathname === '/dashboard/crm/customers' },
+            { name: 'Leads', href: '/dashboard/crm/leads', current: pathname === '/dashboard/crm/leads' },
+            { name: 'Opportunities', href: '/dashboard/crm/opportunities', current: pathname === '/dashboard/crm/opportunities' },
+            { name: 'Contacts', href: '/dashboard/crm/contacts', current: pathname === '/dashboard/crm/contacts' }
+          ]
+        },
+        { 
+          name: 'Sales', 
+          href: '/dashboard/sales', 
+          icon: ShoppingBagIcon,
+          current: pathname.startsWith('/dashboard/sales'),
+          children: [
+            { name: 'Orders', href: '/dashboard/sales/orders', current: pathname === '/dashboard/sales/orders' },
+            { name: 'Quotes', href: '/dashboard/sales/quotes', current: pathname === '/dashboard/sales/quotes' },
+            { name: 'Invoices', href: '/dashboard/sales/invoices', current: pathname === '/dashboard/sales/invoices' }
+          ]
+        },
+        { 
+          name: 'HRM', 
+          href: '/dashboard/hrm', 
+          icon: UsersIcon,
+          current: pathname.startsWith('/dashboard/hrm'),
+          children: [
+            { name: 'Employees', href: '/dashboard/hrm/employees', current: pathname === '/dashboard/hrm/employees' },
+            { name: 'Departments', href: '/dashboard/hrm/departments', current: pathname === '/dashboard/hrm/departments' },
+            { name: 'Payroll', href: '/dashboard/hrm/payroll', current: pathname === '/dashboard/hrm/payroll' }
+          ]
+        },
+        { 
+          name: 'Accounting', 
+          href: '/dashboard/accounting', 
+          icon: CalculatorIcon,
+          current: pathname.startsWith('/dashboard/accounting'),
+          children: [
+            { name: 'Chart of Accounts', href: '/dashboard/accounting/accounts', current: pathname === '/dashboard/accounting/accounts' },
+            { name: 'Journal Entries', href: '/dashboard/accounting/journal', current: pathname === '/dashboard/accounting/journal' },
+            { name: 'Reports', href: '/dashboard/accounting/reports', current: pathname === '/dashboard/accounting/reports' }
+          ]
+        },
+        { 
+          name: 'Analytics', 
+          href: '/dashboard/analytics', 
+          icon: ChartBarIcon,
+          current: pathname === '/dashboard/analytics'
+        },
+        { 
+          name: 'Settings', 
+          href: '/dashboard/settings', 
+          icon: Cog6ToothIcon,
+          current: pathname === '/dashboard/settings'
+        }
+      )
+    }
+
+    // All users with inventory permissions get inventory access
+    if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'PURCHASE_MANAGER') {
+      baseNavigation.push({
+        name: 'Inventory', 
+        href: '/dashboard/inventory', 
+        icon: CubeIcon,
+        current: pathname.startsWith('/dashboard/inventory'),
+        children: [
+          { name: 'Overview', href: '/dashboard/inventory', current: pathname === '/dashboard/inventory' },
+          { name: 'Goods Receipts', href: '/dashboard/inventory/incoming-shipments', current: pathname === '/dashboard/inventory/incoming-shipments' },
+          { name: 'Warehouse Operations', href: '/dashboard/inventory/warehouse-operator', current: pathname === '/dashboard/inventory/warehouse-operator' }
+        ]
+      })
+    }
+
+    return baseNavigation
+  }
+
+  const navigation = getNavigation()
 
   const toggleMenu = (menuName) => {
     const newExpanded = new Set(expandedMenus)

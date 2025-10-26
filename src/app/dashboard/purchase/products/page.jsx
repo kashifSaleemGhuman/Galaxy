@@ -1,9 +1,9 @@
 import { Table } from '../_components/Table'
 
 const products = [
-  { id: 'PRD-001', name: 'Paper A4 80gsm', sku: 'PA4-80', uom: 'Box', default_price: 25.0 },
-  { id: 'PRD-002', name: 'Stapler Heavy Duty', sku: 'STP-HD', uom: 'Unit', default_price: 12.5 },
-  { id: 'PRD-003', name: 'Printer Ink Black', sku: 'INK-BLK', uom: 'Cartridge', default_price: 35.0 },
+  { id: 'PRD-001', name: 'Paper A4 80gsm', description: 'High quality A4 paper', category: 'Office Supplies', unit: 'Box' },
+  { id: 'PRD-002', name: 'Stapler Heavy Duty', description: 'Heavy duty stapler for office use', category: 'Office Supplies', unit: 'Unit' },
+  { id: 'PRD-003', name: 'Printer Ink Black', description: 'Black ink cartridge for printers', category: 'Electronics', unit: 'Cartridge' },
 ]
 
 export default function ProductsPage() {
@@ -18,9 +18,9 @@ export default function ProductsPage() {
         columns={[
           { key: 'id', header: 'ID' },
           { key: 'name', header: 'Name' },
-          { key: 'sku', header: 'SKU' },
-          { key: 'uom', header: 'Unit of Measure' },
-          { key: 'default_price', header: 'Default Price', cell: (row) => `$${row.default_price.toFixed(2)}` },
+          { key: 'description', header: 'Description' },
+          { key: 'category', header: 'Category' },
+          { key: 'unit', header: 'Unit' },
         ]}
         data={products}
       />

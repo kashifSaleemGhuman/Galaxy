@@ -8,9 +8,10 @@ export async function GET() {
     const shaped = data.map(p => ({
       product_id: p.id,
       name: p.name,
-      sku: p.sku,
-      unit_of_measure: p.unitOfMeasure,
-      default_price: p.defaultPrice ?? Number(p.price),
+      description: p.description,
+      category: p.category,
+      unit: p.unit,
+      isActive: p.isActive,
     }))
     return NextResponse.json({ success: true, data: shaped })
   } catch (error) {
@@ -21,25 +22,23 @@ export async function GET() {
 export async function POST(request) {
   try {
     const body = await request.json()
-    const { product_id, name, sku, unit_of_measure, default_price } = body
+    const { product_id, name, description, category, unit } = body
 
-    if (!name || !sku) {
-      return NextResponse.json({ success: false, error: 'name and sku are required' }, { status: 400 })
+    if (!name) {
+      return NextResponse.json({ success: false, error: 'name is required' }, { status: 400 })
     }
 
     const created = await prisma.product.create({
       data: {
         id: product_id ?? undefined,
         name,
-        sku,
-        unitOfMeasure: unit_of_measure ?? null,
-        defaultPrice: default_price != null ? default_price : null,
-        price: default_price != null ? default_price : 0,
-        tenantId: 'default-tenant',
+        description: description ?? null,
+        category: category ?? null,
+        unit: unit ?? 'pcs',
       },
     })
 
-    return NextResponse.json({ success: true, data: { product_id: created.id, name: created.name, sku: created.sku, unit_of_measure: created.unitOfMeasure, default_price: created.defaultPrice ?? Number(created.price) } }, { status: 201 })
+    return NextResponse.json({ success: true, data: { product_id: created.id, name: created.name, description: created.description, category: created.category, unit: created.unit } }, { status: 201 })
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }

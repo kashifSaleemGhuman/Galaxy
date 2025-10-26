@@ -10,526 +10,199 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Core entities
-model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  domain    String?  @unique
-  settings  Json     @default("{}")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  
-  users       User[]
-  customers   Customer[]
-  products    Product[]
-  orders      Order[]
-  leads       Lead[]
-  employees   Employee[]
-  departments Department[]
-  inventoryItems InventoryItem[]
-  stockMovements StockMovement[]
-  chartOfAccounts ChartOfAccount[]
-  journalEntries JournalEntry[]
-  
-  @@map("tenants")
-}
-
 model User {
-  id           String   @id @default(cuid())
-  tenantId     String   @map("tenant_id")
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  firstName    String   @map("first_name")
-  lastName     String   @map("last_name")
-  roleId       String   @map("role_id")
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String    // Hashed password
+  role          String    // SUPER_ADMIN, ADMIN, PURCHASE_MANAGER, etc.
+  isFirstLogin  Boolean   @default(true)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Audit trail
+  passwordHistory PasswordHistory[]
+  auditLogs      AuditLog[]
   
-  tenant       Tenant   @relation(fields: [tenantId], references: [id])
-  role         Role     @relation(fields: [roleId], references: [id])
-  employee     Employee?
-  
-  // Relations for created records
-  createdCustomers Customer[] @relation("CreatedBy")
-  createdOrders    Order[]    @relation("CreatedBy")
-  createdLeads     Lead[]     @relation("CreatedBy")
-  createdStockMovements StockMovement[] @relation("CreatedBy")
-  createdJournalEntries JournalEntry[] @relation("CreatedBy")
-  
-  @@map("users")
+  // RFQ Relations
+  createdRfqs   RFQ[]
+  approvedRfqs  RFQ[]           @relation("RFQApprovals")
+  rfqApprovals  RFQApproval[]
 }
 
-model Role {
+// Keep track of password changes
+model PasswordHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  password  String   // Hashed password
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+// Audit logging
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String   // LOGIN, PASSWORD_CHANGE, etc.
+  details   String?  // Additional information
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+// Vendor model
+model Vendor {
   id          String   @id @default(cuid())
   name        String
-  description String?
-  permissions Json
-  users       User[]
+  email       String   @unique
+  phone       String?
+  address     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   
-  @@map("roles")
+  // Relations
+  rfqs        RFQ[]
 }
 
-// CRM Module
-model Customer {
-  id           String   @id @default(cuid())
-  tenantId     String   @map("tenant_id")
-  companyName  String?  @map("company_name")
-  contactPerson String? @map("contact_person")
-  email        String?
-  phone        String?
-  address      String?
-  website      String?
-  industry     String?
-  value        Decimal? @db.Decimal(15, 2)
-  status       String   @default("active")
-  lastContact  DateTime? @map("last_contact")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  createdBy    String   @map("created_by")
-  
-  tenant       Tenant   @relation(fields: [tenantId], references: [id])
-  creator      User     @relation("CreatedBy", fields: [createdBy], references: [id])
-  leads        Lead[]
-  orders       Order[]
-  
-  @@map("customers")
-}
-
-model Lead {
-  id          String   @id @default(cuid())
-  tenantId    String   @map("tenant_id")
-  customerId  String?  @map("customer_id")
-  title       String
-  description String?
-  value       Decimal? @db.Decimal(15, 2)
-  stage       String   @default("new")
-  assignedTo  String?  @map("assigned_to")
-  createdAt   DateTime @default(now()) @map("created_at")
-  createdBy   String   @map("created_by")
-  
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  customer    Customer? @relation(fields: [customerId], references: [id])
-  creator     User     @relation("CreatedBy", fields: [createdBy], references: [id])
-  
-  @@map("leads")
-}
-
-// Sales Module
+// Product model
 model Product {
   id          String   @id @default(cuid())
-  tenantId    String   @map("tenant_id")
-  name        String
-  sku         String?  @unique
-  description String?
-  price       Decimal  @db.Decimal(15, 2)
-  // Purchase fields (optional to align with ERD)
-  unitOfMeasure String? @map("unit_of_measure")
-  defaultPrice  Decimal? @map("default_price") @db.Decimal(15, 2)
-  cost        Decimal? @db.Decimal(15, 2)
-  categoryId  String?  @map("category_id")
-  isActive    Boolean  @default(true) @map("is_active")
-  
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  inventoryItems InventoryItem[]
-  // Purchase relations
-  rfqLines   RFQ_Line[]
-  poLines    PO_Line[]
-  // New back-relations
-  packagings Packaging[]
-  variants   ProductVariant[]
-  priceLists SupplierPriceList[]
-  purchaseAgreementLines PurchaseAgreementLine[]
-  internalMoves InternalMove[]
-  reorderRules ReorderRule[]
-  
-  @@map("products")
-}
-
-model Order {
-  id           String   @id @default(cuid())
-  tenantId     String   @map("tenant_id")
-  customerId   String   @map("customer_id")
-  orderNumber  String   @unique @map("order_number")
-  status       String   @default("pending")
-  totalAmount  Decimal  @map("total_amount") @db.Decimal(15, 2)
-  createdBy    String   @map("created_by")
-  createdAt    DateTime @default(now()) @map("created_at")
-  
-  tenant       Tenant   @relation(fields: [tenantId], references: [id])
-  customer     Customer @relation(fields: [customerId], references: [id])
-  creator      User     @relation("CreatedBy", fields: [createdBy], references: [id])
-  
-  @@map("orders")
-}
-
-// Inventory Module
-model InventoryItem {
-  id              String   @id @default(cuid())
-  tenantId        String   @map("tenant_id")
-  productId       String   @map("product_id")
-  warehouseId     String?  @map("warehouse_id")
-  quantityOnHand  Int      @default(0) @map("quantity_on_hand")
-  reorderPoint    Int      @default(0) @map("reorder_point")
-  maxStock        Int?     @map("max_stock")
-  location        String?
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  
-  tenant          Tenant         @relation(fields: [tenantId], references: [id])
-  product         Product        @relation(fields: [productId], references: [id])
-  stockMovements  StockMovement[]
-  
-  @@map("inventory_items")
-}
-
-model StockMovement {
-  id              String   @id @default(cuid())
-  tenantId        String   @map("tenant_id")
-  inventoryItemId String   @map("inventory_item_id")
-  movementType    String   @map("movement_type") // 'in', 'out', 'transfer'
-  quantity        Int
-  referenceType   String?  @map("reference_type") // 'order', 'adjustment', 'transfer'
-  referenceId     String?  @map("reference_id")
-  notes           String?
-  createdAt       DateTime @default(now()) @map("created_at")
-  createdBy       String   @map("created_by")
-  
-  tenant          Tenant         @relation(fields: [tenantId], references: [id])
-  inventoryItem   InventoryItem  @relation(fields: [inventoryItemId], references: [id])
-  user            User           @relation("CreatedBy", fields: [createdBy], references: [id])
-  
-  @@map("stock_movements")
-}
-
-// HRM Module
-model Employee {
-  id           String   @id @default(cuid())
-  tenantId     String   @map("tenant_id")
-  userId       String   @unique @map("user_id")
-  employeeId   String   @unique @map("employee_id")
-  departmentId String?  @map("department_id")
-  position     String
-  hireDate     DateTime @map("hire_date")
-  salary       Decimal? @db.Decimal(10, 2)
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  
-  tenant       Tenant     @relation(fields: [tenantId], references: [id])
-  user         User       @relation(fields: [userId], references: [id])
-  department   Department? @relation("DepartmentEmployees", fields: [departmentId], references: [id])
-  managedDepartment Department? @relation("DepartmentManager")
-  
-  @@map("employees")
-}
-
-model Department {
-  id          String   @id @default(cuid())
-  tenantId    String   @map("tenant_id")
   name        String
   description String?
-  managerId   String?  @unique @map("manager_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  category    String?
+  unit        String   // pcs, kg, m, etc.
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   
-  tenant      Tenant     @relation(fields: [tenantId], references: [id])
-  manager     Employee?  @relation("DepartmentManager", fields: [managerId], references: [id])
-  employees   Employee[] @relation("DepartmentEmployees")
-  
-  @@map("departments")
+  // Relations
+  rfqItems    RFQItem[]
+  poLines     POLine[]
 }
 
-// Accounting Module
-model ChartOfAccount {
-  id              String   @id @default(cuid())
-  tenantId        String   @map("tenant_id")
-  accountCode     String   @map("account_code")
-  accountName     String   @map("account_name")
-  accountType     String   @map("account_type") // 'asset', 'liability', 'equity', 'revenue', 'expense'
-  parentAccountId String?  @map("parent_account_id")
-  isActive        Boolean  @default(true) @map("is_active")
+// RFQ (Request for Quotation) model
+model RFQ {
+  id                String   @id @default(cuid())
+  rfqNumber         String   @unique
+  vendorId          String
+  vendor            Vendor   @relation(fields: [vendorId], references: [id])
+  createdById       String
+  createdBy         User     @relation(fields: [createdById], references: [id])
   
-  tenant         Tenant   @relation(fields: [tenantId], references: [id])
-  parentAccount  ChartOfAccount? @relation("ParentChild", fields: [parentAccountId], references: [id])
-  childAccounts  ChartOfAccount[] @relation("ParentChild")
-  journalEntryLines JournalEntryLine[]
+  // RFQ Details
+  orderDeadline     DateTime
+  sentDate          DateTime?
+  status            String   @default("draft") // draft, sent, received, approved, rejected, cancelled
   
-  @@map("chart_of_accounts")
+  // Vendor Quote Details
+  vendorPrice       Decimal?
+  expectedDelivery  DateTime?
+  vendorNotes       String?
+  
+  // Approval Details
+  approvedById      String?
+  approvedBy        User?    @relation("RFQApprovals", fields: [approvedById], references: [id])
+  approvedAt        DateTime?
+  rejectionReason   String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  items             RFQItem[]
+  approvals         RFQApproval[]
 }
 
-model JournalEntry {
-  id           String   @id @default(cuid())
-  tenantId     String   @map("tenant_id")
-  entryNumber  String   @unique @map("entry_number")
-  entryDate    DateTime @map("entry_date")
-  description  String?
-  reference    String?
-  createdBy    String   @map("created_by")
-  createdAt    DateTime @default(now()) @map("created_at")
-  
-  tenant       Tenant   @relation(fields: [tenantId], references: [id])
-  creator      User     @relation("CreatedBy", fields: [createdBy], references: [id])
-  lines        JournalEntryLine[]
-  
-  @@map("journal_entries")
-}
-
-model JournalEntryLine {
-  id               String   @id @default(cuid())
-  journalEntryId   String   @map("journal_entry_id")
-  accountId        String   @map("account_id")
-  debitAmount      Decimal  @default(0) @map("debit_amount") @db.Decimal(15, 2)
-  creditAmount     Decimal  @default(0) @map("credit_amount") @db.Decimal(15, 2)
-  description      String?
-  
-  journalEntry    JournalEntry    @relation(fields: [journalEntryId], references: [id])
-  account         ChartOfAccount  @relation(fields: [accountId], references: [id])
-  
-  @@map("journal_entry_lines")
-} 
-
-// Purchase Module (based on provided ERD)
-
-model Supplier {
-  supplierId   String   @id @map("supplier_id")
-  name         String
-  contactInfo  String?  @map("contact_info")
-  email        String
-  phone        String?
-
-  rfqs             RequestForQtn[]
-  purchaseOrders   PurchaseOrder[]
-  priceLists       SupplierPriceList[]
-  agreements       PurchaseAgreement[]
-  reorderRules     ReorderRule[]
-
-  @@map("suppliers")
-}
-
-model RequestForQtn {
-  rfqId       String   @id @map("rfq_id")
-  supplierId  String   @map("supplier_id")
-  dateCreated DateTime @default(now()) @map("date_created")
-  status      String
-
-  supplier Supplier @relation(fields: [supplierId], references: [supplierId])
-  lines    RFQ_Line[]
-  purchaseOrders PurchaseOrder[]
-
-  @@map("request_for_qtn")
-}
-
-model RFQ_Line {
-  rfqLineId String  @id @map("rfq_line_id")
-  rfqId     String  @map("rfq_id")
-  productId String  @map("product_id")
+// RFQ Items (Products in RFQ)
+model RFQItem {
+  id        String   @id @default(cuid())
+  rfqId     String
+  rfq       RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
   quantity  Int
-  price     Decimal @db.Decimal(15, 2)
-
-  rfq     RequestForQtn @relation(fields: [rfqId], references: [rfqId])
-  product Product       @relation(fields: [productId], references: [id])
-
-  @@map("rfq_lines")
+  unit      String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
+// RFQ Approval tracking
+model RFQApproval {
+  id          String   @id @default(cuid())
+  rfqId       String
+  rfq         RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  approvedBy  String
+  approver    User     @relation(fields: [approvedBy], references: [id])
+  status      String   // pending, approved, rejected
+  comments    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Supplier model (legacy table mapping)
+model Supplier {
+  supplierId  String   @id @map("supplier_id")
+  name        String
+  contactInfo String?   @map("contact_info")
+  email       String
+  phone       String?
+  
+  // Relations
+  purchaseOrders PurchaseOrder[]
+}
+
+// Purchase Order model
 model PurchaseOrder {
   poId        String   @id @map("po_id")
   rfqId       String?  @map("rfq_id")
   supplierId  String   @map("supplier_id")
   dateCreated DateTime @default(now()) @map("date_created")
-  status      String
-
-  supplier Supplier       @relation(fields: [supplierId], references: [supplierId])
-  rfq      RequestForQtn? @relation(fields: [rfqId], references: [rfqId])
-  lines    PO_Line[]
-  receipts GoodsReceipt[]
-  bills    VendorBill[]
-  approvals ApprovalRequest[]
-
-  @@map("purchase_orders")
+  status      String   @default("draft") // draft, sent, confirmed, received, cancelled
+  
+  // Relations
+  supplier    Supplier @relation(fields: [supplierId], references: [supplierId])
+  lines       POLine[]
+  goodsReceipts GoodsReceipt[]
+  vendorBills VendorBill[]
 }
 
-model PO_Line {
-  poLineId          String  @id @map("po_line_id")
-  poId              String  @map("po_id")
-  productId         String  @map("product_id")
-  quantityOrdered   Int     @map("quantity_ordered")
-  quantityReceived  Int     @default(0) @map("quantity_received")
-  price             Decimal @db.Decimal(15, 2)
-
-  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
-  product       Product       @relation(fields: [productId], references: [id])
-
-  @@map("po_lines")
+// Purchase Order Line model
+model POLine {
+  poLineId        String  @id @map("po_line_id")
+  poId            String  @map("po_id")
+  productId       String  @map("product_id")
+  quantityOrdered Int     @map("quantity_ordered")
+  quantityReceived Int    @default(0) @map("quantity_received")
+  price           Decimal
+  
+  // Relations
+  purchaseOrder   PurchaseOrder @relation(fields: [poId], references: [poId])
+  product         Product       @relation(fields: [productId], references: [id])
 }
 
+// Goods Receipt model
 model GoodsReceipt {
-  receiptId   String   @id @map("receipt_id")
-  poId        String   @map("po_id")
+  receiptId    String   @id @map("receipt_id")
+  poId         String   @map("po_id")
   dateReceived DateTime @map("date_received")
-  status      String
-
+  status       String   // pending, confirmed, rejected
+  
+  // Relations
   purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
-
-  @@map("goods_receipts")
 }
 
+// Vendor Bill model
 model VendorBill {
   billId     String   @id @map("bill_id")
   poId       String   @map("po_id")
   dateBilled DateTime @map("date_billed")
-  amount     Decimal  @db.Decimal(15, 2)
-  status     String
-
+  amount     Decimal
+  status     String   // pending, paid, overdue
+  
+  // Relations
   purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
-
-  @@map("vendor_bills")
-}
-
-// =====================
-// Purchase Extensions
-// =====================
-
-// Units of Measure and Packaging
-model UnitOfMeasure {
-  id        String   @id @default(cuid())
-  name      String
-  symbol    String?
-  ratio     Decimal  @db.Decimal(20, 8) // relative to reference unit in a category
-  category  String
-
-  // Note: linked from Product by name for now; no FK relation enforced
-  @@map("uom")
-}
-
-model Packaging {
-  id          String   @id @default(cuid())
-  name        String
-  quantity    Int
-  productId   String   @map("product_id")
-  product     Product  @relation(fields: [productId], references: [id])
-  @@map("packaging")
-}
-
-// Product variants (simple attributes)
-model ProductVariant {
-  id          String   @id @default(cuid())
-  productId   String   @map("product_id")
-  attributes  Json
-  sku         String?  @unique
-  priceDelta  Decimal? @db.Decimal(15, 2)
-
-  product     Product  @relation(fields: [productId], references: [id])
-  @@map("product_variants")
-}
-
-// Supplier price lists and discounts
-model SupplierPriceList {
-  id           String   @id @default(cuid())
-  supplierId   String   @map("supplier_id")
-  productId    String   @map("product_id")
-  minQty       Int      @default(1) @map("min_qty")
-  price        Decimal  @db.Decimal(15, 2)
-  currency     String   @default("USD")
-  validFrom    DateTime? @map("valid_from")
-  validTo      DateTime? @map("valid_to")
-  discountPct  Decimal? @map("discount_pct") @db.Decimal(7, 4)
-
-  supplier     Supplier @relation(fields: [supplierId], references: [supplierId])
-  product      Product  @relation(fields: [productId], references: [id])
-  @@map("supplier_pricelists")
-}
-
-// Purchase Agreements / Blanket Orders
-model PurchaseAgreement {
-  id          String   @id @default(cuid())
-  agreementNo String   @unique @map("agreement_no")
-  supplierId  String   @map("supplier_id")
-  startDate   DateTime @map("start_date")
-  endDate     DateTime @map("end_date")
-  status      String   @default("active")
-
-  supplier    Supplier @relation(fields: [supplierId], references: [supplierId])
-  lines       PurchaseAgreementLine[]
-  @@map("purchase_agreements")
-}
-
-model PurchaseAgreementLine {
-  id           String   @id @default(cuid())
-  agreementId  String   @map("agreement_id")
-  productId    String   @map("product_id")
-  price        Decimal  @db.Decimal(15, 2)
-  minQty       Int      @map("min_qty")
-  maxQty       Int?     @map("max_qty")
-
-  agreement PurchaseAgreement @relation(fields: [agreementId], references: [id])
-  product   Product           @relation(fields: [productId], references: [id])
-  @@map("purchase_agreement_lines")
-}
-
-// Approvals
-model ApprovalRule {
-  id           String   @id @default(cuid())
-  name         String
-  minAmount    Decimal  @db.Decimal(15, 2) @map("min_amount")
-  maxAmount    Decimal? @db.Decimal(15, 2) @map("max_amount")
-  approverRole String   @map("approver_role")
-  active       Boolean  @default(true)
-  requests     ApprovalRequest[]
-  @@map("approval_rules")
-}
-
-model ApprovalRequest {
-  id         String   @id @default(cuid())
-  poId       String   @map("po_id")
-  ruleId     String   @map("rule_id")
-  status     String   @default("pending")
-  requestedAt DateTime @default(now()) @map("requested_at")
-
-  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
-  rule          ApprovalRule  @relation(fields: [ruleId], references: [id])
-  @@map("approval_requests")
-}
-
-// Warehousing: locations and internal moves
-model Location {
-  id        String   @id @default(cuid())
-  name      String
-  code      String?  @unique
-  parentId  String?  @map("parent_id")
-  parent    Location? @relation("LocationChildren", fields: [parentId], references: [id])
-  children  Location[] @relation("LocationChildren")
-  fromMoves InternalMove[] @relation("FromLocation")
-  toMoves   InternalMove[] @relation("ToLocation")
-  @@map("locations")
-}
-
-model InternalMove {
-  id          String   @id @default(cuid())
-  productId   String   @map("product_id")
-  quantity    Int
-  fromId      String?  @map("from_id")
-  toId        String?  @map("to_id")
-  reference   String?
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  product Product @relation(fields: [productId], references: [id])
-  from    Location? @relation("FromLocation", fields: [fromId], references: [id])
-  to      Location? @relation("ToLocation", fields: [toId], references: [id])
-  @@map("internal_moves")
-}
-
-// Reordering / Procurement rules
-model ReorderRule {
-  id              String   @id @default(cuid())
-  productId       String   @map("product_id")
-  minQty          Int      @default(0) @map("min_qty")
-  maxQty          Int?     @map("max_qty")
-  preferredSupplierId String? @map("preferred_supplier_id")
-  active          Boolean  @default(true)
-
-  product   Product  @relation(fields: [productId], references: [id])
-  supplier  Supplier? @relation(fields: [preferredSupplierId], references: [supplierId])
-  @@map("reorder_rules")
 }

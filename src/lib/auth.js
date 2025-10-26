@@ -19,7 +19,6 @@ export const authOptions = {
         try {
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
-            include: { role: true, tenant: true },
           })
 
           if (!user) {
@@ -28,7 +27,7 @@ export const authOptions = {
 
           const isPasswordValid = await bcrypt.compare(
             credentials.password,
-            user.passwordHash
+            user.password
           )
 
           if (!isPasswordValid) {
@@ -38,9 +37,8 @@ export const authOptions = {
           return {
             id: user.id,
             email: user.email,
-            name: `${user.firstName} ${user.lastName}`,
+            name: user.name,
             role: user.role,
-            tenantId: user.tenantId,
           }
         } catch (error) {
           console.error('Authentication error:', error)
@@ -54,7 +52,6 @@ export const authOptions = {
       if (user) {
         token.id = user.id
         token.role = user.role
-        token.tenantId = user.tenantId
       }
       return token
     },
@@ -62,7 +59,6 @@ export const authOptions = {
       if (token) {
         session.user.id = token.id
         session.user.role = token.role
-        session.user.tenantId = token.tenantId
       }
       return session
     },

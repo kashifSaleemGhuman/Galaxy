@@ -4,17 +4,28 @@ import prisma from '@/lib/db'
 export async function GET(request, { params }) {
   try {
     const { id } = params
-    const r = await prisma.requestForQtn.findUnique({ where: { rfqId: id }, include: { lines: true, supplier: true } })
+    const r = await prisma.rFQ.findUnique({ where: { id }, include: { items: { include: { product: true } }, vendor: true, createdBy: true, approvedBy: true } })
     if (!r) {
       return NextResponse.json({ success: false, error: 'RFQ not found' }, { status: 404 })
     }
     return NextResponse.json({ success: true, data: {
-      rfq_id: r.rfqId,
-      supplier_id: r.supplierId,
-      date_created: r.dateCreated.toISOString().split('T')[0],
+      rfq_id: r.id,
+      rfq_number: r.rfqNumber,
+      vendor_id: r.vendorId,
+      vendor_name: r.vendor?.name,
+      created_by: r.createdBy?.name,
+      order_deadline: r.orderDeadline.toISOString().split('T')[0],
+      sent_date: r.sentDate?.toISOString().split('T')[0],
       status: r.status,
-      lines: r.lines,
-      supplier_name: r.supplier?.name,
+      vendor_price: r.vendorPrice,
+      expected_delivery: r.expectedDelivery?.toISOString().split('T')[0],
+      items: r.items?.map(item => ({
+        id: item.id,
+        product_id: item.productId,
+        product_name: item.product?.name,
+        quantity: item.quantity,
+        unit: item.unit
+      }))
     } })
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
@@ -27,14 +38,14 @@ export async function PUT(request, { params }) {
     const body = await request.json()
     const { supplier_id, status } = body
 
-    const updated = await prisma.requestForQtn.update({
-      where: { rfqId: id },
+    const updated = await prisma.rFQ.update({
+      where: { id },
       data: {
-        supplierId: supplier_id ?? undefined,
+        vendorId: supplier_id ?? undefined,
         status: status ?? undefined,
       },
     })
-    return NextResponse.json({ success: true, data: { rfq_id: updated.rfqId, supplier_id: updated.supplierId, date_created: updated.dateCreated.toISOString().split('T')[0], status: updated.status } })
+    return NextResponse.json({ success: true, data: { rfq_id: updated.id, vendor_id: updated.vendorId, order_deadline: updated.orderDeadline.toISOString().split('T')[0], status: updated.status } })
   } catch (error) {
     if (error.code === 'P2025') {
       return NextResponse.json({ success: false, error: 'RFQ not found' }, { status: 404 })
@@ -46,7 +57,7 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const { id } = params
-    await prisma.requestForQtn.delete({ where: { rfqId: id } })
+    await prisma.rFQ.delete({ where: { id } })
     return NextResponse.json({ success: true, message: 'RFQ deleted successfully' })
   } catch (error) {
     if (error.code === 'P2025') {
