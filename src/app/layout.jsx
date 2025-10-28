@@ -1,5 +1,6 @@
 import './globals.css'
 import { SessionProvider } from '@/components/providers/SessionProvider'
+import NotificationToast from '@/components/NotificationToast'
 
 export const metadata = {
   title: 'Galaxy ERP System',
@@ -13,6 +14,7 @@ export default function RootLayout({ children }) {
         <SessionProvider>
           <div className="min-h-screen bg-gray-50">
             {children}
+            <NotificationToast />
           </div>
         </SessionProvider>
       </body>

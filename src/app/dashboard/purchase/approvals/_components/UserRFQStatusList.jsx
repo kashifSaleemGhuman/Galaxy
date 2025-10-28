@@ -8,30 +8,37 @@ import { useRouter } from 'next/navigation';
 
 const STATUS_LABELS = {
   draft: { label: 'Draft', color: 'bg-gray-100 text-gray-800' },
-  sent: { label: 'Sent', color: 'bg-blue-100 text-blue-800' },
+  sent: { label: 'Sent to Vendor', color: 'bg-blue-100 text-blue-800' },
   received: { label: 'Quote Received', color: 'bg-yellow-100 text-yellow-800' },
-  approved: { label: 'Approved', color: 'bg-green-100 text-green-800' },
-  rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800' },
+  approved: { label: 'Approved by Manager', color: 'bg-green-100 text-green-800' },
+  rejected: { label: 'Rejected by Manager', color: 'bg-red-100 text-red-800' },
   cancelled: { label: 'Cancelled', color: 'bg-gray-100 text-gray-800' }
 };
 
-export default function RFQApprovalsList() {
+export default function UserRFQStatusList() {
   const [rfqs, setRfqs] = useState([]);
   const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeFilter, setActiveFilter] = useState('pending');
+  const [activeFilter, setActiveFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [actionLoading, setActionLoading] = useState(null);
-  const [isRedirecting, setIsRedirecting] = useState(false);
   const router = useRouter();
 
-  const fetchApprovals = async (status = 'pending') => {
+  const fetchUserRFQs = async (status = 'all') => {
     try {
       setLoading(true);
-      const data = await api.get('/api/rfqs/approvals', { status, limit: 50 });
-      setRfqs(data.rfqs);
-      setCounts(data.counts);
+      const data = await api.get('/api/rfqs', { status, limit: 100 });
+      setRfqs(data.rfqs || []);
+      
+      // Calculate counts
+      const allRfqs = data.rfqs || [];
+      const counts = {
+        pending: allRfqs.filter(rfq => ['sent', 'received'].includes(rfq.status)).length,
+        approved: allRfqs.filter(rfq => rfq.status === 'approved').length,
+        rejected: allRfqs.filter(rfq => rfq.status === 'rejected').length,
+        total: allRfqs.length
+      };
+      setCounts(counts);
     } catch (err) {
       setError(err.error || err.message);
     } finally {
@@ -40,72 +47,12 @@ export default function RFQApprovalsList() {
   };
 
   useEffect(() => {
-    fetchApprovals(activeFilter);
+    fetchUserRFQs(activeFilter);
   }, [activeFilter]);
-
-  // Auto-redirect if no pending RFQs on initial load
-  useEffect(() => {
-    if (!loading && rfqs.length === 0 && activeFilter === 'pending' && !isRedirecting) {
-      setIsRedirecting(true);
-      setTimeout(() => {
-        router.push('/dashboard/purchase/polling');
-      }, 2000);
-    }
-  }, [loading, rfqs.length, activeFilter, isRedirecting, router]);
-
-  // No polling on approvals page - manager works on current list
-
-  const handleApprove = async (rfqId) => {
-    try {
-      setActionLoading(rfqId);
-      await api.post(`/api/rfqs/${rfqId}/approve`, { action: 'approve' });
-      await fetchApprovals(activeFilter);
-      
-      // Check if no more pending approvals
-      const data = await api.get('/api/rfqs/approvals', { status: 'pending', limit: 1 });
-      if (data.rfqs.length === 0) {
-        // Set redirecting state and redirect back to polling page after a short delay
-        setIsRedirecting(true);
-        setTimeout(() => {
-          router.push('/dashboard/purchase/polling');
-        }, 2000);
-      }
-    } catch (err) {
-      setError(err.error || err.message);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleReject = async (rfqId) => {
-    const reason = prompt('Please provide a reason for rejection:');
-    if (!reason) return;
-
-    try {
-      setActionLoading(rfqId);
-      await api.post(`/api/rfqs/${rfqId}/approve`, { action: 'reject', comments: reason });
-      await fetchApprovals(activeFilter);
-      
-      // Check if no more pending approvals
-      const data = await api.get('/api/rfqs/approvals', { status: 'pending', limit: 1 });
-      if (data.rfqs.length === 0) {
-        // Set redirecting state and redirect back to polling page after a short delay
-        setIsRedirecting(true);
-        setTimeout(() => {
-          router.push('/dashboard/purchase/polling');
-        }, 2000);
-      }
-    } catch (err) {
-      setError(err.error || err.message);
-    } finally {
-      setActionLoading(null);
-    }
-  };
 
   const filteredRfqs = rfqs.filter(rfq => 
     rfq.rfqNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    rfq.vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    rfq.createdBy.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    rfq.vendor.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const formatDate = (dateString) => {
@@ -127,11 +74,46 @@ export default function RFQApprovalsList() {
     router.push(`/dashboard/purchase/rfqs/${rfqId}`);
   };
 
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'approved':
+        return (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        );
+      case 'rejected':
+        return (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        );
+      case 'received':
+        return (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        );
+      case 'sent':
+        return (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+        );
+    }
+  };
+
   if (error) {
     return (
       <div className="bg-red-50 p-4 rounded-md">
         <p className="text-red-800">{error}</p>
-        <Button onClick={() => fetchApprovals(activeFilter)} className="mt-2">
+        <Button onClick={() => fetchUserRFQs(activeFilter)} className="mt-2">
           Try Again
         </Button>
       </div>
@@ -140,17 +122,6 @@ export default function RFQApprovalsList() {
 
   return (
     <div className="space-y-6">
-      {/* Redirect Message */}
-      {isRedirecting && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-md">
-          <div className="flex items-center text-green-800">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
-            <span className="text-sm font-medium">All approvals completed! Redirecting to polling page...</span>
-          </div>
-        </div>
-      )}
-
-
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div 
@@ -160,7 +131,7 @@ export default function RFQApprovalsList() {
           onClick={() => setActiveFilter('pending')}
         >
           <div className="text-2xl font-bold text-gray-900">{counts.pending}</div>
-          <div className="text-sm text-gray-600">Pending Approval</div>
+          <div className="text-sm text-gray-600">Pending Review</div>
         </div>
         <div 
           className={`p-4 rounded-lg cursor-pointer transition-colors ${
@@ -219,9 +190,6 @@ export default function RFQApprovalsList() {
                   Vendor
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created By
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Order Deadline
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -229,6 +197,9 @@ export default function RFQApprovalsList() {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Manager Response
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -251,10 +222,6 @@ export default function RFQApprovalsList() {
                     <div className="text-sm text-gray-500">{rfq.vendor.email}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{rfq.createdBy.name}</div>
-                    <div className="text-sm text-gray-500">{rfq.createdBy.email}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{formatDate(rfq.orderDeadline)}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -267,37 +234,26 @@ export default function RFQApprovalsList() {
                       {STATUS_LABELS[rfq.status]?.label || rfq.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex space-x-2 justify-end">
-                      <Button
-                        onClick={() => handleViewDetails(rfq.id)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1"
-                      >
-                        View Details
-                      </Button>
-                      {rfq.status === 'received' ? (
-                        <>
-                          <Button
-                            onClick={() => handleApprove(rfq.id)}
-                            disabled={actionLoading === rfq.id}
-                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1"
-                          >
-                            {actionLoading === rfq.id ? 'Approving...' : 'Approve'}
-                          </Button>
-                          <Button
-                            onClick={() => handleReject(rfq.id)}
-                            disabled={actionLoading === rfq.id}
-                            className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1"
-                          >
-                            {actionLoading === rfq.id ? 'Rejecting...' : 'Reject'}
-                          </Button>
-                        </>
-                      ) : (
-                        <span className="text-gray-400 text-xs">
-                          {rfq.approvedBy ? `By ${rfq.approvedBy.name}` : 'No action needed'}
-                        </span>
-                      )}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      {getStatusIcon(rfq.status)}
+                      <span className="ml-2 text-sm text-gray-900">
+                        {rfq.approvedBy ? `By ${rfq.approvedBy.name}` : 'Pending'}
+                      </span>
                     </div>
+                    {rfq.approvedAt && (
+                      <div className="text-xs text-gray-500">
+                        {formatDate(rfq.approvedAt)}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <Button
+                      onClick={() => handleViewDetails(rfq.id)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1"
+                    >
+                      View Details
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -311,6 +267,16 @@ export default function RFQApprovalsList() {
           )}
         </div>
       )}
+
+      {/* Back to Dashboard Button */}
+      <div className="flex justify-center pt-6">
+        <Button
+          onClick={() => router.push('/dashboard/purchase/user-dashboard')}
+          className="bg-gray-600 hover:bg-gray-700 text-white"
+        >
+          Back to Dashboard
+        </Button>
+      </div>
     </div>
   );
 }

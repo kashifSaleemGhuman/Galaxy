@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
-import { ROLES } from '@/lib/constants/roles';
 
-// POST /api/rfqs/[id]/approve - Approve or reject RFQ
 export async function POST(req, { params }) {
   try {
     const session = await getServerSession();
@@ -11,69 +9,61 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { action, comments } = await req.json();
+
+    if (!action || !['approve', 'reject'].includes(action)) {
+      return NextResponse.json({ error: 'Invalid action. Must be "approve" or "reject"' }, { status: 400 });
+    }
+
     const currentUser = await prisma.user.findUnique({
       where: { email: session.user.email }
     });
 
-    // Only managers and admins can approve/reject RFQs
-    if (![ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER].includes(currentUser.role)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const { action, comments } = await req.json(); // action: 'approve' or 'reject'
-
-    if (!['approve', 'reject'].includes(action)) {
-      return NextResponse.json({ error: 'Invalid action. Must be "approve" or "reject"' }, { status: 400 });
+    // Check if user has permission to approve/reject
+    const canApprove = ['super_admin', 'admin', 'purchase_manager'].includes(currentUser.role);
+    if (!canApprove) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    // Get existing RFQ
-    const existingRfq = await prisma.rFQ.findUnique({
+    const rfq = await prisma.rFQ.findUnique({
       where: { id: params.id },
-      include: {
-        vendor: true,
-        createdBy: {
-          select: { id: true, name: true, email: true }
-        }
+      include: { 
+        vendor: true, 
+        createdBy: { select: { id: true, name: true, email: true } },
+        items: { include: { product: true } }
       }
     });
 
-    if (!existingRfq) {
+    if (!rfq) {
       return NextResponse.json({ error: 'RFQ not found' }, { status: 404 });
     }
 
     // Check if RFQ is in a state that can be approved/rejected
-    if (!['received', 'sent'].includes(existingRfq.status)) {
+    if (rfq.status !== 'received') {
       return NextResponse.json({ 
-        error: `RFQ cannot be ${action}d. Current status: ${existingRfq.status}` 
+        error: `RFQ cannot be ${action}d. Current status: ${rfq.status}. Only RFQs with recorded quotes can be approved/rejected.` 
       }, { status: 400 });
     }
 
-    // Update RFQ and create approval record
     const updatedRfq = await prisma.$transaction(async (tx) => {
-      const newStatus = action === 'approve' ? 'approved' : 'rejected';
-      
-      // Update RFQ
-      const rfq = await tx.rFQ.update({
+      // Update RFQ status
+      const updated = await tx.rFQ.update({
         where: { id: params.id },
         data: {
-          status: newStatus,
+          status: action === 'approve' ? 'approved' : 'rejected',
           approvedById: currentUser.id,
           approvedAt: new Date(),
-          ...(action === 'reject' && comments ? { rejectionReason: comments } : {})
+          rejectionReason: action === 'reject' ? comments : null
         },
         include: {
           vendor: true,
-          createdBy: {
-            select: { id: true, name: true, email: true }
-          },
-          approvedBy: {
-            select: { id: true, name: true, email: true }
-          },
-          items: {
-            include: {
-              product: true
-            }
-          }
+          createdBy: { select: { id: true, name: true, email: true } },
+          approvedBy: { select: { id: true, name: true, email: true } },
+          items: { include: { product: true } }
         }
       });
 
@@ -82,7 +72,7 @@ export async function POST(req, { params }) {
         data: {
           rfqId: params.id,
           approvedBy: currentUser.id,
-          status: newStatus,
+          status: action === 'approve' ? 'approved' : 'rejected',
           comments: comments || null
         }
       });
@@ -91,20 +81,21 @@ export async function POST(req, { params }) {
       await tx.auditLog.create({
         data: {
           userId: currentUser.id,
-          action: action.toUpperCase() + '_RFQ',
-          details: `${action}d RFQ ${rfq.rfqNumber} for vendor ${rfq.vendor.name}${comments ? `: ${comments}` : ''}`
+          action: action === 'approve' ? 'APPROVE_RFQ' : 'REJECT_RFQ',
+          details: `RFQ ${rfq.rfqNumber} ${action}d by ${currentUser.name}${comments ? ` - ${comments}` : ''}`
         }
       });
 
-      return rfq;
+      return updated;
     });
 
     return NextResponse.json({ 
       rfq: updatedRfq,
       message: `RFQ ${action}d successfully` 
     });
+
   } catch (error) {
-    console.error(`Error ${action}ing RFQ:`, error);
-    return NextResponse.json({ error: `Failed to ${action} RFQ` }, { status: 500 });
+    console.error('Error approving/rejecting RFQ:', error);
+    return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
   }
 }

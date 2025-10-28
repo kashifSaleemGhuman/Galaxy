@@ -80,6 +80,7 @@ model Product {
   
   // Relations
   rfqItems    RFQItem[]
+  poLines     POLine[]
 }
 
 // RFQ (Request for Quotation) model
@@ -140,4 +141,68 @@ model RFQApproval {
   comments    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// Supplier model (legacy table mapping)
+model Supplier {
+  supplierId  String   @id @map("supplier_id")
+  name        String
+  contactInfo String?   @map("contact_info")
+  email       String
+  phone       String?
+  
+  // Relations
+  purchaseOrders PurchaseOrder[]
+}
+
+// Purchase Order model
+model PurchaseOrder {
+  poId        String   @id @map("po_id")
+  rfqId       String?  @map("rfq_id")
+  supplierId  String   @map("supplier_id")
+  dateCreated DateTime @default(now()) @map("date_created")
+  status      String   @default("draft") // draft, sent, confirmed, received, cancelled
+  
+  // Relations
+  supplier    Supplier @relation(fields: [supplierId], references: [supplierId])
+  lines       POLine[]
+  goodsReceipts GoodsReceipt[]
+  vendorBills VendorBill[]
+}
+
+// Purchase Order Line model
+model POLine {
+  poLineId        String  @id @map("po_line_id")
+  poId            String  @map("po_id")
+  productId       String  @map("product_id")
+  quantityOrdered Int     @map("quantity_ordered")
+  quantityReceived Int    @default(0) @map("quantity_received")
+  price           Decimal
+  
+  // Relations
+  purchaseOrder   PurchaseOrder @relation(fields: [poId], references: [poId])
+  product         Product       @relation(fields: [productId], references: [id])
+}
+
+// Goods Receipt model
+model GoodsReceipt {
+  receiptId    String   @id @map("receipt_id")
+  poId         String   @map("po_id")
+  dateReceived DateTime @map("date_received")
+  status       String   // pending, confirmed, rejected
+  
+  // Relations
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
+}
+
+// Vendor Bill model
+model VendorBill {
+  billId     String   @id @map("bill_id")
+  poId       String   @map("po_id")
+  dateBilled DateTime @map("date_billed")
+  amount     Decimal
+  status     String   // pending, paid, overdue
+  
+  // Relations
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
 }

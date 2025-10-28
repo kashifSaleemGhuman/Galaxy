@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { RFQ_STATUS, RFQ_STATUS_LABELS } from './constants';
-// import { rfqService } from './rfqService';
 import PurchaseOrder from '../po/PurchaseOrder';
 import PermissionGuard from '@/components/guards/PermissionGuard';
 import { PERMISSIONS } from '@/lib/constants/roles';
 import api from '@/lib/api/service';
+import { notificationService } from '@/lib/notifications';
+import { Toast } from '@/components/ui/Toast';
 
 export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
   const [quoteDetails, setQuoteDetails] = useState({
@@ -17,10 +18,58 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [creatingPO, setCreatingPO] = useState(false);
+  const [toast, setToast] = useState(null);
 
   const clearMessages = () => {
     setError(null);
     setSuccessMessage(null);
+  };
+
+  const handleCreatePurchaseOrder = async () => {
+    setCreatingPO(true);
+    clearMessages();
+    
+    try {
+      const response = await fetch('/api/purchase/purchase-orders/from-rfq', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          rfqId: rfq.id,
+          poNumber: `PO-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
+          notes: `Created from RFQ ${rfq.rfqNumber}`
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setToast({
+          type: 'success',
+          message: `Purchase Order ${result.data.poId} created successfully! Redirecting to PO details...`
+        });
+        
+        // Redirect to the created PO after a short delay
+        setTimeout(() => {
+          window.location.href = `/dashboard/purchase/purchase-orders/${result.data.poId}`;
+        }, 2000);
+      } else {
+        setToast({
+          type: 'error',
+          message: result.error || 'Failed to create purchase order'
+        });
+      }
+    } catch (err) {
+      setToast({
+        type: 'error',
+        message: 'Failed to create purchase order'
+      });
+      console.error('Error creating purchase order:', err);
+    } finally {
+      setCreatingPO(false);
+    }
   };
 
   const handleSendToVendor = async () => {
@@ -62,6 +111,18 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
       });
       setSuccessMessage('Vendor quote recorded successfully');
       await onUpdateRfq({ ...rfq, ...data.rfq });
+      
+      // Emit notification to alert managers only
+      notificationService.emit('rfq_update', {
+        rfqId: rfq.id,
+        rfqNumber: rfq.rfqNumber,
+        status: 'received',
+        previousStatus: 'sent',
+        message: `New quote received for RFQ ${rfq.rfqNumber} - $${quoteDetails.vendorPrice}`,
+        vendorPrice: quoteDetails.vendorPrice,
+        expectedDeliveryDate: quoteDetails.expectedDeliveryDate,
+        targetRole: 'manager' // Only show to managers
+      });
     } catch (err) {
       setError(err.error || err.message || 'Failed to record vendor quote');
     } finally {
@@ -75,33 +136,69 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
     setLoading(true);
     clearMessages();
     try {
-      const response = await rfqService.acceptQuote(rfq);
+      const response = await api.post(`/api/rfqs/${rfq.id}/approve`, {
+        action: 'approve'
+      });
       
-      if (response.success) {
-        setSuccessMessage('Quote accepted successfully. Generating Purchase Order...');
-        await onUpdateRfq({
-          ...rfq,
-          status: RFQ_STATUS.ACCEPTED,
-          acceptedDate: new Date().toISOString(),
-        });
-        // Show PO generation interface
-        setShowPurchaseOrder(true);
-      }
+      setSuccessMessage('Quote approved successfully');
+      await onUpdateRfq({
+        ...rfq,
+        ...response.rfq,
+        status: 'approved',
+        approvedAt: new Date().toISOString(),
+      });
+      
+      // Emit notification to user
+      notificationService.emit('rfq_update', {
+        rfqId: rfq.id,
+        rfqNumber: rfq.rfqNumber,
+        status: 'approved',
+        previousStatus: 'received',
+        message: `RFQ ${rfq.rfqNumber} has been approved`,
+        targetRole: 'user' // Show to purchase user
+      });
+      
+      // Show PO generation interface
+      setShowPurchaseOrder(true);
     } catch (err) {
-      setError(err.message || 'Failed to accept quote');
+      setError(err.error || err.message || 'Failed to approve quote');
     } finally {
       setLoading(false);
     }
   };
 
   const handleRejectQuote = async () => {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (!reason) return;
+
     setLoading(true);
+    clearMessages();
     try {
+      const response = await api.post(`/api/rfqs/${rfq.id}/approve`, {
+        action: 'reject',
+        comments: reason
+      });
+      
+      setSuccessMessage('Quote rejected successfully');
       await onUpdateRfq({
         ...rfq,
-        status: RFQ_STATUS.REJECTED,
-        rejectedDate: new Date().toISOString(),
+        ...response.rfq,
+        status: 'rejected',
+        rejectionReason: reason,
+        approvedAt: new Date().toISOString(),
       });
+      
+      // Emit notification to user
+      notificationService.emit('rfq_update', {
+        rfqId: rfq.id,
+        rfqNumber: rfq.rfqNumber,
+        status: 'rejected',
+        previousStatus: 'received',
+        message: `RFQ ${rfq.rfqNumber} has been rejected`,
+        targetRole: 'user' // Show to purchase user
+      });
+    } catch (err) {
+      setError(err.error || err.message || 'Failed to reject quote');
     } finally {
       setLoading(false);
     }
@@ -212,6 +309,21 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
                   Reject Quote
                 </Button>
               </PermissionGuard>
+          </div>
+        );
+      case RFQ_STATUS.APPROVED:
+        return (
+          <div className="space-x-4">
+            <Button
+              onClick={handleCreatePurchaseOrder}
+              disabled={creatingPO}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {creatingPO ? 'Creating PO...' : 'Create Purchase Order'}
+            </Button>
+            <div className="text-sm text-gray-500">
+              This RFQ has been approved and is ready for purchase order creation
+            </div>
           </div>
         );
       default:
@@ -325,6 +437,14 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
           {renderActionButtons()}
         </div>
       </div>
+
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

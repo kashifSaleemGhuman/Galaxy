@@ -6,7 +6,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url)
     const po_id = searchParams.get('po_id')
     const where = po_id ? { poId: po_id } : {}
-    const lines = await prisma.pO_Line.findMany({ where })
+    const lines = await prisma.pOLine.findMany({ where })
     return NextResponse.json({ success: true, data: lines })
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
@@ -22,7 +22,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'po_id, product_id, quantity_ordered, price required' }, { status: 400 })
     }
 
-    const created = await prisma.pO_Line.create({
+    const created = await prisma.pOLine.create({
       data: {
         poLineId: po_line_id ?? undefined,
         poId: po_id,

@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import RfqForm from './rfq/RfqForm';
 import RfqList from './rfq/RfqList';
 import RfqDetails from './rfq/RfqDetails';
 import { RFQ_STATUS } from './rfq/constants';
 import api from '@/lib/api/service';
+import { useDebouncedPolling } from '@/hooks/useDebouncedPolling';
+import { notificationService } from '@/lib/notifications';
 
 // Stats card component for displaying RFQ metrics
 const StatsCard = ({ title, value, onClick, isActive }) => (
@@ -46,6 +49,12 @@ const EmptyState = ({ onCreateNew }) => (
 export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [rfqs, setRfqs] = useState([]);
+  const [previousRfqs, setPreviousRfqs] = useState([]);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [redirectMessage, setRedirectMessage] = useState('');
+  const [sentNotifications, setSentNotifications] = useState(new Set());
+  const router = useRouter();
   const [stats, setStats] = useState({
     new: 0,
     rfqSent: 0,
@@ -72,18 +81,87 @@ export default function Dashboard() {
     setLoading(true);
     try {
       const data = await api.get('/api/rfqs', { status: 'all', limit: 100 });
-      setRfqs(data.rfqs || []);
+      const newRfqs = data.rfqs || [];
+      
+      // Detect status changes and emit notifications
+      setPreviousRfqs(prevRfqs => {
+        if (prevRfqs.length > 0) {
+          newRfqs.forEach(newRfq => {
+            const oldRfq = prevRfqs.find(r => r.id === newRfq.id);
+            if (oldRfq && oldRfq.status !== newRfq.status) {
+              // Create unique notification key to prevent duplicates
+              const notificationKey = `${newRfq.id}-${oldRfq.status}-${newRfq.status}`;
+              
+              // Only emit notification if we haven't already sent this specific status change
+              setSentNotifications(prevNotifications => {
+                if (!prevNotifications.has(notificationKey)) {
+                  console.log('RFQ status changed:', {
+                    rfqNumber: newRfq.rfqNumber,
+                    from: oldRfq.status,
+                    to: newRfq.status
+                  });
+                  
+                  notificationService.emit('rfq_update', {
+                    rfqId: newRfq.id,
+                    rfqNumber: newRfq.rfqNumber,
+                    status: newRfq.status,
+                    previousStatus: oldRfq.status,
+                    targetRole: 'user' // Show to purchase user
+                  });
+
+                  // Check if manager responded (approved/rejected) - refresh the page
+                  if ((oldRfq.status === 'sent' || oldRfq.status === 'received') && 
+                      (newRfq.status === 'approved' || newRfq.status === 'rejected')) {
+                    if (!isRedirecting) {
+                      setIsRedirecting(true);
+                      setRedirectMessage(`Manager ${newRfq.status} your RFQ ${newRfq.rfqNumber}! Refreshing page...`);
+                      setTimeout(() => {
+                        window.location.reload();
+                      }, 2000);
+                    }
+                  }
+
+                  // Mark this notification as sent
+                  return new Set([...prevNotifications, notificationKey]);
+                }
+                return prevNotifications;
+              });
+            }
+          });
+        }
+        return newRfqs;
+      });
+      
+      setRfqs(newRfqs);
+      setLastUpdated(new Date());
     } catch (e) {
       console.error('Error loading RFQs:', e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isRedirecting]);
 
   useEffect(() => {
     fetchRfqs();
     fetchStats();
   }, [fetchRfqs, fetchStats]);
+
+  // Clean up old notification tracking to prevent memory leaks
+  useEffect(() => {
+    const cleanup = setInterval(() => {
+      setSentNotifications(new Set());
+    }, 300000); // Clear every 5 minutes
+
+    return () => clearInterval(cleanup);
+  }, []);
+
+  // Clear redirect state when component unmounts
+  useEffect(() => {
+    return () => {
+      setIsRedirecting(false);
+      setRedirectMessage('');
+    };
+  }, []);
 
   const calculateAverageDaysToOrder = (rfqs) => {
     const completedRfqs = rfqs.filter(rfq => rfq.status === RFQ_STATUS.ACCEPTED || rfq.status === 'approved');
@@ -126,6 +204,19 @@ export default function Dashboard() {
     }
   };
 
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([fetchRfqs(), fetchStats()]);
+  }, [fetchRfqs, fetchStats]);
+
+  // Set up polling for real-time updates - stop when redirecting
+  const { isPolling, error: pollingError } = useDebouncedPolling(
+    handleRefresh,
+    15000, // Poll every 15 seconds
+    !isRedirecting, // Disabled when redirecting
+    2000 // Debounce for 2 seconds
+  );
+
+
   if (loading && rfqs.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -134,8 +225,61 @@ export default function Dashboard() {
     );
   }
 
+  // Format last updated time
+  const getTimeSinceUpdate = () => {
+    const seconds = Math.floor((new Date() - lastUpdated) / 1000);
+    if (seconds < 10) return 'just now';
+    if (seconds < 60) return `${seconds} seconds ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes === 1) return '1 minute ago';
+    return `${minutes} minutes ago`;
+  };
+
   return (
     <div className="p-6">
+      {/* Polling Status Bar - Hide when redirecting */}
+      {!isRedirecting && (
+        <div className="mb-4 flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center">
+            {isPolling ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
+                <span className="text-sm font-medium text-blue-800">Checking for updates...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-sm font-medium text-gray-700">Real-time monitoring active</span>
+              </>
+            )}
+          </div>
+          <span className="text-xs text-gray-500">Last updated: {getTimeSinceUpdate()}</span>
+        </div>
+      )}
+      
+      {pollingError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center text-red-800">
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm font-medium">Update check failed: {pollingError}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Redirect Message */}
+      {isRedirecting && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center justify-center text-green-800">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
+            <span className="text-sm font-medium">{redirectMessage}</span>
+          </div>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         <StatsCard 
