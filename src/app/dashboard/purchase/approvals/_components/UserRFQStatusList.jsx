@@ -250,7 +250,7 @@ export default function UserRFQStatusList() {
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <Button
                       onClick={() => handleViewDetails(rfq.id)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1"
+                      className="bg-gradient-to-r from-blue-600 to-black hover:from-blue-700 hover:to-gray-900 text-white text-xs px-3 py-1"
                     >
                       View Details
                     </Button>

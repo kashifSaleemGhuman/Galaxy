@@ -134,7 +134,7 @@ export default function PurchaseOrder({ rfq, onBack }) {
           <Button className="bg-gray-100 hover:bg-gray-200">
             Preview
           </Button>
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+          <Button className="bg-gradient-to-r from-blue-600 to-black hover:from-blue-700 hover:to-gray-900 text-white">
             Send to Vendor
           </Button>
         </div>

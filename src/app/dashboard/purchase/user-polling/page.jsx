@@ -174,7 +174,7 @@ export default function UserPollingPage() {
         <div className="space-y-2">
           <button
             onClick={() => router.push('/dashboard/purchase')}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+            className="w-full bg-gradient-to-r from-green-600 to-green-900 hover:from-green-700 hover:to-black text-white font-medium py-2 px-4 rounded-md transition-colors"
           >
             Go to Purchase Dashboard
           </button>

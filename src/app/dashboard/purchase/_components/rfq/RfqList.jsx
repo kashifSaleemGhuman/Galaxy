@@ -46,7 +46,7 @@ export default function RfqList({ rfqs, onCreateNew, onSelectRfq, activeFilter, 
         </div>
         <Button
           onClick={onCreateNew}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+          className="bg-gradient-to-r from-blue-600 to-black text-white hover:from-blue-700 hover:to-gray-900"
         >
           Create New RFQ
         </Button>

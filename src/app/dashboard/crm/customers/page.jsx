@@ -220,7 +220,7 @@ export default function CustomersPage() {
           <p className="text-gray-600 mt-2">Manage your customer relationships and data</p>
         </div>
         <div className="flex space-x-3">
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2">
+          <button className="bg-gradient-to-r from-blue-600 to-black text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-gray-900 flex items-center space-x-2">
             <Plus className="h-5 w-5" />
             <span>Add Customer</span>
           </button>
@@ -389,7 +389,7 @@ export default function CustomersPage() {
               </div>
 
               <div className="flex space-x-2">
-                <button className="flex-1 bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-100">
+                <button className="flex-1 bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gradient-to-r hover:from-blue-100 hover:to-blue-50">
                   View Details
                 </button>
                 <button className="flex-1 bg-gray-50 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-100">
@@ -414,7 +414,7 @@ export default function CustomersPage() {
               : 'Get started by creating your first customer.'}
           </p>
           <div className="mt-6">
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+            <button className="bg-gradient-to-r from-blue-600 to-black text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-gray-900">
               Add Customer
             </button>
           </div>

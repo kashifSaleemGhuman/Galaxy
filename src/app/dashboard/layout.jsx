@@ -165,8 +165,8 @@ export default function DashboardLayout({ children }) {
         <div
           className={`flex items-center justify-between px-4 py-3 text-white rounded-lg cursor-pointer transition-all duration-200 ${
             item.current 
-              ? 'bg-slate-700 text-white shadow-sm' 
-              : 'hover:bg-slate-600 hover:text-white hover:shadow-sm'
+              ? 'bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-md' 
+              : 'hover:bg-gradient-to-r hover:from-blue-700 hover:to-blue-900 hover:text-white hover:shadow-sm'
           }`}
           onClick={() => hasChildren ? toggleMenu(item.name) : router.push(item.href)}
         >
@@ -191,8 +191,8 @@ export default function DashboardLayout({ children }) {
                 href={child.href}
                 className={`block px-4 py-2 text-sm rounded-lg transition-all duration-200 ${
                   child.current
-                    ? 'bg-slate-700 text-white font-medium'
-                    : 'text-gray-300 hover:bg-slate-600 hover:text-white'
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-800 text-white font-medium shadow-sm'
+                    : 'text-gray-300 hover:bg-gradient-to-r hover:from-blue-700 hover:to-blue-900 hover:text-white'
                 }`}
                 onClick={() => setSidebarOpen(false)}
               >
@@ -277,11 +277,11 @@ export default function DashboardLayout({ children }) {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <div className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
+        <div className="sticky top-0 z-40 bg-gradient-to-r from-blue-600 to-black shadow-sm border-b border-gray-200">
           <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition-colors"
+              className="lg:hidden p-2 rounded-md text-white hover:text-white hover:bg-white hover:bg-opacity-20 transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -291,8 +291,8 @@ export default function DashboardLayout({ children }) {
             <div className="flex-1 lg:hidden"></div>
             
             <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-500">
-                Welcome back, <span className="font-medium text-gray-900">{session?.user?.name || 'User'}</span>! 👋
+              <div className="text-sm text-white">
+                Welcome back, <span className="font-medium text-white">{session?.user?.name || 'User'}</span>! 👋
               </div>
             </div>
           </div>

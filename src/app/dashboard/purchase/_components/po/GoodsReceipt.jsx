@@ -133,7 +133,7 @@ export default function GoodsReceipt({ purchaseOrder, onBack, onSubmit }) {
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="bg-gradient-to-r from-green-600 to-green-900 text-white hover:from-green-700 hover:to-black"
             disabled={loading}
           >
             {loading ? 'Processing...' : 'Confirm Receipt'}

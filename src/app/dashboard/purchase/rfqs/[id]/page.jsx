@@ -144,14 +144,14 @@ export default function RFQDetailPage({ params }) {
                 <Button
                   onClick={handleApprove}
                   disabled={actionLoading}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-gradient-to-r from-green-600 to-green-900 text-white hover:from-green-700 hover:to-black"
                 >
                   {actionLoading ? 'Approving...' : 'Approve'}
                 </Button>
                 <Button
                   onClick={handleReject}
                   disabled={actionLoading}
-                  className="bg-red-600 hover:bg-red-700 text-white"
+                  className="bg-gradient-to-r from-red-600 to-red-900 text-white hover:from-red-700 hover:to-black"
                 >
                   {actionLoading ? 'Rejecting...' : 'Reject'}
                 </Button>

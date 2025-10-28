@@ -334,7 +334,7 @@ export default function CreatePurchaseOrderPage() {
                     <Button
                       type="button"
                       onClick={addLineItem}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      className="w-full bg-gradient-to-r from-blue-600 to-black text-white hover:from-blue-700 hover:to-gray-900"
                     >
                       Add Item
                     </Button>

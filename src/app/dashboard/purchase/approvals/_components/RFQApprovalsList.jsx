@@ -271,7 +271,7 @@ export default function RFQApprovalsList() {
                     <div className="flex space-x-2 justify-end">
                       <Button
                         onClick={() => handleViewDetails(rfq.id)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1"
+                        className="bg-gradient-to-r from-blue-600 to-black hover:from-blue-700 hover:to-gray-900 text-white text-xs px-3 py-1"
                       >
                         View Details
                       </Button>
@@ -280,14 +280,14 @@ export default function RFQApprovalsList() {
                           <Button
                             onClick={() => handleApprove(rfq.id)}
                             disabled={actionLoading === rfq.id}
-                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1"
+                            className="bg-gradient-to-r from-green-600 to-green-900 hover:from-green-700 hover:to-black text-white text-xs px-3 py-1"
                           >
                             {actionLoading === rfq.id ? 'Approving...' : 'Approve'}
                           </Button>
                           <Button
                             onClick={() => handleReject(rfq.id)}
                             disabled={actionLoading === rfq.id}
-                            className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1"
+                            className="bg-gradient-to-r from-red-600 to-red-900 text-white hover:from-red-700 hover:to-black text-xs px-3 py-1"
                           >
                             {actionLoading === rfq.id ? 'Rejecting...' : 'Reject'}
                           </Button>

@@ -40,7 +40,7 @@ const EmptyState = ({ onCreateNew }) => (
       prices for different products you consider buying. Once an agreement has been found
       with the supplier, they will be confirmed and turned into purchase orders.
     </p>
-    <Button onClick={onCreateNew} className="bg-blue-600 hover:bg-blue-700">
+    <Button onClick={onCreateNew} className="bg-gradient-to-r from-blue-600 to-black hover:from-blue-700 hover:to-gray-900">
       Create New RFQ
     </Button>
   </div>
