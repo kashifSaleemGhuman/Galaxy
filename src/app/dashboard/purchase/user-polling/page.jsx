@@ -180,7 +180,7 @@ export default function UserPollingPage() {
           </button>
           <button
             onClick={() => router.push('/dashboard/purchase')}
-            className="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+            className="w-full bg-gradient-to-r from-green-600 to-black hover:from-green-700 hover:to-gray-900 text-white font-medium py-2 px-4 rounded-md transition-colors"
           >
             Create New RFQ
           </button>

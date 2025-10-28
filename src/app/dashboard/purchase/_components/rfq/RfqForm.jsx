@@ -328,7 +328,7 @@ export default function RfqForm({ onSubmit, onCancel }) {
                   <Button
                     type="button"
                     onClick={() => removeProduct(index)}
-                    className="bg-red-50 text-red-600 hover:bg-red-100"
+                    className="bg-gradient-to-r from-red-600 to-black text-white hover:from-red-700 hover:to-gray-900"
                   >
                     Remove
                   </Button>
@@ -349,14 +349,14 @@ export default function RfqForm({ onSubmit, onCancel }) {
           <Button
             type="button"
             onClick={onCancel}
-            className="bg-gray-50 text-gray-600 hover:bg-gray-100"
+            className="bg-gradient-to-r from-red-600 to-black text-white hover:from-red-700 hover:to-gray-900"
             disabled={loading}
           >
             Cancel
           </Button>
           <Button
             type="submit"
-            className="bg-gradient-to-r from-blue-600 to-black text-white hover:from-blue-700 hover:to-gray-900"
+            className="bg-gradient-to-r from-green-600 to-black text-white hover:from-green-700 hover:to-gray-900"
             disabled={loading}
           >
             {loading ? 'Creating...' : 'Create RFQ'}
