@@ -7,6 +7,18 @@
     {
       "key": "baseUrl",
       "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "origin",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "callbackUrl",
+      "value": "{{origin}}/"
+    },
+    {
+      "key": "csrfToken",
+      "value": ""
     }
   ],
   "item": [
@@ -25,6 +37,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -35,6 +51,82 @@
                   "path": [
                     "auth",
                     "[...nextauth]"
+                  ],
+                  "variable": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/auth/callback/credentials",
+          "item": [
+            {
+              "name": "POST /auth/callback/credentials",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/callback/credentials",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "callback",
+                    "credentials"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"example\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/auth/csrf",
+          "item": [
+            {
+              "name": "GET /auth/csrf",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/csrf",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "csrf"
                   ],
                   "variable": []
                 }
@@ -54,6 +146,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -64,6 +160,81 @@
                   "path": [
                     "auth",
                     "register"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"example\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/auth/session",
+          "item": [
+            {
+              "name": "GET /auth/session",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/session",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "session"
+                  ],
+                  "variable": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/auth/signout",
+          "item": [
+            {
+              "name": "POST /auth/signout",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/signout",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "signout"
                   ],
                   "variable": []
                 },
@@ -97,6 +268,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -121,6 +296,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -159,6 +338,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -184,6 +367,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -218,6 +405,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -257,6 +448,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -296,6 +491,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -335,6 +534,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -374,6 +577,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -404,6 +611,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -428,6 +639,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -466,6 +681,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -500,6 +719,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -529,6 +752,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -558,6 +785,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -592,6 +823,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -616,6 +851,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -659,6 +898,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -692,6 +935,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -716,6 +963,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -754,6 +1005,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -779,6 +1034,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -813,6 +1072,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -852,6 +1115,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -876,6 +1143,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -914,6 +1185,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -939,6 +1214,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -973,6 +1252,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1012,6 +1295,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1036,6 +1323,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1074,6 +1365,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1099,6 +1394,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1133,6 +1432,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1172,6 +1475,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1196,6 +1503,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1234,6 +1545,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1264,6 +1579,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1288,6 +1607,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1326,6 +1649,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1351,6 +1678,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1385,6 +1716,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1424,6 +1759,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1448,6 +1787,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1486,6 +1829,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1511,6 +1858,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1545,6 +1896,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1573,6 +1928,93 @@
           ]
         },
         {
+          "name": "/purchase/purchase-orders/:id/send",
+          "item": [
+            {
+              "name": "POST /purchase/purchase-orders/:id/send",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/purchase/purchase-orders/:id/send",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "purchase",
+                    "purchase-orders",
+                    "[id]",
+                    "send"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"example\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/purchase/purchase-orders/from-rfq",
+          "item": [
+            {
+              "name": "POST /purchase/purchase-orders/from-rfq",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/purchase/purchase-orders/from-rfq",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "purchase",
+                    "purchase-orders",
+                    "from-rfq"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"example\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
           "name": "/purchase/rfq-lines",
           "item": [
             {
@@ -1584,6 +2026,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1608,6 +2054,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1646,6 +2096,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1671,6 +2125,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1705,6 +2163,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1744,6 +2206,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1768,6 +2234,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1806,6 +2276,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1831,6 +2305,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1865,6 +2343,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1893,6 +2375,40 @@
           ]
         },
         {
+          "name": "/purchase/rfqs/approved",
+          "item": [
+            {
+              "name": "GET /purchase/rfqs/approved",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/purchase/rfqs/approved",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "purchase",
+                    "rfqs",
+                    "approved"
+                  ],
+                  "variable": []
+                }
+              }
+            }
+          ]
+        },
+        {
           "name": "/purchase/stats",
           "item": [
             {
@@ -1904,6 +2420,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1933,6 +2453,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1957,6 +2481,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -1995,6 +2523,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2020,6 +2552,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2054,6 +2590,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2093,6 +2633,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2117,6 +2661,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2155,6 +2703,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2180,6 +2732,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2214,6 +2770,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2258,6 +2818,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2281,6 +2845,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2318,6 +2886,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2342,6 +2914,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2375,6 +2951,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2413,6 +2993,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2452,6 +3036,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2491,6 +3079,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2530,6 +3122,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2564,6 +3160,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2597,6 +3197,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2620,6 +3224,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2652,6 +3260,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2689,6 +3301,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {
@@ -2732,6 +3348,10 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
                   }
                 ],
                 "url": {

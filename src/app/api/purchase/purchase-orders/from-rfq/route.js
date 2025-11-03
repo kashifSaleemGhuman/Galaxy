@@ -144,7 +144,8 @@ export async function POST(req) {
               productId: item.productId || item.product?.id,
               quantityOrdered: item.quantity,
               quantityReceived: 0,
-              price: rfq.vendorPrice || 0 // Use vendor price from RFQ
+              // Store UNIT price per line (not the RFQ total)
+              price: item.unitPrice ? parseFloat(item.unitPrice) : 0
             }
           });
         })

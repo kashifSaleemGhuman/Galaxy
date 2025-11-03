@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { RFQ_STATUS, RFQ_STATUS_LABELS } from './constants';
@@ -10,6 +10,23 @@ import { notificationService } from '@/lib/notifications';
 import { Toast } from '@/components/ui/Toast';
 
 export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
+  // Initialize item prices from RFQ items
+  const initializeItemPrices = () => {
+    if (rfq.items && rfq.items.length > 0) {
+      return rfq.items.map(item => ({
+        productId: item.productId,
+        productName: item.product?.name || item.name || 'Product',
+        quantity: item.quantity,
+        unit: item.unit,
+        unitPrice: '',
+        lineTotal: 0,
+        expectedDeliveryDate: ''
+      }));
+    }
+    return [];
+  };
+
+  const [itemPrices, setItemPrices] = useState(initializeItemPrices());
   const [quoteDetails, setQuoteDetails] = useState({
     vendorPrice: '',
     vendorNotes: '',
@@ -20,6 +37,48 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
   const [successMessage, setSuccessMessage] = useState(null);
   const [creatingPO, setCreatingPO] = useState(false);
   const [toast, setToast] = useState(null);
+  const [poInfo, setPoInfo] = useState({ exists: false, poId: null });
+
+  const formatCurrency = (amount) => {
+    const n = Number(amount || 0);
+    return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  };
+
+  // Reinitialize item prices when RFQ changes
+  useEffect(() => {
+    if (rfq.items && rfq.items.length > 0) {
+      setItemPrices(rfq.items.map(item => ({
+        productId: item.productId,
+        productName: item.product?.name || item.name || 'Product',
+        quantity: item.quantity,
+        unit: item.unit,
+        unitPrice: '',
+        lineTotal: 0,
+        expectedDeliveryDate: ''
+      })));
+    }
+  }, [rfq.id, rfq.items]);
+
+  // Check if a Purchase Order already exists for this RFQ
+  useEffect(() => {
+    const fetchPoForRfq = async () => {
+      try {
+        const res = await fetch(`/api/purchase/purchase-orders?rfqId=${rfq.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          const first = (data?.data || [])[0];
+          if (first) {
+            setPoInfo({ exists: true, poId: first.po_id || first.poId || first.po_id });
+          } else {
+            setPoInfo({ exists: false, poId: null });
+          }
+        }
+      } catch (_) {
+        // ignore silently
+      }
+    };
+    if (rfq?.id) fetchPoForRfq();
+  }, [rfq?.id]);
 
   const clearMessages = () => {
     setError(null);
@@ -87,40 +146,97 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
     }
   };
 
+  // Calculate total price from item prices
+  const calculateTotalPrice = () => {
+    return itemPrices.reduce((sum, item) => {
+      return sum + (item.lineTotal || 0);
+    }, 0);
+  };
+
+  // Handle item price update
+  const handleItemPriceChange = (index, value) => {
+    const updatedItems = [...itemPrices];
+    const unitPrice = parseFloat(value) || 0;
+    updatedItems[index].unitPrice = value;
+    updatedItems[index].lineTotal = unitPrice * updatedItems[index].quantity;
+    setItemPrices(updatedItems);
+    
+    // Update total vendor price
+    const total = updatedItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+    setQuoteDetails(prev => ({ ...prev, vendorPrice: total.toFixed(2) }));
+  };
+
+  // Handle item delivery date update
+  const handleItemDeliveryDateChange = (index, value) => {
+    const updatedItems = [...itemPrices];
+    updatedItems[index].expectedDeliveryDate = value;
+    setItemPrices(updatedItems);
+    
+    // Update main expected delivery date to earliest date (for API compatibility)
+    const dates = updatedItems
+      .map(item => item.expectedDeliveryDate)
+      .filter(date => date)
+      .sort();
+    if (dates.length > 0) {
+      setQuoteDetails(prev => ({ ...prev, expectedDeliveryDate: dates[0] }));
+    }
+  };
+
   const handleQuoteReceived = async () => {
     setLoading(true);
     clearMessages();
 
-    // Validate required fields
-    if (!quoteDetails.vendorPrice) {
-      setError('Vendor price is required');
-      setLoading(false);
-      return;
-    }
-    if (!quoteDetails.expectedDeliveryDate) {
-      setError('Expected delivery date is required');
+    // Validate all items have prices
+    const hasMissingPrices = itemPrices.some(item => !item.unitPrice || parseFloat(item.unitPrice) <= 0);
+    if (hasMissingPrices) {
+      setError('Please provide unit prices for all products');
       setLoading(false);
       return;
     }
 
+    // Validate all items have delivery dates
+    const hasMissingDates = itemPrices.some(item => !item.expectedDeliveryDate);
+    if (hasMissingDates) {
+      setError('Please provide expected delivery dates for all products');
+      setLoading(false);
+      return;
+    }
+
+    // Calculate total from items
+    const totalPrice = calculateTotalPrice();
+    if (totalPrice <= 0) {
+      setError('Total price must be greater than zero');
+      setLoading(false);
+      return;
+    }
+
+    // Prepare items array with per-product pricing and delivery dates
+    const items = itemPrices.map(item => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      unit: item.unit,
+      unitPrice: parseFloat(item.unitPrice) || 0,
+      expectedDeliveryDate: item.expectedDeliveryDate
+    }));
+
     try {
       const data = await api.post(`/api/rfqs/${rfq.id}/quote`, {
-        vendorPrice: quoteDetails.vendorPrice,
-        expectedDeliveryDate: quoteDetails.expectedDeliveryDate,
+        items: items,
         vendorNotes: quoteDetails.vendorNotes,
       });
       setSuccessMessage('Vendor quote recorded successfully');
       await onUpdateRfq({ ...rfq, ...data.rfq });
       
       // Emit notification to alert managers only
+      const calculatedTotal = calculateTotalPrice();
       notificationService.emit('rfq_update', {
         rfqId: rfq.id,
         rfqNumber: rfq.rfqNumber,
         status: 'received',
         previousStatus: 'sent',
-        message: `New quote received for RFQ ${rfq.rfqNumber} - $${quoteDetails.vendorPrice}`,
-        vendorPrice: quoteDetails.vendorPrice,
-        expectedDeliveryDate: quoteDetails.expectedDeliveryDate,
+        message: `New quote received for RFQ ${rfq.rfqNumber} - $${calculatedTotal.toFixed(2)}`,
+        vendorPrice: calculatedTotal,
+        expectedDeliveryDate: itemPrices.map(i => i.expectedDeliveryDate).sort()[0],
         targetRole: 'manager' // Only show to managers
       });
     } catch (err) {
@@ -218,46 +334,87 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
         );
       case RFQ_STATUS.SENT:
         return (
-          <div className="space-y-4">
-            <h3 className="font-medium">Record Vendor Quote</h3>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Vendor Price *
-                </label>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-gray-500 sm:text-sm">$</span>
-                  </div>
-                  <Input
-                    type="number"
-                    placeholder="0.00"
-                    value={quoteDetails.vendorPrice}
-                    onChange={(e) => setQuoteDetails(prev => ({ ...prev, vendorPrice: e.target.value }))}
-                    className="pl-7"
-                    min="0"
-                    step="0.01"
-                    required
-                  />
+          <div className="space-y-6">
+            <h3 className="font-medium text-lg">Record Vendor Quote</h3>
+            
+            {/* Products with Pricing */}
+            {itemPrices.length > 0 && (
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-700">Product Pricing</h4>
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Unit Price *</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Line Total</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expected Delivery Date *</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {itemPrices.map((item, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {item.productName}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            {item.quantity}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            {item.unit}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="relative">
+                              <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                                <span className="text-gray-500 text-sm">$</span>
+                              </div>
+                              <Input
+                                type="number"
+                                placeholder="0.00"
+                                value={item.unitPrice}
+                                onChange={(e) => handleItemPriceChange(index, e.target.value)}
+                                className="pl-6 w-32"
+                                min="0"
+                                step="0.01"
+                                required
+                              />
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            ${(item.lineTotal || 0).toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <Input
+                              type="date"
+                              value={item.expectedDeliveryDate}
+                              onChange={(e) => handleItemDeliveryDateChange(index, e.target.value)}
+                              min={new Date().toISOString().split('T')[0]}
+                              className="w-40"
+                              required
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-gray-50">
+                      <tr>
+                        <td colSpan="4" className="px-4 py-3 text-right text-sm font-medium text-gray-700">
+                          Total Price:
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">
+                          ${calculateTotalPrice().toFixed(2)}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               </div>
-              
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Expected Delivery Date *
-                </label>
-                <Input
-                  type="date"
-                  value={quoteDetails.expectedDeliveryDate}
-                  onChange={(e) => setQuoteDetails(prev => ({ ...prev, expectedDeliveryDate: e.target.value }))}
-                  min={new Date().toISOString().split('T')[0]}
-                  required
-                />
-                <p className="text-sm text-gray-500">
-                  When will the vendor deliver the products?
-                </p>
-              </div>
-
+            )}
+            
+            <div className="space-y-4 border-t pt-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
                   Vendor Notes
@@ -273,12 +430,13 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
                   Include any special terms, conditions, or notes provided by the vendor
                 </p>
               </div>
+              
               <Button
                 onClick={handleQuoteReceived}
                 disabled={loading}
                 className="bg-yellow-600 hover:bg-yellow-700 text-white"
               >
-                Record Quote
+                {loading ? 'Recording...' : 'Record Quote'}
               </Button>
             </div>
           </div>
@@ -313,17 +471,25 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
         );
       case RFQ_STATUS.APPROVED:
         return (
-          <div className="space-x-4">
-            <Button
-              onClick={handleCreatePurchaseOrder}
-              disabled={creatingPO}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {creatingPO ? 'Creating PO...' : 'Create Purchase Order'}
-            </Button>
-            <div className="text-sm text-gray-500">
-              This RFQ has been approved and is ready for purchase order creation
-            </div>
+          <div className="">
+            {!poInfo.exists ? (
+              <>
+                <Button
+                  onClick={handleCreatePurchaseOrder}
+                  disabled={creatingPO}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {creatingPO ? 'Creating PO...' : 'Create Purchase Order'}
+                </Button>
+                <div className="text-sm text-gray-500 mt-3">
+                  This RFQ has been approved and is ready for purchase order creation
+                </div>
+              </>
+            ) : (
+              <div className="text-sm text-green-700">
+                Purchase Order created: <a className="underline" href={`/dashboard/purchase/purchase-orders/${poInfo.poId}`}>{poInfo.poId || 'View PO'}</a>
+              </div>
+            )}
           </div>
         );
       default:
@@ -419,17 +585,33 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Unit Price</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Line Total</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {(rfq.items || []).map((item, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.product?.name || item.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.quantity}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.unit}</td>
-                </tr>
-              ))}
+              {(rfq.items || []).map((item, index) => {
+                const unitPrice = Number(item.unitPrice || 0);
+                const lineTotal = unitPrice * Number(item.quantity || 0);
+                return (
+                  <tr key={index}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.product?.name || item.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.quantity}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.unit}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{unitPrice ? formatCurrency(unitPrice) : '—'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{unitPrice ? formatCurrency(lineTotal) : '—'}</td>
+                  </tr>
+                );
+              })}
             </tbody>
+            <tfoot className="bg-gray-50">
+              <tr>
+                <td colSpan="4" className="px-6 py-3 text-right text-sm font-medium text-gray-700">Total</td>
+                <td className="px-6 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">
+                  {formatCurrency((rfq.items || []).reduce((sum, i) => sum + (Number(i.unitPrice || 0) * Number(i.quantity || 0)), 0))}
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
 

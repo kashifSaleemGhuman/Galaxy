@@ -66,7 +66,8 @@ function buildItem(name, urlPath, method) {
     request: {
       method,
       header: [
-        { key: 'Content-Type', value: 'application/json', disabled: method === 'GET' || method === 'HEAD' }
+        { key: 'Content-Type', value: 'application/json', disabled: method === 'GET' || method === 'HEAD' },
+        { key: 'Accept', value: 'application/json' }
       ],
       url: {
         raw: `{{baseUrl}}/${toPostmanPath(urlPath)}`,
@@ -83,6 +84,40 @@ function buildItem(name, urlPath, method) {
       raw: '{\n  \"example\": true\n}',
       options: { raw: { language: 'json' } },
     };
+  }
+
+  return item;
+}
+
+function applySpecialCases(item, urlPath, method) {
+  // NextAuth credentials sign-in should be a same-origin form POST with redirect=false
+  if (urlPath === 'auth/callback/credentials' && method === 'POST') {
+    item.request.url.raw = `{{baseUrl}}/auth/callback/credentials?redirect=false`;
+    // Override headers for XHR-like behavior
+    item.request.header = [
+      { key: 'Content-Type', value: 'application/x-www-form-urlencoded' },
+      { key: 'Accept', value: 'application/json' },
+      { key: 'Origin', value: '{{origin}}' },
+      { key: 'Referer', value: '{{origin}}/' },
+      { key: 'X-Requested-With', value: 'XMLHttpRequest' }
+    ];
+    item.request.body = {
+      mode: 'urlencoded',
+      urlencoded: [
+        { key: 'email', value: 'user@galaxy.com' },
+        { key: 'password', value: 'user..AA22' },
+        { key: 'callbackUrl', value: '{{callbackUrl}}' },
+        { key: 'csrfToken', value: '{{csrfToken}}' }
+      ]
+    };
+    item.name = 'POST /auth/callback/credentials (sign-in)';
+  }
+
+  // Prefer JSON on these endpoints
+  if ((urlPath === 'auth/csrf' || urlPath === 'auth/session') && method === 'GET') {
+    item.request.header = [
+      { key: 'Accept', value: 'application/json' }
+    ];
   }
 
   return item;
@@ -110,8 +145,22 @@ function main() {
     const folder = path.dirname(path.relative(API_ROOT, file)).split(path.sep).slice(0, -1).join('/');
     const displayName = urlPath || '/';
 
-    const routeItems = methods.map(m => buildItem(displayName, urlPath, m));
+    const routeItems = methods.map(m => applySpecialCases(buildItem(displayName, urlPath, m), urlPath, m));
     itemsByFolder.set(urlPath, routeItems);
+
+    // If this is NextAuth catch-all route, add implicit NextAuth endpoints
+    if (urlPath === 'auth/[...nextauth]') {
+      const nextAuthExtras = [
+        buildItem('NextAuth Credentials Callback', 'auth/callback/credentials', 'POST'),
+        buildItem('NextAuth Session', 'auth/session', 'GET'),
+        buildItem('NextAuth CSRF', 'auth/csrf', 'GET'),
+        buildItem('NextAuth Signout', 'auth/signout', 'POST'),
+      ];
+      itemsByFolder.set('auth/callback/credentials', [nextAuthExtras[0]]);
+      itemsByFolder.set('auth/session', [nextAuthExtras[1]]);
+      itemsByFolder.set('auth/csrf', [nextAuthExtras[2]]);
+      itemsByFolder.set('auth/signout', [nextAuthExtras[3]]);
+    }
   }
 
   // Build a flat list under groups based on first segment
@@ -121,7 +170,10 @@ function main() {
       schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
     },
     variable: [
-      { key: 'baseUrl', value: 'http://localhost:3000/api' }
+      { key: 'baseUrl', value: 'http://localhost:3000/api' },
+      { key: 'origin', value: 'http://localhost:3000' },
+      { key: 'callbackUrl', value: '{{origin}}/' },
+      { key: 'csrfToken', value: '' }
     ],
     item: [],
   };
