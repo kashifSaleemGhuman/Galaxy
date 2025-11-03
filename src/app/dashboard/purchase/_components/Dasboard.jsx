@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import RfqForm from './rfq/RfqForm';
 import RfqList from './rfq/RfqList';
@@ -14,11 +14,11 @@ const StatsCard = ({ title, value, onClick, isActive }) => (
   <div
     onClick={onClick}
     className={`${
-      isActive ? 'bg-blue-600' : 'bg-black hover:bg-gray-800'
-    } p-4 rounded-lg text-center cursor-pointer transition-colors duration-200`}
+      isActive ? 'ring-2 ring-blue-300' : ''
+    } bg-white border border-gray-200 hover:shadow-md p-4 rounded-lg text-center cursor-pointer transition-colors duration-200`}
   >
-    <div className="text-3xl font-bold text-white">{value}</div>
-    <div className="text-sm text-gray-400">{title}</div>
+    <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-black bg-clip-text text-transparent">{value}</div>
+    <div className="text-sm bg-gradient-to-r from-blue-600 to-black bg-clip-text text-transparent">{title}</div>
   </div>
 );
 
@@ -40,7 +40,7 @@ const EmptyState = ({ onCreateNew }) => (
       prices for different products you consider buying. Once an agreement has been found
       with the supplier, they will be confirmed and turned into purchase orders.
     </p>
-    <Button onClick={onCreateNew} className="bg-blue-600 hover:bg-blue-700">
+    <Button onClick={onCreateNew} className="bg-gradient-to-r from-green-600 to-black hover:from-green-700 hover:to-gray-900">
       Create New RFQ
     </Button>
   </div>
@@ -48,6 +48,7 @@ const EmptyState = ({ onCreateNew }) => (
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
   const [rfqs, setRfqs] = useState([]);
   const [previousRfqs, setPreviousRfqs] = useState([]);
   const [lastUpdated, setLastUpdated] = useState(new Date());
@@ -147,6 +148,16 @@ export default function Dashboard() {
   }, [fetchRfqs, fetchStats]);
 
   // Clean up old notification tracking to prevent memory leaks
+  useEffect(() => {
+    // If redirected with newRfq flag, open RFQ form and clean URL
+    const shouldOpenForm = searchParams?.get('newRfq') === '1';
+    if (shouldOpenForm) {
+      setShowForm(true);
+      // replace state without the query param
+      router.replace('/dashboard/purchase');
+    }
+  }, [searchParams, router]);
+
   useEffect(() => {
     const cleanup = setInterval(() => {
       setSentNotifications(new Set());

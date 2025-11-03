@@ -24,12 +24,12 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className="bg-white shadow">
+    <nav className="bg-gradient-to-r from-blue-600 to-black shadow">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/dashboard" className="text-xl font-bold text-gray-800">
+              <Link href="/dashboard" className="text-xl font-bold text-white">
                 Galaxy ERP
               </Link>
             </div>
@@ -42,8 +42,8 @@ export default function Navigation() {
                     href={item.href}
                     className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                       isActive
-                        ? 'border-blue-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                        ? 'border-white text-white'
+                        : 'border-transparent text-gray-200 hover:border-gray-300 hover:text-white'
                     }`}
                   >
                     {item.name}
@@ -55,11 +55,11 @@ export default function Navigation() {
           <div className="hidden sm:ml-6 sm:flex sm:items-center">
             <div className="ml-3 relative">
               <div className="flex items-center">
-                <span className="text-sm text-gray-500 mr-2">
+                <span className="text-sm text-gray-200 mr-2">
                   {session?.user?.email}
                 </span>
                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                  isAdmin ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                  isAdmin ? 'bg-purple-600 text-white' : 'bg-white text-blue-900'
                 }`}>
                   {session?.user?.role}
                 </span>

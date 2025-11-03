@@ -327,7 +327,7 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
           <Button
             onClick={handleSendToVendor}
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-gradient-to-r from-blue-600 to-black text-white hover:from-blue-700 hover:to-gray-900"
           >
             Send to Vendor
           </Button>
@@ -434,7 +434,7 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
               <Button
                 onClick={handleQuoteReceived}
                 disabled={loading}
-                className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                className="bg-gradient-to-r from-yellow-600 to-orange-900 text-white hover:from-yellow-700 hover:to-orange-800"
               >
                 {loading ? 'Recording...' : 'Record Quote'}
               </Button>
@@ -455,14 +455,14 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
                 <Button
                   onClick={handleAcceptQuote}
                   disabled={loading}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-gradient-to-r from-green-600 to-green-900 text-white hover:from-green-700 hover:to-black"
                 >
                   Accept Quote
                 </Button>
                 <Button
                   onClick={handleRejectQuote}
                   disabled={loading}
-                  className="bg-red-600 hover:bg-red-700 text-white"
+                  className="bg-gradient-to-r from-red-600 to-red-900 text-white hover:from-red-700 hover:to-black"
                 >
                   Reject Quote
                 </Button>

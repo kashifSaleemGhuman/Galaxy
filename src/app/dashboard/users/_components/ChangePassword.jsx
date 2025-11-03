@@ -157,7 +157,7 @@ export default function ChangePassword({ isFirstLogin }) {
           <Button
             type="submit"
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-gradient-to-r from-blue-600 to-black text-white hover:from-blue-700 hover:to-gray-900"
           >
             {loading ? 'Changing Password...' : 'Change Password'}
           </Button>
