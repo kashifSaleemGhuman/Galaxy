@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/db'
+import prisma from '@/lib/db'
 import { crmCache, rateLimit } from '@/lib/redis'
 
 // GET /api/inventory/warehouses - Get all warehouses
@@ -37,30 +37,21 @@ export async function GET(request) {
     const skip = (page - 1) * limit
     
     // Build cache key based on filters
-    const cacheKey = {
-      tenantId: session.user.tenantId,
-      page,
-      limit,
-      search,
-      status
-    }
+  const cacheKey = { page, limit, search, status }
     
     // Try to get cached data first
-    const cachedData = await crmCache.getCustomerList(session.user.tenantId, cacheKey)
+  const cachedData = await crmCache.getCustomerList('inventory-warehouses', cacheKey)
     if (cachedData) {
       console.log('📦 Serving warehouses from cache')
       return NextResponse.json(cachedData)
     }
     
     // Build where clause
-    const where = {
-      tenantId: session.user.tenantId,
+  const where = {
       ...(search && {
         OR: [
           { name: { contains: search, mode: 'insensitive' } },
-          { code: { contains: search, mode: 'insensitive' } },
-          { city: { contains: search, mode: 'insensitive' } },
-          { state: { contains: search, mode: 'insensitive' } }
+          { code: { contains: search, mode: 'insensitive' } }
         ]
       }),
       ...(status && status !== 'all' && { isActive: status === 'active' })
@@ -74,27 +65,9 @@ export async function GET(request) {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          manager: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          },
-          locations: {
-            select: {
-              id: true,
-              name: true,
-              code: true,
-              type: true,
-              isActive: true
-            }
-          },
           _count: {
             select: {
-              inventoryItems: true,
-              locations: true
+              inventoryItems: true
             }
           }
         }
@@ -117,7 +90,7 @@ export async function GET(request) {
     }
     
     // Cache the response for 30 minutes
-    await crmCache.setCustomerList(session.user.tenantId, cacheKey, responseData, 1800)
+  await crmCache.setCustomerList('inventory-warehouses', cacheKey, responseData, 1800)
     console.log('💾 Cached warehouses data')
     
     return NextResponse.json(responseData)
@@ -158,19 +131,7 @@ export async function POST(request) {
     const body = await request.json()
     console.log('🔍 Debug: Request body:', body)
     
-    const {
-      name,
-      code,
-      address,
-      city,
-      state,
-      country,
-      postalCode,
-      phone,
-      email,
-      managerId,
-      isActive = true
-    } = body
+    const { name, code, address, isActive = true } = body 
     
     // Validate required fields
     if (!name || !code) {
@@ -181,9 +142,7 @@ export async function POST(request) {
     }
     
     // Check for duplicate code
-    const existingCode = await prisma.warehouse.findFirst({
-      where: { code, tenantId: session.user.tenantId }
-    })
+    const existingCode = await prisma.warehouse.findFirst({ where: { code } })
     if (existingCode) {
       return NextResponse.json(
         { error: 'Warehouse with this code already exists' },
@@ -191,44 +150,17 @@ export async function POST(request) {
       )
     }
     
-    console.log('🔍 Debug: About to create warehouse with data:', {
-      tenantId: session.user.tenantId,
-      name,
-      code
-    })
+    console.log('🔍 Debug: About to create warehouse with data:', { name, code })
     
     // Create warehouse
     const warehouse = await prisma.warehouse.create({
-      data: {
-        tenantId: session.user.tenantId,
-        name,
-        code,
-        address,
-        city,
-        state,
-        country,
-        postalCode,
-        phone,
-        email,
-        managerId: managerId || null,
-        isActive
-      },
-      include: {
-        manager: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        }
-      }
+      data: { name, code, address, isActive }
     })
     
     console.log('✅ Warehouse created successfully:', warehouse.id)
     
     // Invalidate warehouse cache for this tenant
-    await crmCache.invalidateCustomer(session.user.tenantId)
+    await crmCache.invalidateCustomer('inventory-warehouses')
     console.log('🗑️ Invalidated warehouse cache after creation')
     
     return NextResponse.json({ 

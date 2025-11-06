@@ -1,20 +1,15 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
 
 export async function POST(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     
-    if (!session?.user) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
-    const { notes } = await request.json();
-
-    // Check if user has permission to reject shipments
     const currentUser = await prisma.user.findUnique({
       where: { email: session.user.email }
     });
@@ -23,19 +18,21 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check permissions - warehouse operators and inventory managers can reject
-    const canReject = ['INVENTORY_USER', 'INVENTORY_MANAGER', 'SUPER_ADMIN', 'ADMIN'].includes(currentUser.role);
+    // Only warehouse operators and super admins can reject shipments
+    const canRejectShipments = ['INVENTORY_USER', 'SUPER_ADMIN'].includes(currentUser.role);
     
-    if (!canReject) {
+    if (!canRejectShipments) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
+
+    const { id } = params;
+    const { notes } = await request.json();
 
     // Get the incoming shipment
     const shipment = await prisma.incomingShipment.findUnique({
       where: { id },
       include: {
-        purchaseOrder: true,
-        lines: { include: { product: true } }
+        purchaseOrder: true
       }
     });
 
@@ -69,17 +66,19 @@ export async function POST(request, { params }) {
 
     return NextResponse.json({
       success: true,
-      message: 'Incoming shipment rejected successfully',
+      message: 'Shipment rejected successfully',
       data: {
         shipment: updatedShipment
       }
     });
 
   } catch (error) {
-    console.error('Error rejecting incoming shipment:', error);
+    console.error('Error rejecting shipment:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
+
+

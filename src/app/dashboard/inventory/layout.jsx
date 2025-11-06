@@ -1,6 +1,7 @@
 "use client"
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
 const tabs = [
   { href: '/dashboard/inventory', label: 'Overview' },
@@ -16,6 +17,15 @@ const tabs = [
 
 export default function InventoryLayout({ children }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const { data: session, status } = useSession()
+  const role = session?.user?.role
+
+  // Role guard: only SUPER_ADMIN, ADMIN, INVENTORY_MANAGER can access inventory module
+  if (status !== 'loading' && role && !['SUPER_ADMIN','ADMIN','INVENTORY_MANAGER'].includes(role)) {
+    router.push('/dashboard/warehouse')
+    return null
+  }
   const isHome = pathname === '/dashboard/inventory'
   
   return (

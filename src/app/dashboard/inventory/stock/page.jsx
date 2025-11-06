@@ -26,141 +26,39 @@ export default function StockPage() {
   const [selectedItems, setSelectedItems] = useState([])
   const [warehouses, setWarehouses] = useState([])
 
-  // Mock data for demonstration
+  // Fetch real inventory data
   useEffect(() => {
-    const mockStockItems = [
-      {
-        id: '1',
-        product: {
-          id: '1',
-          name: 'Laptop Pro 15',
-          sku: 'LP-001',
-          barcode: '1234567890123',
-          category: { name: 'Electronics' }
-        },
-        warehouse: {
-          id: '1',
-          name: 'Main Warehouse',
-          code: 'WH-001'
-        },
-        location: {
-          id: '1',
-          name: 'A-01-01',
-          code: 'A-01-01'
-        },
-        quantityOnHand: 25,
-        quantityReserved: 5,
-        quantityAvailable: 20,
-        reorderPoint: 10,
-        maxStock: 100,
-        minStock: 5,
-        averageCost: 1200.00,
-        lastCost: 1250.00,
-        lastMovementDate: '2024-01-15T10:30:00Z',
-        status: 'in_stock'
-      },
-      {
-        id: '2',
-        product: {
-          id: '2',
-          name: 'Wireless Mouse',
-          sku: 'WM-001',
-          barcode: '1234567890124',
-          category: { name: 'Electronics' }
-        },
-        warehouse: {
-          id: '1',
-          name: 'Main Warehouse',
-          code: 'WH-001'
-        },
-        location: {
-          id: '2',
-          name: 'A-01-02',
-          code: 'A-01-02'
-        },
-        quantityOnHand: 3,
-        quantityReserved: 0,
-        quantityAvailable: 3,
-        reorderPoint: 10,
-        maxStock: 50,
-        minStock: 5,
-        averageCost: 25.00,
-        lastCost: 28.00,
-        lastMovementDate: '2024-01-14T14:20:00Z',
-        status: 'low_stock'
-      },
-      {
-        id: '3',
-        product: {
-          id: '3',
-          name: 'Office Chair',
-          sku: 'OC-001',
-          barcode: '1234567890125',
-          category: { name: 'Furniture' }
-        },
-        warehouse: {
-          id: '2',
-          name: 'Secondary Warehouse',
-          code: 'WH-002'
-        },
-        location: {
-          id: '3',
-          name: 'B-02-01',
-          code: 'B-02-01'
-        },
-        quantityOnHand: 0,
-        quantityReserved: 0,
-        quantityAvailable: 0,
-        reorderPoint: 5,
-        maxStock: 20,
-        minStock: 2,
-        averageCost: 150.00,
-        lastCost: 165.00,
-        lastMovementDate: '2024-01-10T09:15:00Z',
-        status: 'out_of_stock'
-      },
-      {
-        id: '4',
-        product: {
-          id: '4',
-          name: 'Monitor 24"',
-          sku: 'MN-001',
-          barcode: '1234567890126',
-          category: { name: 'Electronics' }
-        },
-        warehouse: {
-          id: '1',
-          name: 'Main Warehouse',
-          code: 'WH-001'
-        },
-        location: {
-          id: '4',
-          name: 'A-02-01',
-          code: 'A-02-01'
-        },
-        quantityOnHand: 15,
-        quantityReserved: 2,
-        quantityAvailable: 13,
-        reorderPoint: 8,
-        maxStock: 50,
-        minStock: 3,
-        averageCost: 300.00,
-        lastCost: 320.00,
-        lastMovementDate: '2024-01-16T11:45:00Z',
-        status: 'in_stock'
-      }
-    ]
-
-    const mockWarehouses = [
-      { id: '1', name: 'Main Warehouse', code: 'WH-001' },
-      { id: '2', name: 'Secondary Warehouse', code: 'WH-002' },
-      { id: '3', name: 'Remote Warehouse', code: 'WH-003' }
-    ]
-
-    setStockItems(mockStockItems)
-    setWarehouses(mockWarehouses)
-    setLoading(false)
+    fetchInventoryData()
   }, [])
+
+  const fetchInventoryData = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/inventory/items')
+      
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success) {
+          setStockItems(result.data)
+          setWarehouses(result.warehouses)
+        } else {
+          console.error('Error fetching inventory:', result.error)
+          setStockItems([])
+          setWarehouses([])
+        }
+      } else {
+        console.error('Failed to fetch inventory data')
+        setStockItems([])
+        setWarehouses([])
+      }
+    } catch (error) {
+      console.error('Error fetching inventory data:', error)
+      setStockItems([])
+      setWarehouses([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getStockStatus = (item) => {
     if (item.quantityOnHand <= 0) {

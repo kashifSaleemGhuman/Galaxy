@@ -53,12 +53,18 @@ export default function CreatePurchaseOrderPage() {
         productsResponse.json()
       ]);
 
-      if (suppliersResult.success) {
-        setSuppliers(suppliersResult.data);
+      // Handle suppliers response (returns array directly)
+      if (Array.isArray(suppliersResult)) {
+        setSuppliers(suppliersResult);
+      } else if (suppliersResult.error) {
+        console.error('Suppliers API error:', suppliersResult.error);
       }
 
-      if (productsResult.success) {
-        setProducts(productsResult.data);
+      // Handle products response (returns { products: [...] })
+      if (productsResult.products && Array.isArray(productsResult.products)) {
+        setProducts(productsResult.products);
+      } else if (productsResult.error) {
+        console.error('Products API error:', productsResult.error);
       }
     } catch (err) {
       setError('Failed to load initial data');
@@ -254,7 +260,7 @@ export default function CreatePurchaseOrderPage() {
                     >
                       <option value="">Select a supplier</option>
                       {suppliers.map((supplier) => (
-                        <option key={supplier.supplier_id} value={supplier.supplier_id}>
+                        <option key={supplier.supplierId} value={supplier.supplierId}>
                           {supplier.name}
                         </option>
                       ))}

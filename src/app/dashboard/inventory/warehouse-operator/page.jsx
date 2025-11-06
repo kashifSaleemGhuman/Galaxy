@@ -28,11 +28,17 @@ export default function WarehouseOperator() {
     try {
       const response = await fetch('/api/inventory/incoming-shipments')
       if (response.ok) {
-        const data = await response.json()
-        setReceipts(data)
+        const result = await response.json()
+        if (result.success && Array.isArray(result.data)) {
+          setReceipts(result.data)
+        } else {
+          console.error('Invalid data format:', result)
+          setReceipts([])
+        }
       }
     } catch (error) {
       console.error('Error fetching receipts:', error)
+      setReceipts([])
     } finally {
       setLoading(false)
     }
@@ -56,12 +62,12 @@ export default function WarehouseOperator() {
     }
   }
 
-  const filteredReceipts = receipts.filter(receipt => {
-    const matchesSearch = receipt.purchaseOrder?.poId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        receipt.purchaseOrder?.supplier?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredReceipts = Array.isArray(receipts) ? receipts.filter(receipt => {
+    const matchesSearch = receipt.poId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        receipt.supplier?.name?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || receipt.status === statusFilter
     return matchesSearch && matchesStatus
-  })
+  }) : []
 
   const handleViewDetails = (receipt) => {
     setSelectedReceipt(receipt)
@@ -70,12 +76,26 @@ export default function WarehouseOperator() {
 
   const handleConfirmReceipt = async (receiptId) => {
     try {
-      // Here you would implement the confirmation logic
-      console.log('Confirming receipt:', receiptId)
-      // Update the receipt status to confirmed
-      // This would typically involve an API call
-      alert('Receipt confirmed successfully! Stock has been updated.')
-      fetchReceipts() // Refresh the list
+      console.log('Processing incoming shipment:', receiptId)
+      
+      const response = await fetch(`/api/inventory/incoming-shipments/${receiptId}/process`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notes: 'Goods received and processed by warehouse operator'
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        alert('Receipt confirmed successfully! Stock has been updated.')
+        fetchReceipts() // Refresh the list
+      } else {
+        alert(`Error: ${result.error || 'Failed to process receipt'}`)
+      }
     } catch (error) {
       console.error('Error confirming receipt:', error)
       alert('Error confirming receipt')
@@ -84,12 +104,26 @@ export default function WarehouseOperator() {
 
   const handleRejectReceipt = async (receiptId) => {
     try {
-      // Here you would implement the rejection logic
       console.log('Rejecting receipt:', receiptId)
-      // Update the receipt status to rejected
-      // This would typically involve an API call
-      alert('Receipt rejected')
-      fetchReceipts() // Refresh the list
+      
+      const response = await fetch(`/api/inventory/incoming-shipments/${receiptId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notes: 'Goods rejected by warehouse operator'
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        alert('Receipt rejected successfully!')
+        fetchReceipts() // Refresh the list
+      } else {
+        alert(`Error: ${result.error || 'Failed to reject receipt'}`)
+      }
     } catch (error) {
       console.error('Error rejecting receipt:', error)
       alert('Error rejecting receipt')
@@ -145,8 +179,8 @@ export default function WarehouseOperator() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Confirmed Today</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {receipts.filter(r => r.status === 'confirmed' && 
-                  new Date(r.dateReceived).toDateString() === new Date().toDateString()).length}
+            {receipts.filter(r => r.status === 'confirmed' && 
+              r.receivedAt && new Date(r.receivedAt).toDateString() === new Date().toDateString()).length}
               </p>
             </div>
           </div>
@@ -217,7 +251,7 @@ export default function WarehouseOperator() {
         ) : (
           <div className="divide-y divide-gray-200">
             {filteredReceipts.map((receipt) => (
-              <div key={receipt.receiptId} className="px-6 py-4 hover:bg-gray-50">
+              <div key={receipt.id} className="px-6 py-4 hover:bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <div className="flex-shrink-0">
@@ -228,7 +262,7 @@ export default function WarehouseOperator() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2">
                         <p className="text-sm font-medium text-gray-900">
-                          {receipt.receiptId}
+                          {receipt.shipmentNumber}
                         </p>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(receipt.status)}`}>
                           {getStatusIcon(receipt.status)}
@@ -236,9 +270,9 @@ export default function WarehouseOperator() {
                         </span>
                       </div>
                       <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
-                        <span>PO: {receipt.purchaseOrder?.poId}</span>
-                        <span>Supplier: {receipt.purchaseOrder?.supplier?.name}</span>
-                        <span>Date: {new Date(receipt.dateReceived).toLocaleDateString()}</span>
+                        <span>PO: {receipt.poId}</span>
+                        <span>Supplier: {receipt.supplier?.name}</span>
+                        <span>Date: {receipt.receivedAt ? new Date(receipt.receivedAt).toLocaleDateString() : 'Not received'}</span>
                       </div>
                     </div>
                   </div>
@@ -247,14 +281,14 @@ export default function WarehouseOperator() {
                     {receipt.status === 'pending' && (
                       <>
                         <button
-                          onClick={() => handleConfirmReceipt(receipt.receiptId)}
+                          onClick={() => handleConfirmReceipt(receipt.id)}
                           className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-green-700 bg-green-100 hover:bg-green-200"
                         >
                           <CheckCircle className="w-3 h-3 mr-1" />
                           Confirm
                         </button>
                         <button
-                          onClick={() => handleRejectReceipt(receipt.receiptId)}
+                          onClick={() => handleRejectReceipt(receipt.id)}
                           className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200"
                         >
                           <AlertTriangle className="w-3 h-3 mr-1" />
@@ -300,8 +334,8 @@ export default function WarehouseOperator() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Receipt ID</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedReceipt.receiptId}</p>
+                    <label className="block text-sm font-medium text-gray-700">Shipment Number</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedReceipt.shipmentNumber}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Status</label>
@@ -314,34 +348,35 @@ export default function WarehouseOperator() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Purchase Order</label>
-                  <p className="mt-1 text-sm text-gray-900">{selectedReceipt.purchaseOrder?.poId}</p>
+                  <p className="mt-1 text-sm text-gray-900">{selectedReceipt.poId}</p>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Supplier</label>
-                  <p className="mt-1 text-sm text-gray-900">{selectedReceipt.purchaseOrder?.supplier?.name}</p>
+                  <p className="mt-1 text-sm text-gray-900">{selectedReceipt.supplier?.name}</p>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Date Received</label>
                   <p className="mt-1 text-sm text-gray-900">
-                    {new Date(selectedReceipt.dateReceived).toLocaleDateString()}
+                    {selectedReceipt.receivedAt ? new Date(selectedReceipt.receivedAt).toLocaleDateString() : 'Not received yet'}
                   </p>
                 </div>
                 
-                {selectedReceipt.purchaseOrder?.lines && selectedReceipt.purchaseOrder.lines.length > 0 && (
+                {selectedReceipt.lines && selectedReceipt.lines.length > 0 && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Items</label>
                     <div className="space-y-2">
-                      {selectedReceipt.purchaseOrder.lines.map((line, index) => (
+                      {selectedReceipt.lines.map((line, index) => (
                         <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
                           <div>
                             <p className="text-sm font-medium text-gray-900">{line.product?.name}</p>
-                            <p className="text-xs text-gray-500">Qty: {line.quantityOrdered}</p>
+                            <p className="text-xs text-gray-500">Expected: {line.quantityExpected}</p>
+                            <p className="text-xs text-gray-500">Received: {line.quantityReceived}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm text-gray-900">${line.price}</p>
-                            <p className="text-xs text-gray-500">Total: ${(line.price * line.quantityOrdered).toFixed(2)}</p>
+                            <p className="text-sm text-gray-900">${line.unitPrice}</p>
+                            <p className="text-xs text-gray-500">Total: ${(parseFloat(line.unitPrice) * line.quantityExpected).toFixed(2)}</p>
                           </div>
                         </div>
                       ))}
@@ -361,7 +396,7 @@ export default function WarehouseOperator() {
                   <>
                     <button
                       onClick={() => {
-                        handleConfirmReceipt(selectedReceipt.receiptId)
+                        handleConfirmReceipt(selectedReceipt.id)
                         setShowModal(false)
                       }}
                       className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700"
@@ -370,7 +405,7 @@ export default function WarehouseOperator() {
                     </button>
                     <button
                       onClick={() => {
-                        handleRejectReceipt(selectedReceipt.receiptId)
+                        handleRejectReceipt(selectedReceipt.id)
                         setShowModal(false)
                       }}
                       className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"

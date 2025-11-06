@@ -62,28 +62,36 @@ export default function DashboardLayout({ children }) {
         name: 'Users',
         href: '/dashboard/users',
         icon: UsersIcon,
-        current: pathname.startsWith('/dashboard/users')
+        current: pathname.startsWith('/dashboard/users'),
+        children: [
+          { name: 'Overview', href: '/dashboard/users', current: pathname === '/dashboard/users' },
+          { name: 'Roles', href: '/dashboard/users/roles', current: pathname === '/dashboard/users/roles' }
+        ]
       })
     }
 
-    // Super Admin gets access to all modules
+    // Purchase module - available to all purchase-related roles
+    if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'PURCHASE_MANAGER' || userRole === 'PURCHASE_USER') {
+      baseNavigation.push({
+        name: 'Purchase', 
+        href: '/dashboard/purchase', 
+        icon: ShoppingBagIcon,
+        current: pathname.startsWith('/dashboard/purchase'),
+        children: [
+          { name: 'Overview', href: '/dashboard/purchase', current: pathname === '/dashboard/purchase' },
+          { name: 'Suppliers', href: '/dashboard/purchase/suppliers', current: pathname === '/dashboard/purchase/suppliers' },
+          { name: 'Products', href: '/dashboard/purchase/products', current: pathname === '/dashboard/purchase/products' },
+          { name: 'RFQs', href: '/dashboard/purchase/rfqs', current: pathname.startsWith('/dashboard/purchase/rfqs') },
+          { name: 'Purchase Orders', href: '/dashboard/purchase/purchase-orders', current: pathname === '/dashboard/purchase/purchase-orders' },
+          { name: 'Receipts', href: '/dashboard/purchase/receipts', current: pathname === '/dashboard/purchase/receipts' },
+          { name: 'Vendor Bills', href: '/dashboard/purchase/bills', current: pathname === '/dashboard/purchase/bills' }
+        ]
+      })
+    }
+
+    // Super Admin and Admin get access to all other modules
     if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') {
       baseNavigation.push(
-        { 
-          name: 'Purchase', 
-          href: '/dashboard/purchase', 
-          icon: ShoppingBagIcon,
-          current: pathname.startsWith('/dashboard/purchase'),
-          children: [
-            { name: 'Overview', href: '/dashboard/purchase', current: pathname === '/dashboard/purchase' },
-            { name: 'Suppliers', href: '/dashboard/purchase/suppliers', current: pathname === '/dashboard/purchase/suppliers' },
-            { name: 'Products', href: '/dashboard/purchase/products', current: pathname === '/dashboard/purchase/products' },
-            { name: 'RFQs', href: '/dashboard/purchase/rfqs', current: pathname.startsWith('/dashboard/purchase/rfqs') },
-            { name: 'Purchase Orders', href: '/dashboard/purchase/purchase-orders', current: pathname === '/dashboard/purchase/purchase-orders' },
-            { name: 'Receipts', href: '/dashboard/purchase/receipts', current: pathname === '/dashboard/purchase/receipts' },
-            { name: 'Vendor Bills', href: '/dashboard/purchase/bills', current: pathname === '/dashboard/purchase/bills' }
-          ]
-        },
         { 
           name: 'CRM', 
           href: '/dashboard/crm', 
@@ -145,8 +153,8 @@ export default function DashboardLayout({ children }) {
       )
     }
 
-    // All users with inventory permissions get inventory access
-    if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'PURCHASE_MANAGER') {
+    // Inventory module - for inventory managers and admins only
+    if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'INVENTORY_MANAGER') {
       baseNavigation.push({
         name: 'Inventory', 
         href: '/dashboard/inventory', 
@@ -157,8 +165,23 @@ export default function DashboardLayout({ children }) {
           { name: 'Products', href: '/dashboard/inventory/products', current: pathname === '/dashboard/inventory/products' },
           { name: 'Stock', href: '/dashboard/inventory/stock', current: pathname === '/dashboard/inventory/stock' },
           { name: 'Movements', href: '/dashboard/inventory/movements', current: pathname === '/dashboard/inventory/movements' },
-          { name: 'Goods Receipts', href: '/dashboard/inventory/incoming-shipments', current: pathname === '/dashboard/inventory/incoming-shipments' },
-          { name: 'Warehouse Operations', href: '/dashboard/inventory/warehouse-operator', current: pathname === '/dashboard/inventory/warehouse-operator' }
+          { name: 'Goods Receipts', href: '/dashboard/inventory/incoming-shipments', current: pathname === '/dashboard/inventory/incoming-shipments' }
+        ]
+      })
+    }
+
+    // Warehouse module - for warehouse operators and super admins only
+    if (userRole === 'SUPER_ADMIN' || userRole === 'INVENTORY_USER') {
+      baseNavigation.push({
+        name: 'Warehouse', 
+        href: '/dashboard/warehouse', 
+        icon: BuildingOfficeIcon,
+        current: pathname.startsWith('/dashboard/warehouse'),
+        children: [
+          { name: 'Dashboard', href: '/dashboard/warehouse', current: pathname === '/dashboard/warehouse' },
+          { name: 'Incoming Shipments', href: '/dashboard/warehouse/shipments', current: pathname === '/dashboard/warehouse/shipments' },
+          { name: 'Process Goods', href: '/dashboard/warehouse/process', current: pathname === '/dashboard/warehouse/process' },
+          { name: 'Completed Tasks', href: '/dashboard/warehouse/completed', current: pathname === '/dashboard/warehouse/completed' }
         ]
       })
     }

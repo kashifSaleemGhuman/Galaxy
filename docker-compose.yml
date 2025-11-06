@@ -15,7 +15,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
-      timeout: 5s
+      timeout: 5su can now log in to the system with any of the provided credentials! 🚀
       retries: 5
 
   # Redis Cache

@@ -20,131 +20,21 @@ import {
 import Link from 'next/link'
 
 export default function InventoryOverview() {
-  const [stats, setStats] = useState({})
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    totalWarehouses: 0,
+    totalLocations: 0,
+    totalValue: 0
+  })
   const [recentMovements, setRecentMovements] = useState([])
   const [lowStockItems, setLowStockItems] = useState([])
   const [pendingReceipts, setPendingReceipts] = useState([])
   const [loading, setLoading] = useState(true)
-  const [creatingMockPO, setCreatingMockPO] = useState(false)
   const [suppliers, setSuppliers] = useState([])
 
   useEffect(() => {
     fetchSuppliers()
     
-    // Mock data for inventory overview
-    const mockStats = {
-      totalProducts: 156,
-      totalWarehouses: 3,
-      totalLocations: 12,
-      totalValue: 125000,
-      lowStockItems: 8,
-      pendingReceipts: 3,
-      recentMovements: 24
-    }
-
-    const mockRecentMovements = [
-      {
-        id: 'SM-001',
-        type: 'in',
-        product: 'Paper A4 80gsm',
-        quantity: 50,
-        warehouse: 'Main Warehouse',
-        date: '2024-01-15',
-        reference: 'GR-001'
-      },
-      {
-        id: 'SM-002',
-        type: 'out',
-        product: 'Stapler Heavy Duty',
-        quantity: 5,
-        warehouse: 'Main Warehouse',
-        date: '2024-01-15',
-        reference: 'SO-001'
-      },
-      {
-        id: 'SM-003',
-        type: 'transfer',
-        product: 'Printer Ink Black',
-        quantity: 10,
-        warehouse: 'Main Warehouse → Secondary Warehouse',
-        date: '2024-01-14',
-        reference: 'TR-001'
-      },
-      {
-        id: 'SM-004',
-        type: 'adjustment',
-        product: 'Desk Chairs',
-        quantity: -2,
-        warehouse: 'Main Warehouse',
-        date: '2024-01-14',
-        reference: 'ADJ-001'
-      }
-    ]
-
-    const mockLowStockItems = [
-      {
-        id: 'P-001',
-        name: 'Paper A4 80gsm',
-        sku: 'PAP-001',
-        currentStock: 5,
-        reorderPoint: 20,
-        warehouse: 'Main Warehouse',
-        status: 'critical'
-      },
-      {
-        id: 'P-002',
-        name: 'Printer Ink Black',
-        sku: 'INK-001',
-        currentStock: 2,
-        reorderPoint: 10,
-        warehouse: 'Main Warehouse',
-        status: 'critical'
-      },
-      {
-        id: 'P-003',
-        name: 'Mouse Wireless',
-        sku: 'MOU-001',
-        currentStock: 8,
-        reorderPoint: 15,
-        warehouse: 'Secondary Warehouse',
-        status: 'low'
-      }
-    ]
-
-    const mockPendingReceipts = [
-      {
-        id: 'GR-001',
-        poNumber: 'PO-101',
-        supplier: 'Acme Supplies',
-        expectedDate: '2024-01-20',
-        totalLines: 3,
-        totalValue: 245.00,
-        status: 'in_transit'
-      },
-      {
-        id: 'GR-002',
-        poNumber: 'PO-102',
-        supplier: 'Office Depot',
-        expectedDate: '2024-01-22',
-        totalLines: 2,
-        totalValue: 120.00,
-        status: 'draft'
-      },
-      {
-        id: 'GR-003',
-        poNumber: 'PO-103',
-        supplier: 'Tech Solutions',
-        expectedDate: '2024-01-18',
-        totalLines: 2,
-        totalValue: 150.00,
-        status: 'partially_received'
-      }
-    ]
-
-    setStats(mockStats)
-    setRecentMovements(mockRecentMovements)
-    setLowStockItems(mockLowStockItems)
-    setPendingReceipts(mockPendingReceipts)
     setLoading(false)
   }, [])
 
@@ -161,42 +51,7 @@ export default function InventoryOverview() {
   }
 
 
-  const createMockPO = async () => {
-    setCreatingMockPO(true)
-    try {
-      // Create request body with available data or empty
-      const requestBody = {}
-      
-      if (suppliers.length > 0) {
-        const randomSupplier = suppliers[Math.floor(Math.random() * suppliers.length)]
-        requestBody.supplierId = randomSupplier.supplierId || randomSupplier.id
-      }
-      
-
-      const response = await fetch('/api/inventory/mock-po', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody)
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        alert(`Mock PO created successfully!\nPO Number: ${result.purchaseOrder.poId}\nGoods Receipt ID: ${result.goodsReceipt.receiptId}`)
-        // Refresh the page to show new data
-        window.location.reload()
-      } else {
-        const error = await response.json()
-        alert(`Error creating mock PO: ${error.error}`)
-      }
-    } catch (error) {
-      console.error('Error creating mock PO:', error)
-      alert('Error creating mock PO')
-    } finally {
-      setCreatingMockPO(false)
-    }
-  }
+  
 
   const getMovementIcon = (type) => {
     switch (type) {
@@ -257,18 +112,7 @@ export default function InventoryOverview() {
           <p className="text-gray-600 mt-2">Monitor your inventory levels, movements, and operations</p>
         </div>
         <div className="flex space-x-3">
-          <button
-            onClick={createMockPO}
-            disabled={creatingMockPO}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2"
-          >
-            {creatingMockPO ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <FileText className="h-5 w-5" />
-            )}
-            <span>{creatingMockPO ? 'Creating...' : 'Create Mock PO'}</span>
-          </button>
+          
           <Link href="/dashboard/inventory/products" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2">
             <Plus className="h-5 w-5" />
             <span>Add Product</span>
@@ -321,7 +165,7 @@ export default function InventoryOverview() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Value</p>
-              <p className="text-2xl font-bold text-gray-900">${stats.totalValue.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-900">${Number(stats?.totalValue || 0).toLocaleString()}</p>
             </div>
           </div>
         </div>

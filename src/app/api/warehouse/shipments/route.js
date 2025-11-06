@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
-import { ROLES } from '@/lib/constants/roles';
 
 export async function GET(request) {
   try {
     const session = await getServerSession();
+    
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -18,38 +18,41 @@ export async function GET(request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check if user has permission to view incoming shipments
-    const canViewShipments = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.INVENTORY_MANAGER, ROLES.PURCHASE_MANAGER].includes(currentUser.role);
-    if (!canViewShipments) {
+    // Only warehouse operators and super admins can access warehouse module
+    const canAccessWarehouse = ['INVENTORY_USER', 'SUPER_ADMIN'].includes(currentUser.role);
+    
+    if (!canAccessWarehouse) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
-    const warehouseId = searchParams.get('warehouse_id');
-    const limit = parseInt(searchParams.get('limit')) || 50;
 
+    // Build where clause
     let whereClause = {};
     
     if (status) {
-      whereClause.status = status;
+      if (status.includes(',')) {
+        // Multiple statuses (e.g., "processed,rejected")
+        whereClause.status = {
+          in: status.split(',')
+        };
+      } else {
+        whereClause.status = status;
+      }
     }
-    
-    if (warehouseId) {
-      whereClause.warehouseId = warehouseId;
-    }
+
+    // Only show shipments that are assigned to warehouses (not pending)
+    whereClause.warehouseId = {
+      not: null
+    };
 
     const shipments = await prisma.incomingShipment.findMany({
       where: whereClause,
       include: {
         purchaseOrder: {
           include: {
-            supplier: true,
-            lines: {
-              include: {
-                product: true
-              }
-            }
+            supplier: true
           }
         },
         warehouse: true,
@@ -61,8 +64,7 @@ export async function GET(request) {
       },
       orderBy: {
         createdAt: 'desc'
-      },
-      take: limit
+      }
     });
 
     const shapedShipments = shipments.map(shipment => ({
@@ -83,8 +85,10 @@ export async function GET(request) {
       receivedAt: shipment.receivedAt,
       processedAt: shipment.processedAt,
       createdAt: shipment.createdAt,
+      notes: shipment.notes,
       lines: shipment.lines.map(line => ({
         id: line.id,
+        productId: line.productId,
         productName: line.product.name,
         quantityExpected: line.quantityExpected,
         quantityReceived: line.quantityReceived,
@@ -105,10 +109,12 @@ export async function GET(request) {
     });
 
   } catch (error) {
-    console.error('Error fetching incoming shipments:', error);
-    return NextResponse.json({ 
-      error: 'Failed to fetch incoming shipments',
-      details: error.message 
-    }, { status: 500 });
+    console.error('Error fetching warehouse shipments:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
+
+

@@ -4,7 +4,7 @@ import prisma from '@/lib/db'
 export async function GET(request, { params }) {
   try {
     const { id } = params
-    const line = await prisma.pO_Line.findUnique({ where: { poLineId: id } })
+    const line = await prisma.pOLine.findUnique({ where: { poLineId: id } })
     if (!line) {
       return NextResponse.json({ success: false, error: 'PO Line not found' }, { status: 404 })
     }
@@ -20,7 +20,7 @@ export async function PUT(request, { params }) {
     const body = await request.json()
     const { po_id, product_id, quantity_ordered, quantity_received, price } = body
 
-    const updated = await prisma.pO_Line.update({
+    const updated = await prisma.pOLine.update({
       where: { poLineId: id },
       data: {
         poId: po_id ?? undefined,
@@ -42,7 +42,7 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const { id } = params
-    await prisma.pO_Line.delete({ where: { poLineId: id } })
+    await prisma.pOLine.delete({ where: { poLineId: id } })
     return NextResponse.json({ success: true, message: 'PO Line deleted successfully' })
   } catch (error) {
     if (error.code === 'P2025') {

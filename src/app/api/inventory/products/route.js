@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/db'
+import prisma from '@/lib/db'
 import { crmCache, rateLimit } from '@/lib/redis'
 
 // GET /api/inventory/products - Get all products
@@ -39,18 +39,10 @@ export async function GET(request) {
     const skip = (page - 1) * limit
     
     // Build cache key based on filters
-    const cacheKey = {
-      tenantId: session.user.tenantId,
-      page,
-      limit,
-      search,
-      category,
-      status,
-      trackQuantity
-    }
+    const cacheKey = { page, limit, search, category, status }
     
     // Try to get cached data first
-    const cachedData = await crmCache.getCustomerList(session.user.tenantId, cacheKey)
+    const cachedData = await crmCache.getCustomerList('inventory-products', cacheKey)
     if (cachedData) {
       console.log('📦 Serving products from cache')
       return NextResponse.json(cachedData)
@@ -58,18 +50,14 @@ export async function GET(request) {
     
     // Build where clause
     const where = {
-      tenantId: session.user.tenantId,
       ...(search && {
         OR: [
           { name: { contains: search, mode: 'insensitive' } },
-          { sku: { contains: search, mode: 'insensitive' } },
-          { barcode: { contains: search, mode: 'insensitive' } },
           { description: { contains: search, mode: 'insensitive' } }
         ]
       }),
-      ...(category && category !== 'all' && { categoryId: category }),
-      ...(status && status !== 'all' && { isActive: status === 'active' }),
-      ...(trackQuantity !== undefined && { trackQuantity: trackQuantity === 'true' })
+      ...(category && category !== 'all' && { category }),
+      ...(status && status !== 'all' && { isActive: status === 'active' })
     }
     
     // Get products with pagination
@@ -80,12 +68,6 @@ export async function GET(request) {
         take: limit,
         orderBy: { name: 'asc' },
         include: {
-          category: {
-            select: {
-              id: true,
-              name: true
-            }
-          },
           inventoryItems: {
             include: {
               warehouse: {
@@ -95,13 +77,7 @@ export async function GET(request) {
                   code: true
                 }
               },
-              location: {
-                select: {
-                  id: true,
-                  name: true,
-                  code: true
-                }
-              }
+              // location is a scalar string in current schema; no relation include
             }
           }
         }
@@ -124,7 +100,7 @@ export async function GET(request) {
     }
     
     // Cache the response for 30 minutes
-    await crmCache.setCustomerList(session.user.tenantId, cacheKey, responseData, 1800)
+    await crmCache.setCustomerList('inventory-products', cacheKey, responseData, 1800)
     console.log('💾 Cached products data')
     
     return NextResponse.json(responseData)

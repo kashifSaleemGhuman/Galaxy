@@ -1,10 +1,10 @@
 import { getServerSession } from 'next-auth/next';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
-import { prisma } from './db';
+import prisma from './db';
 import { ROLES, ROLE_PERMISSIONS } from './constants/roles';
 
-export const authConfig = {
+export const authOptions = {
   providers: [
     CredentialsProvider({
       name: 'credentials',

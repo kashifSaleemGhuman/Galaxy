@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
-import { ROLES } from '@/lib/constants/roles';
 
-export async function GET(request) {
+export async function GET(request, { params }) {
   try {
     const session = await getServerSession();
+    
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -18,38 +18,21 @@ export async function GET(request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check if user has permission to view incoming shipments
-    const canViewShipments = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.INVENTORY_MANAGER, ROLES.PURCHASE_MANAGER].includes(currentUser.role);
-    if (!canViewShipments) {
+    // Only warehouse operators and super admins can access warehouse module
+    const canAccessWarehouse = ['INVENTORY_USER', 'SUPER_ADMIN'].includes(currentUser.role);
+    
+    if (!canAccessWarehouse) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const warehouseId = searchParams.get('warehouse_id');
-    const limit = parseInt(searchParams.get('limit')) || 50;
+    const { id } = params;
 
-    let whereClause = {};
-    
-    if (status) {
-      whereClause.status = status;
-    }
-    
-    if (warehouseId) {
-      whereClause.warehouseId = warehouseId;
-    }
-
-    const shipments = await prisma.incomingShipment.findMany({
-      where: whereClause,
+    const shipment = await prisma.incomingShipment.findUnique({
+      where: { id },
       include: {
         purchaseOrder: {
           include: {
-            supplier: true,
-            lines: {
-              include: {
-                product: true
-              }
-            }
+            supplier: true
           }
         },
         warehouse: true,
@@ -58,14 +41,14 @@ export async function GET(request) {
             product: true
           }
         }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: limit
+      }
     });
 
-    const shapedShipments = shipments.map(shipment => ({
+    if (!shipment) {
+      return NextResponse.json({ error: 'Shipment not found' }, { status: 404 });
+    }
+
+    const shapedShipment = {
       id: shipment.id,
       shipmentNumber: shipment.shipmentNumber,
       poId: shipment.poId,
@@ -83,8 +66,10 @@ export async function GET(request) {
       receivedAt: shipment.receivedAt,
       processedAt: shipment.processedAt,
       createdAt: shipment.createdAt,
+      notes: shipment.notes,
       lines: shipment.lines.map(line => ({
         id: line.id,
+        productId: line.productId,
         productName: line.product.name,
         quantityExpected: line.quantityExpected,
         quantityReceived: line.quantityReceived,
@@ -96,19 +81,20 @@ export async function GET(request) {
       totalValue: shipment.lines.reduce((sum, line) => 
         sum + (line.quantityAccepted * line.unitPrice), 0
       )
-    }));
+    };
 
     return NextResponse.json({
       success: true,
-      data: shapedShipments,
-      count: shapedShipments.length
+      data: shapedShipment
     });
 
   } catch (error) {
-    console.error('Error fetching incoming shipments:', error);
-    return NextResponse.json({ 
-      error: 'Failed to fetch incoming shipments',
-      details: error.message 
-    }, { status: 500 });
+    console.error('Error fetching warehouse shipment:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
+
+
