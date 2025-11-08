@@ -134,27 +134,31 @@ model Supplier {
 
 // Purchase Order model
 model PurchaseOrder {
-  poId        String   @id
-  rfqId       String?
-  supplierId  String
-  dateCreated DateTime @default(now())
+  poId        String   @id @map("po_id")
+  rfqId       String?  @map("rfq_id")
+  supplierId  String   @map("supplier_id")
+  dateCreated DateTime @default(now()) @map("date_created")
   status      String   @default("draft")
 
   // Relations
   supplier Supplier @relation(fields: [supplierId], references: [supplierId])
   lines    POLine[]
+  
+  @@map("PurchaseOrder")
 }
 
 // Purchase Order Line model
 model POLine {
-  poLineId         String  @id
-  poId             String
-  productId        String
-  quantityOrdered  Int
-  quantityReceived Int     @default(0)
+  poLineId         String  @id @map("po_line_id")
+  poId             String  @map("po_id")
+  productId        String  @map("product_id")
+  quantityOrdered  Int     @map("quantity_ordered")
+  quantityReceived Int     @default(0) @map("quantity_received")
   price            Decimal
 
   // Relations
   purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
   product       Product       @relation(fields: [productId], references: [id])
+  
+  @@map("POLine")
 }
