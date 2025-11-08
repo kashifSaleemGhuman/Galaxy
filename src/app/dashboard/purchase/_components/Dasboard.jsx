@@ -219,11 +219,11 @@ export default function Dashboard() {
     await Promise.all([fetchRfqs(), fetchStats()]);
   }, [fetchRfqs, fetchStats]);
 
-  // Set up polling for real-time updates - stop when redirecting
+  // Set up polling for real-time updates - stop when redirecting or form is open
   const { isPolling, error: pollingError } = useDebouncedPolling(
     handleRefresh,
     15000, // Poll every 15 seconds
-    !isRedirecting, // Disabled when redirecting
+    !isRedirecting && !showForm, // Disabled when redirecting or form is open
     2000 // Debounce for 2 seconds
   );
 
