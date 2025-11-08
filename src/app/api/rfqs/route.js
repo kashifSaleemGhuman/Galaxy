@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
 
@@ -14,7 +15,7 @@ function generateRFQNumber() {
 // GET /api/rfqs - List RFQs
 export async function GET(req) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -83,7 +84,7 @@ export async function GET(req) {
 // POST /api/rfqs - Create RFQ
 export async function POST(req) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -128,6 +129,22 @@ export async function POST(req) {
       return NextResponse.json({ error: 'One or more products not found' }, { status: 404 });
     }
 
+    // Validate and parse items
+    const validatedItems = items.map(item => {
+      const quantity = parseInt(item.quantity, 10);
+      if (isNaN(quantity) || quantity <= 0) {
+        throw new Error(`Invalid quantity for product ${item.productId}: ${item.quantity}`);
+      }
+      if (!item.unit || typeof item.unit !== 'string' || item.unit.trim() === '') {
+        throw new Error(`Invalid unit for product ${item.productId}`);
+      }
+      return {
+        productId: item.productId,
+        quantity,
+        unit: item.unit.trim()
+      };
+    });
+
     // Create RFQ with items
     const rfq = await prisma.$transaction(async (tx) => {
       const rfqNumber = generateRFQNumber();
@@ -144,10 +161,10 @@ export async function POST(req) {
 
       // Create RFQ items
       await tx.rFQItem.createMany({
-        data: items.map(item => ({
+        data: validatedItems.map(item => ({
           rfqId: newRfq.id,
           productId: item.productId,
-          quantity: parseInt(item.quantity),
+          quantity: item.quantity,
           unit: item.unit
         }))
       });
@@ -183,6 +200,24 @@ export async function POST(req) {
     return NextResponse.json({ rfq: completeRfq }, { status: 201 });
   } catch (error) {
     console.error('Error creating RFQ:', error);
-    return NextResponse.json({ error: 'Failed to create RFQ' }, { status: 500 });
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+    
+    // Return more detailed error in development, generic in production
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? error.message || 'Failed to create RFQ'
+      : 'Failed to create RFQ';
+    
+    return NextResponse.json({ 
+      error: errorMessage,
+      ...(process.env.NODE_ENV === 'development' && { 
+        details: error.code,
+        meta: error.meta 
+      })
+    }, { status: 500 });
   }
 }
