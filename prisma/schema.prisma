@@ -122,14 +122,16 @@ model RFQApproval {
 
 // Supplier model (legacy external supplier directory)
 model Supplier {
-  supplierId  String  @id
+  supplierId  String  @id @map("supplier_id")
   name        String
-  contactInfo String?
+  contactInfo String? @map("contact_info")
   email       String
   phone       String?
 
   // Relations
   purchaseOrders PurchaseOrder[]
+  
+  @@map("Supplier")
 }
 
 // Purchase Order model
