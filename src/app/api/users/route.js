@@ -4,6 +4,10 @@ import { hash } from 'bcryptjs';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
 
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 const ALLOWED_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN];
 
 // Helper function to check if user has permission to manage users
