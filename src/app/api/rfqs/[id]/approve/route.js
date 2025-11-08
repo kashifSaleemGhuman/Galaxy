@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
 
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function POST(req, { params }) {
   try {
     const session = await getServerSession();
