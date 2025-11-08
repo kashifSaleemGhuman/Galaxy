@@ -95,21 +95,22 @@ export async function GET(req) {
       message: error.message,
       code: error.code,
       meta: error.meta,
+      name: error.name,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
     
-    // Return more detailed error in development, generic in production
-    const errorMessage = process.env.NODE_ENV === 'development' 
-      ? error.message || 'Failed to fetch RFQs'
-      : 'Failed to fetch RFQs';
-    
-    return NextResponse.json({ 
-      error: errorMessage,
+    // Return error details for debugging (safe to expose Prisma error codes)
+    const errorResponse = {
+      error: 'Failed to fetch RFQs',
+      ...(error.code && { code: error.code }),
+      ...(error.meta && { meta: error.meta }),
       ...(process.env.NODE_ENV === 'development' && { 
-        details: error.code,
-        meta: error.meta 
+        message: error.message,
+        stack: error.stack 
       })
-    }, { status: 500 });
+    };
+    
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
 
@@ -242,20 +243,21 @@ export async function POST(req) {
       message: error.message,
       code: error.code,
       meta: error.meta,
+      name: error.name,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
     
-    // Return more detailed error in development, generic in production
-    const errorMessage = process.env.NODE_ENV === 'development' 
-      ? error.message || 'Failed to create RFQ'
-      : 'Failed to create RFQ';
-    
-    return NextResponse.json({ 
-      error: errorMessage,
+    // Return error details for debugging (safe to expose Prisma error codes)
+    const errorResponse = {
+      error: 'Failed to create RFQ',
+      ...(error.code && { code: error.code }),
+      ...(error.meta && { meta: error.meta }),
       ...(process.env.NODE_ENV === 'development' && { 
-        details: error.code,
-        meta: error.meta 
+        message: error.message,
+        stack: error.stack 
       })
-    }, { status: 500 });
+    };
+    
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
