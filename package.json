@@ -13,6 +13,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
+    "db:clear": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/clear-db.ts",
     "postman:generate": "node scripts/generate-postman.js",
     "postinstall": "prisma generate",
     "vercel-build": "prisma generate && prisma migrate deploy && prisma db seed && next build"
