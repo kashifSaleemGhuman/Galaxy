@@ -19,6 +19,12 @@ function generateRFQNumber() {
 // GET /api/rfqs - List RFQs
 export async function GET(req) {
   try {
+    // Check if Prisma client is available
+    if (!prisma) {
+      console.error('Prisma client is not initialized');
+      return NextResponse.json({ error: 'Database connection error' }, { status: 500 });
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -40,6 +46,10 @@ export async function GET(req) {
     const currentUser = await prisma.user.findUnique({
       where: { email: session.user.email }
     });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
 
     if (![ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER].includes(currentUser.role)) {
       // Regular users can only see their own RFQs
@@ -81,13 +91,37 @@ export async function GET(req) {
     });
   } catch (error) {
     console.error('Error fetching RFQs:', error);
-    return NextResponse.json({ error: 'Failed to fetch RFQs' }, { status: 500 });
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+    
+    // Return more detailed error in development, generic in production
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? error.message || 'Failed to fetch RFQs'
+      : 'Failed to fetch RFQs';
+    
+    return NextResponse.json({ 
+      error: errorMessage,
+      ...(process.env.NODE_ENV === 'development' && { 
+        details: error.code,
+        meta: error.meta 
+      })
+    }, { status: 500 });
   }
 }
 
 // POST /api/rfqs - Create RFQ
 export async function POST(req) {
   try {
+    // Check if Prisma client is available
+    if (!prisma) {
+      console.error('Prisma client is not initialized');
+      return NextResponse.json({ error: 'Database connection error' }, { status: 500 });
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
