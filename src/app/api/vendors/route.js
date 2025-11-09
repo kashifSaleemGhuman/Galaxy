@@ -21,16 +21,25 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get('q') || '';
     const limit = parseInt(searchParams.get('limit') || '20', 10);
+    const activeOnly = searchParams.get('activeOnly') === 'true';
+
+    const where = {};
+    
+    // Filter by search query
+    if (q) {
+      where.OR = [
+        { name: { contains: q, mode: 'insensitive' } },
+        { email: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+    
+    // Filter by active status if requested (for RFQ creation)
+    if (activeOnly) {
+      where.isActive = true;
+    }
 
     const vendors = await prisma.vendor.findMany({
-      where: q
-        ? {
-            OR: [
-              { name: { contains: q, mode: 'insensitive' } },
-              { email: { contains: q, mode: 'insensitive' } },
-            ],
-          }
-        : {},
+      where,
       orderBy: { name: 'asc' },
       take: limit,
     });

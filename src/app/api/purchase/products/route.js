@@ -8,15 +8,25 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
 
-export async function GET() {
+export async function GET(req) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const activeOnly = searchParams.get('activeOnly') === 'true';
+
+    const where = {};
+    
+    // Filter by active status if requested (for RFQ creation)
+    if (activeOnly) {
+      where.isActive = true;
+    }
+
     const data = await prisma.product.findMany({
-      where: { isActive: true },
+      where,
       orderBy: { name: 'asc' }
     });
 

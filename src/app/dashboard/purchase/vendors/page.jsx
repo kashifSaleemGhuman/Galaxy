@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Table } from '../_components/Table';
+import { useToast } from '@/components/ui/Toast';
 
 export default function VendorsPage() {
   const { data: session, status } = useSession();
@@ -11,15 +12,19 @@ export default function VendorsPage() {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingVendor, setEditingVendor] = useState(null);
+  const [deletingVendor, setDeletingVendor] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
-    address: ''
+    address: '',
+    isActive: true
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const { showToast, ToastContainer } = useToast();
 
   // Check if user is purchase_manager or above
   const isAuthorized = session?.user?.role === 'purchase_manager' || 
@@ -66,8 +71,13 @@ export default function VendorsPage() {
     setSubmitting(true);
 
     try {
-      const response = await fetch('/api/vendors', {
-        method: 'POST',
+      const url = editingVendor 
+        ? `/api/vendors/${editingVendor.id}`
+        : '/api/vendors';
+      const method = editingVendor ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -77,19 +87,84 @@ export default function VendorsPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setSuccess('Vendor added successfully!');
-        setFormData({ name: '', email: '', phone: '', address: '' });
+        const message = editingVendor ? 'Vendor updated successfully!' : 'Vendor added successfully!';
+        setSuccess(message);
+        showToast(message, 'success');
+        setFormData({ name: '', email: '', phone: '', address: '', isActive: true });
         setShowForm(false);
+        setEditingVendor(null);
         fetchVendors(); // Refresh the list
       } else {
-        setError(data.error || 'Failed to add vendor');
+        const errorMsg = data.error || `Failed to ${editingVendor ? 'update' : 'add'} vendor`;
+        setError(errorMsg);
+        showToast(errorMsg, 'error');
       }
     } catch (error) {
-      console.error('Error adding vendor:', error);
-      setError('Failed to add vendor. Please try again.');
+      console.error(`Error ${editingVendor ? 'updating' : 'adding'} vendor:`, error);
+      const errorMsg = `Failed to ${editingVendor ? 'update' : 'add'} vendor. Please try again.`;
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleEdit = (vendor) => {
+    setEditingVendor(vendor);
+    setFormData({
+      name: vendor.name,
+      email: vendor.email,
+      phone: vendor.phone || '',
+      address: vendor.address || '',
+      isActive: vendor.isActive
+    });
+    setShowForm(true);
+    setError('');
+    setSuccess('');
+  };
+
+  const handleDelete = async (vendor) => {
+    if (!confirm(`Are you sure you want to delete "${vendor.name}"? This will deactivate the vendor.`)) {
+      return;
+    }
+
+    setDeletingVendor(vendor.id);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch(`/api/vendors/${vendor.id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        const message = 'Vendor deleted successfully!';
+        setSuccess(message);
+        showToast(message, 'success');
+        fetchVendors(); // Refresh the list
+      } else {
+        const errorMsg = data.error || 'Failed to delete vendor';
+        setError(errorMsg);
+        showToast(errorMsg, 'error');
+      }
+    } catch (error) {
+      console.error('Error deleting vendor:', error);
+      const errorMsg = 'Failed to delete vendor. Please try again.';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
+    } finally {
+      setDeletingVendor(null);
+    }
+  };
+
+  const handleCancel = () => {
+    setShowForm(false);
+    setEditingVendor(null);
+    setFormData({ name: '', email: '', phone: '', address: '', isActive: true });
+    setError('');
+    setSuccess('');
   };
 
   if (status === 'loading' || loading) {
@@ -105,6 +180,7 @@ export default function VendorsPage() {
 
   return (
     <div className="space-y-6">
+      <ToastContainer />
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">Vendors</h2>
         {isAuthorized && (
@@ -119,7 +195,9 @@ export default function VendorsPage() {
 
       {isAuthorized && showForm && (
         <div className="bg-white shadow-md rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Vendor</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            {editingVendor ? 'Edit Vendor' : 'Add New Vendor'}
+          </h3>
           
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
@@ -192,13 +270,36 @@ export default function VendorsPage() {
               />
             </div>
 
-            <div className="sm:col-span-2 pt-2">
+            {editingVendor && (
+              <div className="sm:col-span-2">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="isActive"
+                    checked={formData.isActive}
+                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    className="mr-2"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Active</span>
+                </label>
+              </div>
+            )}
+
+            <div className="sm:col-span-2 pt-2 flex gap-2">
               <button
                 type="submit"
                 disabled={submitting}
                 className="px-6 py-2 bg-gradient-to-r from-blue-600 to-black hover:from-blue-700 hover:to-gray-900 text-white rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {submitting ? 'Adding...' : 'Add Vendor'}
+                {submitting ? (editingVendor ? 'Updating...' : 'Adding...') : (editingVendor ? 'Update Vendor' : 'Add Vendor')}
+              </button>
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={submitting}
+                className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
               </button>
             </div>
           </form>
@@ -213,7 +314,12 @@ export default function VendorsPage() {
         </div>
       )}
 
+      {/* Active Vendors */}
       <div className="bg-white shadow-md rounded-xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Active Vendors</h3>
+          <p className="text-sm text-gray-500 mt-1">These vendors can be used for creating new RFQs</p>
+        </div>
         <Table
           columns={[
             { key: 'name', header: 'Name' },
@@ -233,10 +339,80 @@ export default function VendorsPage() {
                 </span>
               )
             },
+            {
+              key: 'actions',
+              header: 'Actions',
+              cell: (row) => isAuthorized ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEdit(row)}
+                    className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(row)}
+                    disabled={deletingVendor === row.id}
+                    className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {deletingVendor === row.id ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              ) : null
+            },
           ]}
-          data={vendors}
+          data={vendors.filter(v => v.isActive)}
         />
       </div>
+
+      {/* Inactive Vendors */}
+      {vendors.filter(v => !v.isActive).length > 0 && (
+        <div className="bg-white shadow-md rounded-xl overflow-hidden opacity-75">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h3 className="text-lg font-semibold text-gray-700">Inactive Vendors</h3>
+            <p className="text-sm text-gray-500 mt-1">These vendors cannot be used for creating new RFQs</p>
+          </div>
+          <Table
+            columns={[
+              { key: 'name', header: 'Name', cell: (row) => <span className="text-gray-500">{row.name}</span> },
+              { key: 'email', header: 'Email', cell: (row) => <span className="text-gray-500">{row.email}</span> },
+              { key: 'phone', header: 'Phone', cell: (row) => <span className="text-gray-500">{row.phone || 'N/A'}</span> },
+              { key: 'address', header: 'Address', cell: (row) => <span className="text-gray-500">{row.address || 'N/A'}</span> },
+              { 
+                key: 'isActive', 
+                header: 'Status', 
+                cell: (row) => (
+                  <span className="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">
+                    Inactive
+                  </span>
+                )
+              },
+              {
+                key: 'actions',
+                header: 'Actions',
+                cell: (row) => isAuthorized ? (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEdit(row)}
+                      className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(row)}
+                      disabled={deletingVendor === row.id}
+                      className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {deletingVendor === row.id ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
+                ) : null
+              },
+            ]}
+            data={vendors.filter(v => !v.isActive)}
+          />
+        </div>
+      )}
     </div>
   );
 }

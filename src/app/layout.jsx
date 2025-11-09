@@ -1,6 +1,5 @@
 import './globals.css'
-import { SessionProvider } from '@/components/providers/SessionProvider'
-import NotificationToast from '@/components/NotificationToast'
+import { Providers } from '@/components/providers/Providers'
 
 export const metadata = {
   title: 'Galaxy ERP System',
@@ -11,12 +10,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body suppressHydrationWarning={true} className="font-sans">
-        <SessionProvider>
-          <div className="min-h-screen bg-gray-50">
-            {children}
-            <NotificationToast />
-          </div>
-        </SessionProvider>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   )

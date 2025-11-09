@@ -1,53 +1,127 @@
-import { NextResponse } from 'next/server'
-import prisma from '@/lib/db'
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
-export async function GET(request, { params }) {
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import prisma from '@/lib/db';
+import { ROLES } from '@/lib/constants/roles';
+
+// PUT - Update product
+export async function PUT(req, { params }) {
   try {
-    const { id } = params
-    const p = await prisma.product.findUnique({ where: { id } })
-    if (!p) {
-      return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 })
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    return NextResponse.json({ success: true, data: { product_id: p.id, name: p.name, sku: p.sku, unit_of_measure: p.unitOfMeasure, default_price: p.defaultPrice ?? Number(p.price) } })
-  } catch (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
-  }
-}
 
-export async function PUT(request, { params }) {
-  try {
-    const { id } = params
-    const body = await request.json()
-    const { name, sku, unit_of_measure, default_price } = body
+    // Check if user is purchase_manager or above
+    const allowedRoles = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER];
+    if (!allowedRoles.includes(session.user.role)) {
+      return NextResponse.json({ error: 'Forbidden: Only purchase managers can update products' }, { status: 403 });
+    }
 
-    const updated = await prisma.product.update({
+    const { id } = params;
+    const body = await req.json();
+    const { name, description, category, unit, isActive } = body;
+
+    // Check if product exists
+    const existingProduct = await prisma.product.findUnique({
+      where: { id }
+    });
+
+    if (!existingProduct) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+
+    // Update product
+    const product = await prisma.product.update({
       where: { id },
       data: {
-        name: name ?? undefined,
-        sku: sku ?? undefined,
-        unitOfMeasure: unit_of_measure ?? undefined,
-        defaultPrice: default_price ?? undefined,
-        price: default_price ?? undefined,
-      },
-    })
-    return NextResponse.json({ success: true, data: { product_id: updated.id, name: updated.name, sku: updated.sku, unit_of_measure: updated.unitOfMeasure, default_price: updated.defaultPrice ?? Number(updated.price) } })
+        ...(name && { name }),
+        ...(description !== undefined && { description: description || null }),
+        ...(category !== undefined && { category: category || null }),
+        ...(unit && { unit }),
+        ...(isActive !== undefined && { isActive })
+      }
+    });
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: 'PRODUCT_UPDATED',
+        details: `Product "${product.name}" updated by ${session.user.email}`,
+      }
+    });
+
+    return NextResponse.json({ success: true, product }, { status: 200 });
   } catch (error) {
-    if (error.code === 'P2025') {
-      return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 })
-    }
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    console.error('Error updating product:', error);
+    return NextResponse.json({ error: 'Failed to update product: ' + error.message }, { status: 500 });
   }
 }
 
-export async function DELETE(request, { params }) {
+// DELETE - Delete product (soft delete by setting isActive to false)
+export async function DELETE(req, { params }) {
   try {
-    const { id } = params
-    await prisma.product.delete({ where: { id } })
-    return NextResponse.json({ success: true, message: 'Product deleted successfully' })
-  } catch (error) {
-    if (error.code === 'P2025') {
-      return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 })
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+
+    // Check if user is purchase_manager or above
+    const allowedRoles = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER];
+    if (!allowedRoles.includes(session.user.role)) {
+      return NextResponse.json({ error: 'Forbidden: Only purchase managers can delete products' }, { status: 403 });
+    }
+
+    const { id } = params;
+
+    // Check if product exists
+    const product = await prisma.product.findUnique({
+      where: { id }
+    });
+
+    if (!product) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+
+    // Check if product has active RFQ items
+    const activeRfqItems = await prisma.rFQItem.findFirst({
+      where: {
+        productId: id,
+        rfq: {
+          status: { notIn: ['completed', 'cancelled'] }
+        }
+      }
+    });
+
+    if (activeRfqItems) {
+      return NextResponse.json({ 
+        error: 'Cannot delete product with active RFQ items. Please deactivate instead.' 
+      }, { status: 400 });
+    }
+
+    // Soft delete by setting isActive to false
+    const updatedProduct = await prisma.product.update({
+      where: { id },
+      data: { isActive: false }
+    });
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: 'PRODUCT_DELETED',
+        details: `Product "${product.name}" deleted (deactivated) by ${session.user.email}`,
+      }
+    });
+
+    return NextResponse.json({ success: true, product: updatedProduct }, { status: 200 });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    return NextResponse.json({ error: 'Failed to delete product: ' + error.message }, { status: 500 });
   }
 }

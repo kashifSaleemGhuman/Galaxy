@@ -149,7 +149,7 @@ export async function POST(req) {
       }, { status: 400 });
     }
 
-    // Verify vendor exists
+    // Verify vendor exists and is active
     const vendor = await prisma.vendor.findUnique({
       where: { id: vendorId }
     });
@@ -158,7 +158,13 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Vendor not found' }, { status: 404 });
     }
 
-    // Verify products exist
+    if (!vendor.isActive) {
+      return NextResponse.json({ 
+        error: 'Cannot create RFQ with an inactive vendor. Please select an active vendor.' 
+      }, { status: 400 });
+    }
+
+    // Verify products exist and are active
     const productIds = items.map(item => item.productId);
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } }
@@ -166,6 +172,15 @@ export async function POST(req) {
 
     if (products.length !== productIds.length) {
       return NextResponse.json({ error: 'One or more products not found' }, { status: 404 });
+    }
+
+    // Check if all products are active
+    const inactiveProducts = products.filter(p => !p.isActive);
+    if (inactiveProducts.length > 0) {
+      const inactiveNames = inactiveProducts.map(p => p.name).join(', ');
+      return NextResponse.json({ 
+        error: `Cannot create RFQ with inactive products: ${inactiveNames}. Please select active products only.` 
+      }, { status: 400 });
     }
 
     // Validate and parse items

@@ -28,16 +28,16 @@ export default function RfqForm({ onSubmit, onCancel }) {
   const vendorRef = useRef(null);
   const productRef = useRef(null);
 
-  // Fetch vendors from API
+  // Fetch vendors from API (only active vendors for RFQ creation)
   const fetchVendors = async (q = '') => {
-    const data = await api.get('/api/vendors', { q, limit: 20 });
+    const data = await api.get('/api/vendors', { q, limit: 20, activeOnly: true });
     setFilteredVendors(data.vendors || []);
   };
 
-  // Fetch products from API
+  // Fetch products from API (only active products for RFQ creation)
   const fetchProducts = async (q = '') => {
-    const data = await api.get('/api/products', { q, limit: 50 });
-    setFilteredProducts(data.products || []);
+    const data = await api.get('/api/purchase/products', { q, limit: 50, activeOnly: true });
+    setFilteredProducts(data.data || []);
   };
 
   // Initial prefetch
@@ -224,16 +224,18 @@ export default function RfqForm({ onSubmit, onCancel }) {
               </div>
               {showVendorDropdown && filteredVendors.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                  {filteredVendors.map((vendor) => (
-                    <div
-                      key={vendor.id}
-                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                      onClick={() => handleVendorSelect(vendor)}
-                    >
-                      <div className="font-medium">{vendor.name}</div>
-                      <div className="text-sm text-gray-500">{vendor.email}</div>
-                    </div>
-                  ))}
+                  {filteredVendors
+                    .filter(vendor => vendor.isActive !== false) // Double-check: only show active vendors
+                    .map((vendor) => (
+                      <div
+                        key={vendor.id}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => handleVendorSelect(vendor)}
+                      >
+                        <div className="font-medium">{vendor.name}</div>
+                        <div className="text-sm text-gray-500">{vendor.email}</div>
+                      </div>
+                    ))}
                 </div>
               )}
             </div>

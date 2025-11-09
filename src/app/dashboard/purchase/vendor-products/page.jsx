@@ -42,18 +42,18 @@ export default function VendorProductsPage() {
     try {
       setLoading(true);
       
-      // Fetch vendors
-      const vendorsRes = await fetch('/api/vendors');
+      // Fetch vendors (only active vendors for linking)
+      const vendorsRes = await fetch('/api/vendors?activeOnly=true');
       const vendorsData = await vendorsRes.json();
       if (vendorsData.vendors) {
-        setVendors(vendorsData.vendors.filter(v => v.isActive));
+        setVendors(vendorsData.vendors);
       }
 
-      // Fetch products
-      const productsRes = await fetch('/api/purchase/products');
+      // Fetch products (only active products for linking)
+      const productsRes = await fetch('/api/purchase/products?activeOnly=true');
       const productsData = await productsRes.json();
       if (productsData.success && productsData.data) {
-        setProducts(productsData.data.filter(p => p.isActive));
+        setProducts(productsData.data);
       }
 
       // Fetch vendor-products
