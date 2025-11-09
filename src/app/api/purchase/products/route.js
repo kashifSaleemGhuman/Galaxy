@@ -1,46 +1,82 @@
-import { NextResponse } from 'next/server'
-import prisma from '@/lib/db'
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import prisma from '@/lib/db';
+import { ROLES } from '@/lib/constants/roles';
 
 export async function GET() {
   try {
-    const data = await prisma.product.findMany()
-    // Shape to ERD-like keys
-    const shaped = data.map(p => ({
-      product_id: p.id,
-      name: p.name,
-      sku: p.sku,
-      unit_of_measure: p.unitOfMeasure,
-      default_price: p.defaultPrice ?? Number(p.price),
-    }))
-    return NextResponse.json({ success: true, data: shaped })
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const data = await prisma.product.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' }
+    });
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 export async function POST(request) {
   try {
-    const body = await request.json()
-    const { product_id, name, sku, unit_of_measure, default_price } = body
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!name || !sku) {
-      return NextResponse.json({ success: false, error: 'name and sku are required' }, { status: 400 })
+    // Check if user is purchase_manager or above
+    const allowedRoles = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER];
+    if (!allowedRoles.includes(session.user.role)) {
+      return NextResponse.json({ error: 'Forbidden: Only purchase managers can add products' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { name, description, category, unit } = body;
+
+    // Validation
+    if (!name || !unit) {
+      return NextResponse.json({ success: false, error: 'Name and unit are required' }, { status: 400 });
+    }
+
+    // Check if product with this name already exists
+    const existingProduct = await prisma.product.findFirst({
+      where: { name }
+    });
+
+    if (existingProduct) {
+      return NextResponse.json({ success: false, error: 'Product with this name already exists' }, { status: 400 });
     }
 
     const created = await prisma.product.create({
       data: {
-        id: product_id ?? undefined,
         name,
-        sku,
-        unitOfMeasure: unit_of_measure ?? null,
-        defaultPrice: default_price != null ? default_price : null,
-        price: default_price != null ? default_price : 0,
-        tenantId: 'default-tenant',
+        description: description || null,
+        category: category || null,
+        unit,
+        isActive: true
       },
-    })
+    });
 
-    return NextResponse.json({ success: true, data: { product_id: created.id, name: created.name, sku: created.sku, unit_of_measure: created.unitOfMeasure, default_price: created.defaultPrice ?? Number(created.price) } }, { status: 201 })
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: 'PRODUCT_CREATED',
+        details: `Product "${name}" created by ${session.user.email}`,
+      }
+    });
+
+    return NextResponse.json({ success: true, product: created }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
