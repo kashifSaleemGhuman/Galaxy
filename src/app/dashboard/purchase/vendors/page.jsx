@@ -5,17 +5,17 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Table } from '../_components/Table';
 
-export default function ProductsPage() {
+export default function VendorsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [products, setProducts] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
-    category: '',
-    unit: ''
+    email: '',
+    phone: '',
+    address: ''
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -34,20 +34,20 @@ export default function ProductsPage() {
       return;
     }
 
-    fetchProducts();
+    fetchVendors();
   }, [status, router]);
 
-  const fetchProducts = async () => {
+  const fetchVendors = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/purchase/products');
+      const response = await fetch('/api/vendors');
       const data = await response.json();
-      if (data.success && data.data) {
-        setProducts(data.data);
+      if (data.vendors) {
+        setVendors(data.vendors);
       }
     } catch (error) {
-      console.error('Error fetching products:', error);
-      setError('Failed to fetch products');
+      console.error('Error fetching vendors:', error);
+      setError('Failed to fetch vendors');
     } finally {
       setLoading(false);
     }
@@ -66,7 +66,7 @@ export default function ProductsPage() {
     setSubmitting(true);
 
     try {
-      const response = await fetch('/api/purchase/products', {
+      const response = await fetch('/api/vendors', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,16 +77,16 @@ export default function ProductsPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setSuccess('Product added successfully!');
-        setFormData({ name: '', description: '', category: '', unit: '' });
+        setSuccess('Vendor added successfully!');
+        setFormData({ name: '', email: '', phone: '', address: '' });
         setShowForm(false);
-        fetchProducts(); // Refresh the list
+        fetchVendors(); // Refresh the list
       } else {
-        setError(data.error || 'Failed to add product');
+        setError(data.error || 'Failed to add vendor');
       }
     } catch (error) {
-      console.error('Error adding product:', error);
-      setError('Failed to add product. Please try again.');
+      console.error('Error adding vendor:', error);
+      setError('Failed to add vendor. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -106,20 +106,20 @@ export default function ProductsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">Products</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Vendors</h2>
         {isAuthorized && (
           <button
             onClick={() => setShowForm(!showForm)}
             className="px-4 py-2 bg-gradient-to-r from-blue-600 to-black hover:from-blue-700 hover:to-gray-900 text-white rounded-md text-sm"
           >
-            {showForm ? 'Cancel' : 'New Product'}
+            {showForm ? 'Cancel' : 'New Vendor'}
           </button>
         )}
       </div>
 
       {isAuthorized && showForm && (
         <div className="bg-white shadow-md rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Product</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Vendor</h3>
           
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
@@ -136,7 +136,7 @@ export default function ProductsPage() {
           <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Product Name *
+                Vendor Name *
               </label>
               <input
                 type="text"
@@ -144,51 +144,51 @@ export default function ProductsPage() {
                 value={formData.name}
                 onChange={handleChange}
                 className="w-full bg-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter product name"
+                placeholder="Enter vendor name"
                 required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email *
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className="w-full bg-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="vendor@example.com"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Phone
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className="w-full bg-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="+1-555-123-4567"
               />
             </div>
 
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
+                Address
               </label>
               <textarea
-                name="description"
-                value={formData.description}
+                name="address"
+                value={formData.address}
                 onChange={handleChange}
                 rows={3}
                 className="w-full bg-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter product description"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category
-              </label>
-              <input
-                type="text"
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="w-full bg-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., Electronics, Office Supplies"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Unit *
-              </label>
-              <input
-                type="text"
-                name="unit"
-                value={formData.unit}
-                onChange={handleChange}
-                className="w-full bg-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., pcs, kg, box"
-                required
+                placeholder="Enter vendor address"
               />
             </div>
 
@@ -198,7 +198,7 @@ export default function ProductsPage() {
                 disabled={submitting}
                 className="px-6 py-2 bg-gradient-to-r from-blue-600 to-black hover:from-blue-700 hover:to-gray-900 text-white rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {submitting ? 'Adding...' : 'Add Product'}
+                {submitting ? 'Adding...' : 'Add Vendor'}
               </button>
             </div>
           </form>
@@ -208,7 +208,7 @@ export default function ProductsPage() {
       {!isAuthorized && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
           <p className="text-yellow-800 text-sm">
-            You don't have permission to add products. Only purchase managers can add products.
+            You don't have permission to add vendors. Only purchase managers can add vendors.
           </p>
         </div>
       )}
@@ -217,9 +217,9 @@ export default function ProductsPage() {
         <Table
           columns={[
             { key: 'name', header: 'Name' },
-            { key: 'description', header: 'Description', cell: (row) => row.description || 'N/A' },
-            { key: 'category', header: 'Category', cell: (row) => row.category || 'N/A' },
-            { key: 'unit', header: 'Unit' },
+            { key: 'email', header: 'Email' },
+            { key: 'phone', header: 'Phone', cell: (row) => row.phone || 'N/A' },
+            { key: 'address', header: 'Address', cell: (row) => row.address || 'N/A' },
             { 
               key: 'isActive', 
               header: 'Status', 
@@ -234,11 +234,10 @@ export default function ProductsPage() {
               )
             },
           ]}
-          data={products}
+          data={vendors}
         />
       </div>
     </div>
   );
 }
-
 

@@ -44,28 +44,30 @@ model AuditLog {
 }
 
 model Vendor {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  phone     String?
-  address   String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  rfqs      RFQ[]
+  id             String          @id @default(cuid())
+  name           String
+  email          String          @unique
+  phone          String?
+  address        String?
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  rfqs           RFQ[]
+  vendorProducts VendorProduct[]
 }
 
 model Product {
-  id          String    @id @default(cuid())
-  name        String
-  description String?
-  category    String?
-  unit        String
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  rfqItems    RFQItem[]
-  POLine      POLine[]
+  id             String          @id @default(cuid())
+  name           String
+  description    String?
+  category       String?
+  unit           String
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  rfqItems       RFQItem[]
+  POLine         POLine[]
+  vendorProducts VendorProduct[]
 }
 
 model RFQ {
@@ -130,6 +132,8 @@ model Supplier {
 
   // Relations
   purchaseOrders PurchaseOrder[]
+
+  @@map("Supplier")
 }
 
 // Purchase Order model
@@ -143,6 +147,8 @@ model PurchaseOrder {
   // Relations
   supplier Supplier @relation(fields: [supplierId], references: [supplierId])
   lines    POLine[]
+
+  @@map("PurchaseOrder")
 }
 
 // Purchase Order Line model
@@ -157,4 +163,24 @@ model POLine {
   // Relations
   purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
   product       Product       @relation(fields: [productId], references: [id])
+
+  @@map("POLine")
+}
+
+// Vendor-Product relationship (many-to-many with additional fields)
+model VendorProduct {
+  id        String   @id @default(cuid())
+  vendorId  String
+  productId String
+  price     Decimal? // Optional price for this vendor-product combination
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendor  Vendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorId, productId])
+  @@index([vendorId])
+  @@index([productId])
 }
