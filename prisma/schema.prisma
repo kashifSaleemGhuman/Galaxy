@@ -132,11 +132,7 @@ model Supplier {
 
   // Relations
   purchaseOrders PurchaseOrder[]
-<<<<<<< HEAD
-
-=======
   
->>>>>>> ea6d3e46e054d13e91b1a0d970c6e3e889765ac7
   @@map("Supplier")
 }
 
@@ -151,11 +147,7 @@ model PurchaseOrder {
   // Relations
   supplier Supplier @relation(fields: [supplierId], references: [supplierId])
   lines    POLine[]
-<<<<<<< HEAD
-
-=======
   
->>>>>>> ea6d3e46e054d13e91b1a0d970c6e3e889765ac7
   @@map("PurchaseOrder")
 }
 
@@ -171,7 +163,6 @@ model POLine {
   // Relations
   purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
   product       Product       @relation(fields: [productId], references: [id])
-<<<<<<< HEAD
 
   @@map("POLine")
 }
@@ -192,8 +183,4 @@ model VendorProduct {
   @@unique([vendorId, productId])
   @@index([vendorId])
   @@index([productId])
-=======
-  
-  @@map("POLine")
->>>>>>> ea6d3e46e054d13e91b1a0d970c6e3e889765ac7
 }
