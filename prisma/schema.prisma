@@ -124,45 +124,54 @@ model RFQApproval {
 
 // Supplier model (legacy external supplier directory)
 model Supplier {
-  supplierId  String  @id
+  supplierId  String  @id @map("supplier_id")
   name        String
-  contactInfo String?
+  contactInfo String? @map("contact_info")
   email       String
   phone       String?
 
   // Relations
   purchaseOrders PurchaseOrder[]
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> ea6d3e46e054d13e91b1a0d970c6e3e889765ac7
   @@map("Supplier")
 }
 
 // Purchase Order model
 model PurchaseOrder {
-  poId        String   @id
-  rfqId       String?
-  supplierId  String
-  dateCreated DateTime @default(now())
+  poId        String   @id @map("po_id")
+  rfqId       String?  @map("rfq_id")
+  supplierId  String   @map("supplier_id")
+  dateCreated DateTime @default(now()) @map("date_created")
   status      String   @default("draft")
 
   // Relations
   supplier Supplier @relation(fields: [supplierId], references: [supplierId])
   lines    POLine[]
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> ea6d3e46e054d13e91b1a0d970c6e3e889765ac7
   @@map("PurchaseOrder")
 }
 
 // Purchase Order Line model
 model POLine {
-  poLineId         String  @id
-  poId             String
-  productId        String
-  quantityOrdered  Int
-  quantityReceived Int     @default(0)
+  poLineId         String  @id @map("po_line_id")
+  poId             String  @map("po_id")
+  productId        String  @map("product_id")
+  quantityOrdered  Int     @map("quantity_ordered")
+  quantityReceived Int     @default(0) @map("quantity_received")
   price            Decimal
 
   // Relations
   purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
   product       Product       @relation(fields: [productId], references: [id])
+<<<<<<< HEAD
 
   @@map("POLine")
 }
@@ -183,4 +192,8 @@ model VendorProduct {
   @@unique([vendorId, productId])
   @@index([vendorId])
   @@index([productId])
+=======
+  
+  @@map("POLine")
+>>>>>>> ea6d3e46e054d13e91b1a0d970c6e3e889765ac7
 }

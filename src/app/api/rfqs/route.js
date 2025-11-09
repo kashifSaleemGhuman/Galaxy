@@ -4,6 +4,10 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
 
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 // Helper function to generate RFQ number
 function generateRFQNumber() {
   const year = new Date().getFullYear();
@@ -15,6 +19,12 @@ function generateRFQNumber() {
 // GET /api/rfqs - List RFQs
 export async function GET(req) {
   try {
+    // Check if Prisma client is available
+    if (!prisma) {
+      console.error('Prisma client is not initialized');
+      return NextResponse.json({ error: 'Database connection error' }, { status: 500 });
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -36,6 +46,10 @@ export async function GET(req) {
     const currentUser = await prisma.user.findUnique({
       where: { email: session.user.email }
     });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
 
     if (![ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER].includes(currentUser.role)) {
       // Regular users can only see their own RFQs
@@ -77,13 +91,38 @@ export async function GET(req) {
     });
   } catch (error) {
     console.error('Error fetching RFQs:', error);
-    return NextResponse.json({ error: 'Failed to fetch RFQs' }, { status: 500 });
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+      name: error.name,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+    
+    // Return error details for debugging (safe to expose Prisma error codes)
+    const errorResponse = {
+      error: 'Failed to fetch RFQs',
+      ...(error.code && { code: error.code }),
+      ...(error.meta && { meta: error.meta }),
+      ...(process.env.NODE_ENV === 'development' && { 
+        message: error.message,
+        stack: error.stack 
+      })
+    };
+    
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
 
 // POST /api/rfqs - Create RFQ
 export async function POST(req) {
   try {
+    // Check if Prisma client is available
+    if (!prisma) {
+      console.error('Prisma client is not initialized');
+      return NextResponse.json({ error: 'Database connection error' }, { status: 500 });
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -204,20 +243,21 @@ export async function POST(req) {
       message: error.message,
       code: error.code,
       meta: error.meta,
+      name: error.name,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
     
-    // Return more detailed error in development, generic in production
-    const errorMessage = process.env.NODE_ENV === 'development' 
-      ? error.message || 'Failed to create RFQ'
-      : 'Failed to create RFQ';
-    
-    return NextResponse.json({ 
-      error: errorMessage,
+    // Return error details for debugging (safe to expose Prisma error codes)
+    const errorResponse = {
+      error: 'Failed to create RFQ',
+      ...(error.code && { code: error.code }),
+      ...(error.meta && { meta: error.meta }),
       ...(process.env.NODE_ENV === 'development' && { 
-        details: error.code,
-        meta: error.meta 
+        message: error.message,
+        stack: error.stack 
       })
-    }, { status: 500 });
+    };
+    
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

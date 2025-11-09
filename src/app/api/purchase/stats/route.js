@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
 
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function GET() {
