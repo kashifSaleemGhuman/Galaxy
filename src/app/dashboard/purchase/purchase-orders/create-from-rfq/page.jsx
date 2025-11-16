@@ -147,7 +147,7 @@ export default function CreatePOFromRFQPage() {
           <p className="text-gray-500 mb-4">There are no approved RFQs available for creating purchase orders</p>
           <Button 
             onClick={() => router.push('/dashboard/purchase/rfqs')}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-gradient-to-r from-blue-600 to-black text-white hover:from-blue-700 hover:to-gray-900"
           >
             View RFQs
           </Button>
@@ -226,7 +226,7 @@ export default function CreatePOFromRFQPage() {
                         <p className="text-xs text-gray-500 capitalize">{rfq.purchaseOrderStatus}</p>
                         <Button 
                           onClick={() => router.push(`/dashboard/purchase/purchase-orders/${rfq.purchaseOrderId}`)}
-                          className="mt-2 bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                          className="mt-2 bg-gradient-to-r from-blue-600 to-black text-white text-sm hover:from-blue-700 hover:to-gray-900"
                         >
                           View PO
                         </Button>
@@ -235,7 +235,7 @@ export default function CreatePOFromRFQPage() {
                       <Button 
                         onClick={() => handleCreatePO(rfq)}
                         disabled={creating}
-                        className="bg-green-600 hover:bg-green-700 text-white"
+                        className="bg-gradient-to-r from-green-600 to-green-900 text-white hover:from-green-700 hover:to-black"
                       >
                         {creating ? 'Creating...' : 'Create PO'}
                       </Button>

@@ -208,7 +208,7 @@ export default function RFQApprovalsList() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
         </div>
       ) : (
-        <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+        <div className="bg-white shadow-sm rounded-lg overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -230,7 +230,7 @@ export default function RFQApprovalsList() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[22rem] md:w-[24rem]">
                   Actions
                 </th>
               </tr>
@@ -267,11 +267,11 @@ export default function RFQApprovalsList() {
                       {STATUS_LABELS[rfq.status]?.label || rfq.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium w-[22rem] md:w-[24rem]">
                     <div className="flex space-x-2 justify-end">
                       <Button
                         onClick={() => handleViewDetails(rfq.id)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1"
+                        className="bg-gradient-to-r from-blue-600 to-black hover:from-blue-700 hover:to-gray-900 text-white text-xs px-3 py-1"
                       >
                         View Details
                       </Button>
@@ -280,14 +280,14 @@ export default function RFQApprovalsList() {
                           <Button
                             onClick={() => handleApprove(rfq.id)}
                             disabled={actionLoading === rfq.id}
-                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1"
+                            className="bg-gradient-to-r from-green-600 to-green-900 hover:from-green-700 hover:to-black text-white text-xs px-3 py-1"
                           >
                             {actionLoading === rfq.id ? 'Approving...' : 'Approve'}
                           </Button>
                           <Button
                             onClick={() => handleReject(rfq.id)}
                             disabled={actionLoading === rfq.id}
-                            className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1"
+                            className="bg-gradient-to-r from-red-600 to-red-900 text-white hover:from-red-700 hover:to-black text-xs px-3 py-1"
                           >
                             {actionLoading === rfq.id ? 'Rejecting...' : 'Reject'}
                           </Button>

@@ -245,7 +245,7 @@ export default function VendorPortal({ rfq, onQuoteSubmit }) {
             </Button>
             <Button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-gradient-to-r from-blue-600 to-black text-white hover:from-blue-700 hover:to-gray-900"
               disabled={loading}
             >
               {loading ? 'Submitting...' : 'Submit Quote'}

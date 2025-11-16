@@ -340,7 +340,7 @@ export default function CreatePurchaseOrderPage() {
                     <Button
                       type="button"
                       onClick={addLineItem}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      className="w-full bg-gradient-to-r from-blue-600 to-black text-white hover:from-blue-700 hover:to-gray-900"
                     >
                       Add Item
                     </Button>
@@ -388,13 +388,13 @@ export default function CreatePurchaseOrderPage() {
                                 {formatCurrency(line.quantity_ordered * line.price)}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                <button
+                                <Button
                                   type="button"
                                   onClick={() => removeLineItem(index)}
-                                  className="text-red-600 hover:text-red-800"
+                                  className="bg-gradient-to-r from-red-600 to-black text-white hover:from-red-700 hover:to-gray-900"
                                 >
                                   Remove
-                                </button>
+                                </Button>
                               </td>
                             </tr>
                           );
@@ -445,7 +445,7 @@ export default function CreatePurchaseOrderPage() {
                   <Button
                     type="button"
                     onClick={() => router.push('/dashboard/purchase/purchase-orders')}
-                    className="w-full bg-gray-600 hover:bg-gray-700 text-white"
+                    className="w-full bg-gradient-to-r from-red-600 to-black text-white hover:from-red-700 hover:to-gray-900"
                   >
                     Cancel
                   </Button>

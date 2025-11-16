@@ -361,12 +361,12 @@ export default function CRMDashboard() {
         <div className="flex space-x-3">
           <button 
             onClick={handleAddCustomer}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+            className="bg-gradient-to-r from-blue-600 to-black text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-gray-900 flex items-center space-x-2"
           >
             <Plus className="h-5 w-5" />
             <span>Add Customer</span>
           </button>
-          <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2">
+          <button className="bg-gradient-to-r from-green-600 to-green-900 text-white px-4 py-2 rounded-lg hover:from-green-700 hover:to-black flex items-center space-x-2">
             <UserPlus className="h-5 w-5" />
             <span>Add Lead</span>
           </button>

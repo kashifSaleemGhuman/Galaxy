@@ -144,14 +144,14 @@ export default function RFQDetailPage({ params }) {
                 <Button
                   onClick={handleApprove}
                   disabled={actionLoading}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-gradient-to-r from-green-600 to-green-900 text-white hover:from-green-700 hover:to-black"
                 >
                   {actionLoading ? 'Approving...' : 'Approve'}
                 </Button>
                 <Button
                   onClick={handleReject}
                   disabled={actionLoading}
-                  className="bg-red-600 hover:bg-red-700 text-white"
+                  className="bg-gradient-to-r from-red-600 to-red-900 text-white hover:from-red-700 hover:to-black"
                 >
                   {actionLoading ? 'Rejecting...' : 'Reject'}
                 </Button>
@@ -212,6 +212,7 @@ export default function RFQDetailPage({ params }) {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -225,6 +226,9 @@ export default function RFQDetailPage({ params }) {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {item.unit || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.unitPrice !== undefined && item.unitPrice !== null ? formatCurrency(item.unitPrice) : '—'}
                   </td>
                 </tr>
               ))}

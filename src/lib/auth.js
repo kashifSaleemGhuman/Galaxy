@@ -1,52 +1,53 @@
 import { getServerSession } from 'next-auth/next';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import bcrypt from 'bcryptjs';
-import prisma from './db';
+import { compare } from 'bcryptjs';
 import { ROLES, ROLE_PERMISSIONS } from './constants/roles';
+import { prisma } from './db';
 
 export const authOptions = {
   providers: [
     CredentialsProvider({
-      name: 'credentials',
+      name: 'Credentials',
       credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null
-        }
+        if (!credentials?.email || !credentials?.password) return null;
 
         try {
+          // Find user in database
           const user = await prisma.user.findUnique({
-            where: { email: credentials.email },
-          })
+            where: { email: credentials.email }
+          });
 
-          if (!user) {
-            return null
+          if (!user) return null;
+
+          // Verify password
+          const isValidPassword = await compare(credentials.password, user.password);
+          
+          if (isValidPassword) {
+            // Create audit log for successful login
+            await prisma.auditLog.create({
+              data: {
+                userId: user.id,
+                action: 'LOGIN',
+                details: 'User logged in successfully'
+              }
+            });
+
+            // Never send the password
+            const { password, ...userWithoutPass } = user;
+            return userWithoutPass;
           }
 
-          const isPasswordValid = await bcrypt.compare(
-            credentials.password,
-            user.password
-          )
-
-          if (!isPasswordValid) {
-            return null
-          }
-
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-          }
+          return null;
         } catch (error) {
-          console.error('Authentication error:', error)
-          return null
+          console.error('Auth error:', error);
+          return null;
         }
-      },
-    }),
+      }
+    })
   ],
   callbacks: {
     async jwt({ token, user }) {
@@ -55,23 +56,33 @@ export const authOptions = {
         token.role = user.role
         token.permissions = ROLE_PERMISSIONS[user.role] || [];
         token.userId = user.id;
+        token.isFirstLogin = user.isFirstLogin;
+        token.email = user.email;
       }
       return token;
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id
-        session.user.role = token.role
+      if (session?.user) {
+        session.user.role = token.role;
         session.user.permissions = token.permissions;
+        session.user.id = token.userId || token.id;
+        session.user.isFirstLogin = token.isFirstLogin;
+        session.user.email = token.email;
       }
-      return session
-    },
+      return session;
+    }
   },
   pages: {
     signIn: '/login',
     error: '/error',
-  }
+  },
+  session: {
+    strategy: "jwt",
+  },
+  secret: process.env.NEXTAUTH_SECRET || 'your-secret-key'
 };
+
+export const authConfig = authOptions;
 
 // Middleware to check permissions
 export async function checkPermission(permission) {

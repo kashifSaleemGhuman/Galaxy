@@ -3,6 +3,10 @@ import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
 
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function GET(req) {
   try {
     const session = await getServerSession();
@@ -27,6 +31,7 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
     const supplierId = searchParams.get('supplier_id');
+    const rfqId = searchParams.get('rfqId') || searchParams.get('rfq_id');
     const limit = parseInt(searchParams.get('limit')) || 50;
 
     let whereClause = {};
@@ -37,6 +42,9 @@ export async function GET(req) {
     
     if (supplierId) {
       whereClause.supplierId = supplierId;
+    }
+    if (rfqId) {
+      whereClause.rfqId = rfqId;
     }
 
     const data = await prisma.purchaseOrder.findMany({ 

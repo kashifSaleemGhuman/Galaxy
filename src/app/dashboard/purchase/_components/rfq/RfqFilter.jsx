@@ -7,11 +7,8 @@ export default function RfqFilter({ activeFilter, onFilterChange }) {
     <div className="flex gap-2 mb-4">
       <Button
         onClick={() => onFilterChange('all')}
-        className={`${
-          activeFilter === 'all'
-            ? 'bg-blue-600 text-white'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        }`}
+        variant={activeFilter === 'all' ? 'default' : 'outline'}
+        className={`${activeFilter === 'all' ? '' : 'text-black'}`}
       >
         All RFQs
       </Button>
@@ -19,11 +16,9 @@ export default function RfqFilter({ activeFilter, onFilterChange }) {
         <Button
           key={status}
           onClick={() => onFilterChange(status)}
-          className={`${
-            activeFilter === status
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
+          size={status === 'cancelled' ? 'sm' : 'default'}
+          variant={activeFilter === status ? 'default' : 'outline'}
+          className={`${activeFilter === status ? '' : 'text-black'}`}
         >
           {label}
         </Button>

@@ -3,6 +3,10 @@ import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
 
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 // POST /api/purchase/purchase-orders/from-rfq - Create Purchase Order from approved RFQ
 export async function POST(req) {
   // Debug: Check prisma client
@@ -144,7 +148,8 @@ export async function POST(req) {
               productId: item.productId || item.product?.id,
               quantityOrdered: item.quantity,
               quantityReceived: 0,
-              price: rfq.vendorPrice || 0 // Use vendor price from RFQ
+              // Store UNIT price per line (not the RFQ total)
+              price: item.unitPrice ? parseFloat(item.unitPrice) : 0
             }
           });
         })

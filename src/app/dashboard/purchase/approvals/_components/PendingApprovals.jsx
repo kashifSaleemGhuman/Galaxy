@@ -56,7 +56,7 @@ export default function PendingApprovals() {
                     ${rfq.quoteAmount}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    <Button className="bg-blue-600 text-white hover:bg-blue-700">
+                    <Button className="bg-gradient-to-r from-blue-600 to-black text-white hover:from-blue-700 hover:to-gray-900">
                       Review
                     </Button>
                   </td>

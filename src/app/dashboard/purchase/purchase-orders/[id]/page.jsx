@@ -174,7 +174,7 @@ export default function PurchaseOrderDetailPage({ params }) {
             <Button 
               onClick={handleSendPO}
               disabled={sending}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-gradient-to-r from-green-600 to-green-900 text-white hover:from-green-700 hover:to-black"
             >
               {sending ? 'Sending...' : 'Send to Vendor'}
             </Button>

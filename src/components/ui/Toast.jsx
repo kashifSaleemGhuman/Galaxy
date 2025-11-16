@@ -46,7 +46,7 @@ export function Toast({ message, type = 'info', duration = 5000, onClose }) {
   if (!isVisible) return null
 
   return (
-    <div className={`fixed top-4 right-4 z-50 max-w-sm w-full ${styles.bgColor} border ${styles.borderColor} rounded-lg shadow-lg transform transition-all duration-300 ease-in-out`}>
+    <div className={`max-w-sm w-full ${styles.bgColor} border ${styles.borderColor} rounded-lg shadow-lg transform transition-all duration-300 ease-in-out`}>
       <div className="flex items-start p-4">
         <div className="flex-shrink-0">
           <IconComponent className={`h-5 w-5 ${styles.iconColor}`} />

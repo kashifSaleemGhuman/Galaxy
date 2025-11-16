@@ -236,13 +236,13 @@ export default function PurchaseOrdersPage() {
         <div className="flex space-x-3">
           <Button 
             onClick={handleCreateFromRFQ}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="bg-gradient-to-r from-green-600 to-green-900 text-white hover:from-green-700 hover:to-black"
           >
             Create from RFQ
           </Button>
           <Button 
             onClick={handleCreateStandalone}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-gradient-to-r from-blue-600 to-black text-white hover:from-blue-700 hover:to-gray-900"
           >
             New Purchase Order
           </Button>
@@ -321,13 +321,13 @@ export default function PurchaseOrdersPage() {
           <div className="flex justify-center space-x-3">
             <Button 
               onClick={handleCreateFromRFQ}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-gradient-to-r from-green-600 to-green-900 text-white hover:from-green-700 hover:to-black"
             >
               Create from RFQ
             </Button>
             <Button 
               onClick={handleCreateStandalone}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-gradient-to-r from-blue-600 to-black text-white hover:from-blue-700 hover:to-gray-900"
             >
               New Purchase Order
             </Button>

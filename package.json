@@ -13,7 +13,10 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
-    "postinstall": "prisma generate"
+    "db:clear": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/clear-db.ts",
+    "postman:generate": "node scripts/generate-postman.js",
+    "postinstall": "prisma generate",
+    "vercel-build": "prisma generate && prisma migrate deploy && prisma db seed && next build"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
@@ -31,7 +34,11 @@
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-tabs": "^1.0.4",
     "@radix-ui/react-toast": "^1.1.5",
+    "@tailwindcss/aspect-ratio": "^0.4.2",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-table": "^8.10.3",
+    "autoprefixer": "^10.4.16",
     "axios": "^1.12.2",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",
@@ -43,28 +50,25 @@
     "next": "13.5.4",
     "next-auth": "^4.23.2",
     "next-themes": "^0.2.1",
+    "postcss": "^8.4.31",
     "react": "^18",
     "react-day-picker": "^8.8.2",
     "react-dom": "^18",
+    "supports-color": "^8.1.1",
     "tailwind-merge": "^1.14.0",
+    "tailwindcss": "^3.3.3",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.2.2",
     "zustand": "^4.4.1"
   },
   "devDependencies": {
-    "@tailwindcss/aspect-ratio": "^0.4.2",
-    "@tailwindcss/forms": "^0.5.10",
-    "@tailwindcss/typography": "^0.5.19",
     "@types/bcryptjs": "^2.4.4",
-    "@types/node": "^20.19.23",
+    "@types/node": "^24.10.0",
     "@types/react": "^18.3.26",
     "@types/react-dom": "^18",
-    "autoprefixer": "^10.4.16",
     "eslint": "^8",
     "eslint-config-next": "13.5.4",
-    "postcss": "^8.4.31",
     "prisma": "^5.4.2",
-    "tailwindcss": "^3.3.3",
-    "tailwindcss-animate": "^1.0.7",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.2.2"
+    "ts-node": "^10.9.1"
   }
 }
