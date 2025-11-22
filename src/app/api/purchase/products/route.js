@@ -7,6 +7,10 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
+import {
+  normalizeAttributes,
+  normalizeTraceabilityQuestions,
+} from '@/lib/purchase/productFieldUtils';
 
 export async function GET(req) {
   try {
@@ -50,7 +54,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { name, description, category, unit } = body;
+    const { name, description, category, unit, attributes, traceabilityQuestions } = body;
 
     // Validation
     if (!name || !unit) {
@@ -72,7 +76,9 @@ export async function POST(request) {
         description: description || null,
         category: category || null,
         unit,
-        isActive: true
+        isActive: true,
+        attributes: normalizeAttributes(attributes),
+        traceabilityQuestions: normalizeTraceabilityQuestions(traceabilityQuestions)
       },
     });
 

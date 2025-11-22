@@ -11,6 +11,50 @@ import { Toast } from '@/components/ui/Toast';
 
 export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
   // Initialize item prices from RFQ items
+  const buildTraceabilityResponses = (rfqItem) => {
+    const questions = Array.isArray(rfqItem.product?.traceabilityQuestions)
+      ? rfqItem.product.traceabilityQuestions
+      : [];
+    const existingAnswers = Array.isArray(rfqItem.traceabilityAnswers)
+      ? rfqItem.traceabilityAnswers
+      : [];
+
+    return questions.map((question) => {
+      const match = existingAnswers.find(
+        (answer) => answer.questionId === question.id
+      );
+
+      return {
+        questionId: question.id,
+        prompt: question.prompt,
+        required: question.required !== false,
+        type: question.type || 'text',
+        placeholder: question.placeholder || '',
+        answer: match?.answer || '',
+      };
+    });
+  };
+
+  const buildCustomFieldResponses = (rfqItem) => {
+    const attributes = rfqItem.product?.attributes;
+    if (!attributes || typeof attributes !== 'object') {
+      return [];
+    }
+
+    const existingAnswers = rfqItem.customFieldAnswers || {};
+    if (typeof existingAnswers !== 'object') {
+      return [];
+    }
+
+    return Object.entries(attributes).map(([key, defaultValue]) => ({
+      fieldKey: key,
+      label: key,
+      placeholder: defaultValue || `Enter ${key.toLowerCase()}`,
+      value: existingAnswers[key] || '', // Only use existing answers, not default values
+      required: true, // All custom fields are required when recording quotes
+    }));
+  };
+
   const initializeItemPrices = () => {
     if (rfq.items && rfq.items.length > 0) {
       return rfq.items.map(item => ({
@@ -20,7 +64,9 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
         unit: item.unit,
         unitPrice: '',
         lineTotal: 0,
-        expectedDeliveryDate: ''
+        expectedDeliveryDate: '',
+        traceabilityResponses: buildTraceabilityResponses(item),
+        customFieldResponses: buildCustomFieldResponses(item)
       }));
     }
     return [];
@@ -54,7 +100,9 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
         unit: item.unit,
         unitPrice: '',
         lineTotal: 0,
-        expectedDeliveryDate: ''
+        expectedDeliveryDate: '',
+        traceabilityResponses: buildTraceabilityResponses(item),
+        customFieldResponses: buildCustomFieldResponses(item)
       })));
     }
   }, [rfq.id, rfq.items]);
@@ -182,6 +230,54 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
     }
   };
 
+  const handleTraceabilityAnswerChange = (index, questionId, value) => {
+    setItemPrices((prev) => {
+      const updated = [...prev];
+      const responses = [...(updated[index].traceabilityResponses || [])];
+      const targetIndex = responses.findIndex(
+        (response) => response.questionId === questionId
+      );
+
+      if (targetIndex !== -1) {
+        responses[targetIndex] = {
+          ...responses[targetIndex],
+          answer: value,
+        };
+        updated[index] = {
+          ...updated[index],
+          traceabilityResponses: responses,
+        };
+      }
+
+      return updated;
+    });
+    clearMessages();
+  };
+
+  const handleCustomFieldChange = (index, fieldKey, value) => {
+    setItemPrices((prev) => {
+      const updated = [...prev];
+      const responses = [...(updated[index].customFieldResponses || [])];
+      const targetIndex = responses.findIndex(
+        (response) => response.fieldKey === fieldKey
+      );
+
+      if (targetIndex !== -1) {
+        responses[targetIndex] = {
+          ...responses[targetIndex],
+          value: value,
+        };
+        updated[index] = {
+          ...updated[index],
+          customFieldResponses: responses,
+        };
+      }
+
+      return updated;
+    });
+    clearMessages();
+  };
+
   const handleQuoteReceived = async () => {
     setLoading(true);
     clearMessages();
@@ -202,6 +298,30 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
       return;
     }
 
+    const missingTraceabilityAnswers = itemPrices.some((item) =>
+      (item.traceabilityResponses || [])
+        .filter((response) => response.required)
+        .some((response) => !(`${response.answer ?? ''}`.trim()))
+    );
+
+    if (missingTraceabilityAnswers) {
+      setError('Please provide answers for all required traceability questions');
+      setLoading(false);
+      return;
+    }
+
+    const missingCustomFields = itemPrices.some((item) =>
+      (item.customFieldResponses || [])
+        .filter((response) => response.required)
+        .some((response) => !(`${response.value ?? ''}`.trim()))
+    );
+
+    if (missingCustomFields) {
+      setError('Please provide values for all required custom fields (e.g., Weight, Dimensions)');
+      setLoading(false);
+      return;
+    }
+
     // Calculate total from items
     const totalPrice = calculateTotalPrice();
     if (totalPrice <= 0) {
@@ -216,7 +336,19 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
       quantity: item.quantity,
       unit: item.unit,
       unitPrice: parseFloat(item.unitPrice) || 0,
-      expectedDeliveryDate: item.expectedDeliveryDate
+      expectedDeliveryDate: item.expectedDeliveryDate,
+      traceabilityAnswers: (item.traceabilityResponses || [])
+        .map((response) => ({
+          questionId: response.questionId,
+          answer: response.answer,
+        }))
+        .filter((response) => `${response.answer ?? ''}`.trim()),
+      customFieldAnswers: (item.customFieldResponses || []).reduce((acc, response) => {
+        if (response.value && `${response.value}`.trim()) {
+          acc[response.fieldKey] = response.value;
+        }
+        return acc;
+      }, {})
     }));
 
     try {
@@ -410,6 +542,113 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
                       </tr>
                     </tfoot>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {itemPrices.some((item) => (item.customFieldResponses || []).length > 0) && (
+              <div className="space-y-4 border-t pt-4">
+                <h4 className="font-medium text-gray-700">Product Specifications</h4>
+                <p className="text-xs text-gray-500 mb-3">
+                  Please provide the vendor's specifications for these product attributes
+                </p>
+                <div className="space-y-4">
+                  {itemPrices.map((item, index) => {
+                    if (!item.customFieldResponses || item.customFieldResponses.length === 0) {
+                      return null;
+                    }
+
+                    return (
+                      <div key={item.productId} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <p className="text-sm font-semibold text-gray-800 mb-3">
+                          {item.productName}
+                        </p>
+                        <div className="space-y-3">
+                          {item.customFieldResponses.map((field) => {
+                            const inputId = `${item.productId}-custom-${field.fieldKey}`;
+
+                            return (
+                              <div key={field.fieldKey} className="space-y-1">
+                                <label htmlFor={inputId} className="text-xs font-medium text-gray-600">
+                                  {field.label}
+                                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                                </label>
+                                <Input
+                                  id={inputId}
+                                  type="text"
+                                  value={field.value}
+                                  onChange={(e) => handleCustomFieldChange(index, field.fieldKey, e.target.value)}
+                                  placeholder={field.placeholder}
+                                  className="w-full"
+                                  required={field.required}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {itemPrices.some((item) => (item.traceabilityResponses || []).length > 0) && (
+              <div className="space-y-4 border-t pt-4">
+                <h4 className="font-medium text-gray-700">Traceability Answers</h4>
+                <div className="space-y-4">
+                  {itemPrices.map((item, index) => {
+                    if (!item.traceabilityResponses || item.traceabilityResponses.length === 0) {
+                      return null;
+                    }
+
+                    return (
+                      <div key={item.productId} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <p className="text-sm font-semibold text-gray-800 mb-3">
+                          {item.productName}
+                        </p>
+                        <div className="space-y-3">
+                          {item.traceabilityResponses.map((question) => {
+                            const inputId = `${item.productId}-${question.questionId}`;
+                            const inputType =
+                              question.type === 'number'
+                                ? 'number'
+                                : question.type === 'date'
+                                  ? 'date'
+                                  : 'text';
+
+                            return (
+                              <div key={question.questionId} className="space-y-1">
+                                <label htmlFor={inputId} className="text-xs font-medium text-gray-600">
+                                  {question.prompt}
+                                  {question.required && <span className="text-red-500 ml-1">*</span>}
+                                </label>
+                                {question.type === 'textarea' ? (
+                                  <textarea
+                                    id={inputId}
+                                    className="w-full bg-white rounded-md border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    rows={3}
+                                    value={question.answer}
+                                    onChange={(e) => handleTraceabilityAnswerChange(index, question.questionId, e.target.value)}
+                                    placeholder={question.placeholder || 'Enter answer'}
+                                  />
+                                ) : (
+                                  <Input
+                                    id={inputId}
+                                    type={inputType}
+                                    value={question.answer}
+                                    onChange={(e) => handleTraceabilityAnswerChange(index, question.questionId, e.target.value)}
+                                    placeholder={question.placeholder || 'Enter answer'}
+                                    className="w-full"
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -614,6 +853,122 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
             </tfoot>
           </table>
         </div>
+
+        {(rfq.items || []).some(
+          (item) => {
+            const attributes = item.product?.attributes;
+            return attributes && typeof attributes === 'object' && Object.keys(attributes).length > 0;
+          }
+        ) && (
+          <div>
+            <h3 className="font-medium mb-2">Product Specifications</h3>
+            <div className="space-y-4">
+              {(rfq.items || []).map((item) => {
+                const attributes = item.product?.attributes;
+                if (!attributes || typeof attributes !== 'object' || Object.keys(attributes).length === 0) {
+                  return null;
+                }
+
+                const customFieldAnswers = item.customFieldAnswers || {};
+                const attributeEntries = Object.entries(attributes);
+
+                return (
+                  <div
+                    key={item.id || item.productId}
+                    className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                  >
+                    <p className="text-sm font-semibold text-gray-800 mb-2">
+                      {item.product?.name || item.name}
+                    </p>
+                    <dl className="space-y-2">
+                      {attributeEntries.map(([key, defaultValue]) => {
+                        // Show vendor-provided answer if available, otherwise show default or pending
+                        const vendorValue = customFieldAnswers[key];
+                        const displayValue = vendorValue !== undefined && vendorValue !== null && `${vendorValue}`.trim()
+                          ? vendorValue
+                          : (rfq.status === RFQ_STATUS.SENT
+                              ? 'Pending response'
+                              : defaultValue || '—');
+
+                        return (
+                          <div
+                            key={key}
+                            className="flex flex-col sm:flex-row sm:items-center sm:justify-between"
+                          >
+                            <dt className="text-sm text-gray-600">
+                              {key}
+                            </dt>
+                            <dd className="text-sm font-medium text-gray-900">
+                              {displayValue}
+                            </dd>
+                          </div>
+                        );
+                      })}
+                    </dl>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {(rfq.items || []).some(
+          (item) =>
+            Array.isArray(item.product?.traceabilityQuestions) &&
+            item.product.traceabilityQuestions.length > 0
+        ) && (
+          <div>
+            <h3 className="font-medium mb-2">Traceability</h3>
+            <div className="space-y-4">
+              {(rfq.items || []).map((item) => {
+                const questions = Array.isArray(item.product?.traceabilityQuestions)
+                  ? item.product.traceabilityQuestions
+                  : [];
+                if (questions.length === 0) {
+                  return null;
+                }
+                const answers = Array.isArray(item.traceabilityAnswers)
+                  ? item.traceabilityAnswers
+                  : [];
+                const answerMap = new Map(
+                  answers.map((answer) => [
+                    answer.questionId || answer.id,
+                    answer.answer ?? '',
+                  ])
+                );
+
+                return (
+                  <div
+                    key={item.id || item.productId}
+                    className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                  >
+                    <p className="text-sm font-semibold text-gray-800 mb-2">
+                      {item.product?.name || item.name}
+                    </p>
+                    <dl className="space-y-2">
+                      {questions.map((question) => (
+                        <div
+                          key={question.id}
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <dt className="text-sm text-gray-600">
+                            {question.prompt}
+                          </dt>
+                          <dd className="text-sm font-medium text-gray-900">
+                            {answerMap.get(question.id) ||
+                              (rfq.status === RFQ_STATUS.SENT
+                                ? 'Pending response'
+                                : '—')}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="pt-4 border-t">
           {renderActionButtons()}
