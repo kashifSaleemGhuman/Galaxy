@@ -7,6 +7,10 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
+import {
+  normalizeAttributes,
+  normalizeTraceabilityQuestions,
+} from '@/lib/purchase/productFieldUtils';
 
 // PUT - Update product
 export async function PUT(req, { params }) {
@@ -24,7 +28,7 @@ export async function PUT(req, { params }) {
 
     const { id } = params;
     const body = await req.json();
-    const { name, description, category, unit, isActive } = body;
+    const { name, description, category, unit, isActive, attributes, traceabilityQuestions } = body;
 
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({
@@ -43,7 +47,11 @@ export async function PUT(req, { params }) {
         ...(description !== undefined && { description: description || null }),
         ...(category !== undefined && { category: category || null }),
         ...(unit && { unit }),
-        ...(isActive !== undefined && { isActive })
+        ...(isActive !== undefined && { isActive }),
+        ...(attributes !== undefined && { attributes: normalizeAttributes(attributes) }),
+        ...(traceabilityQuestions !== undefined && {
+          traceabilityQuestions: normalizeTraceabilityQuestions(traceabilityQuestions)
+        })
       }
     });
 

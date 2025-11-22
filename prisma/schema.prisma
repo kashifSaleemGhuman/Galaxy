@@ -62,6 +62,8 @@ model Product {
   description    String?
   category       String?
   unit           String
+  attributes     Json            @default("{}")
+  traceabilityQuestions Json     @default("[]")
   isActive       Boolean         @default(true)
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
@@ -103,6 +105,8 @@ model RFQItem {
   // Vendor Quote Details (per item)
   unitPrice            Decimal?
   expectedDeliveryDate DateTime?
+  traceabilityAnswers  Json        @default("[]")
+  customFieldAnswers   Json        @default("{}")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

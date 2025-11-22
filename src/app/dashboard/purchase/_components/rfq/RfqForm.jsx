@@ -108,7 +108,8 @@ export default function RfqForm({ onSubmit, onCancel }) {
             productId: product.id,
             name: product.name,
             quantity: '',
-            unit: product.unit || product.defaultUnit || ''
+            unit: product.unit || product.defaultUnit || '',
+            attributes: product.attributes || {}
           }
         ]
       });
@@ -308,50 +309,73 @@ export default function RfqForm({ onSubmit, onCancel }) {
                   Selected Products ({formData.products.length})
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {formData.products.map((product) => (
-                    <div
-                      key={product.productId}
-                      className="bg-blue-50 border border-blue-200 rounded-lg p-3 w-full"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <span className="font-medium text-gray-900 text-sm flex-1">
-                          {product.name}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeProduct(product.productId)}
-                          className="text-red-600 hover:text-red-800 ml-2"
-                        >
-                          ×
-                        </button>
-                      </div>
-                      <div className="flex gap-2">
-                        <div className="flex-1">
-                          <label className="block text-xs text-gray-600 mb-1">Quantity</label>
-                          <Input
-                            type="number"
-                            value={product.quantity}
-                            onChange={(e) => handleProductUpdate(product.productId, 'quantity', e.target.value)}
-                            placeholder="Qty"
-                            required
-                            min="1"
-                            className="text-sm h-8"
-                          />
+                  {formData.products.map((product) => {
+                    const attributes = product.attributes || {};
+                    const attributeEntries = Object.entries(attributes);
+                    
+                    return (
+                      <div
+                        key={product.productId}
+                        className="bg-blue-50 border border-blue-200 rounded-lg p-3 w-full"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <span className="font-medium text-gray-900 text-sm flex-1">
+                            {product.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeProduct(product.productId)}
+                            className="text-red-600 hover:text-red-800 ml-2"
+                          >
+                            ×
+                          </button>
                         </div>
-                        <div className="flex-1">
-                          <label className="block text-xs text-gray-600 mb-1">Unit</label>
-                          <Input
-                            type="text"
-                            value={product.unit}
-                            onChange={(e) => handleProductUpdate(product.productId, 'unit', e.target.value)}
-                            placeholder="Unit"
-                            required
-                            className="text-sm h-8"
-                          />
+                        
+                        {/* Custom Attributes Display */}
+                        {attributeEntries.length > 0 && (
+                          <div className="mb-2 pb-2 border-b border-blue-200">
+                            <div className="flex flex-wrap gap-1">
+                              {attributeEntries.map(([key, value]) => (
+                                <span
+                                  key={key}
+                                  className="px-2 py-0.5 bg-white border border-blue-300 rounded text-xs text-gray-700"
+                                  title={`${key}: ${value}`}
+                                >
+                                  <span className="font-medium">{key}:</span> {value || '—'}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <label className="block text-xs text-gray-600 mb-1">Quantity</label>
+                            <Input
+                              type="number"
+                              value={product.quantity}
+                              onChange={(e) => handleProductUpdate(product.productId, 'quantity', e.target.value)}
+                              placeholder="Qty"
+                              required
+                              min="1"
+                              className="text-sm h-8"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="block text-xs text-gray-600 mb-1">Unit</label>
+                            <Input
+                              type="text"
+                              value={product.unit}
+                              onChange={(e) => handleProductUpdate(product.productId, 'unit', e.target.value)}
+                              placeholder="Unit"
+                              required
+                              className="text-sm h-8"
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
