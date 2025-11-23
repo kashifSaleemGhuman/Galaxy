@@ -6,6 +6,62 @@ import { useRouter } from "next/navigation";
 import { Table } from '../_components/Table';
 import { useToast } from '@/components/ui/Toast';
 
+const generateTempId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `tmp-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+};
+
+const createAttributeRow = (overrides = {}) => ({
+  id: overrides.id || generateTempId(),
+  key: overrides.key || '',
+  value: overrides.value ?? ''
+});
+
+const toAttributeRows = (attributes) => {
+  if (!attributes || typeof attributes !== 'object') {
+    return [];
+  }
+
+  return Object.entries(attributes).map(([key, value]) =>
+    createAttributeRow({
+      id: generateTempId(),
+      key,
+      value: value ?? ''
+    })
+  );
+};
+
+const renderAttributeBadges = (attributes) => {
+  if (!attributes || typeof attributes !== 'object') {
+    return <span className="text-gray-400 text-xs">—</span>;
+  }
+
+  const entries = Object.entries(attributes);
+  if (entries.length === 0) {
+    return <span className="text-gray-400 text-xs">—</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {entries.slice(0, 3).map(([key, value]) => (
+        <span
+          key={key}
+          className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs"
+        >
+          {key}: {value}
+        </span>
+      ))}
+      {entries.length > 3 && (
+        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
+          +{entries.length - 3} more
+        </span>
+      )}
+    </div>
+  );
+};
+
 export default function VendorsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -19,8 +75,11 @@ export default function VendorsPage() {
     email: '',
     phone: '',
     address: '',
+    bankName: '',
+    bankAccountNumber: '',
     isActive: true
   });
+  const [attributeRows, setAttributeRows] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -64,11 +123,48 @@ export default function VendorsPage() {
     setSuccess('');
   };
 
+  const handleAddAttribute = () => {
+    setAttributeRows([...attributeRows, createAttributeRow()]);
+  };
+
+  const handleAttributeChange = (id, field, value) => {
+    setAttributeRows(
+      attributeRows.map((row) =>
+        row.id === id ? { ...row, [field]: value } : row
+      )
+    );
+  };
+
+  const handleRemoveAttribute = (id) => {
+    setAttributeRows(attributeRows.filter((row) => row.id !== id));
+  };
+
+  const resetFormState = () => {
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      bankName: '',
+      bankAccountNumber: '',
+      isActive: true
+    });
+    setAttributeRows([]);
+    setEditingVendor(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     setSubmitting(true);
+
+    const attributesPayload = attributeRows
+      .filter((row) => row.key.trim())
+      .map((row) => ({
+        key: row.key.trim(),
+        value: typeof row.value === 'string' ? row.value.trim() : row.value ?? ''
+      }));
 
     try {
       const url = editingVendor 
@@ -76,12 +172,17 @@ export default function VendorsPage() {
         : '/api/vendors';
       const method = editingVendor ? 'PUT' : 'POST';
 
+      const payload = {
+        ...formData,
+        attributes: attributesPayload
+      };
+
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -90,9 +191,8 @@ export default function VendorsPage() {
         const message = editingVendor ? 'Vendor updated successfully!' : 'Vendor added successfully!';
         setSuccess(message);
         showToast(message, 'success');
-        setFormData({ name: '', email: '', phone: '', address: '', isActive: true });
+        resetFormState();
         setShowForm(false);
-        setEditingVendor(null);
         fetchVendors(); // Refresh the list
       } else {
         const errorMsg = data.error || `Failed to ${editingVendor ? 'update' : 'add'} vendor`;
@@ -116,8 +216,11 @@ export default function VendorsPage() {
       email: vendor.email,
       phone: vendor.phone || '',
       address: vendor.address || '',
+      bankName: vendor.bankName || '',
+      bankAccountNumber: vendor.bankAccountNumber || '',
       isActive: vendor.isActive
     });
+    setAttributeRows(toAttributeRows(vendor.attributes));
     setShowForm(true);
     setError('');
     setSuccess('');
@@ -161,8 +264,7 @@ export default function VendorsPage() {
 
   const handleCancel = () => {
     setShowForm(false);
-    setEditingVendor(null);
-    setFormData({ name: '', email: '', phone: '', address: '', isActive: true });
+    resetFormState();
     setError('');
     setSuccess('');
   };
@@ -214,7 +316,7 @@ export default function VendorsPage() {
           <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Vendor Name *
+                Vendor Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -229,7 +331,7 @@ export default function VendorsPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email *
+                Email <span className="text-red-500">*</span>
               </label>
               <input
                 type="email"
@@ -268,6 +370,94 @@ export default function VendorsPage() {
                 className="w-full bg-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Enter vendor address"
               />
+            </div>
+
+            <div className="sm:col-span-2 border-t border-gray-200 pt-4 mt-2">
+              <h4 className="text-sm font-semibold text-gray-800 mb-3">Bank Details</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Bank Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="bankName"
+                    value={formData.bankName}
+                    onChange={handleChange}
+                    className="w-full bg-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., Chase Bank"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    IBAN / Account Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="bankAccountNumber"
+                    value={formData.bankAccountNumber}
+                    onChange={handleChange}
+                    className="w-full bg-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., GB82 WEST 1234 5698 7654 32"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="sm:col-span-2 border-t border-gray-200 pt-4 mt-2">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">Custom Fields</p>
+                  <p className="text-xs text-gray-500">
+                    Add optional vendor information such as tax ID, registration number, or other details.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddAttribute}
+                  className="px-3 py-1.5 rounded-md text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-700"
+                >
+                  Add Field
+                </button>
+              </div>
+
+              {attributeRows.length === 0 ? (
+                <p className="text-xs text-gray-500">No custom fields defined.</p>
+              ) : (
+                <div className="space-y-3">
+                  {attributeRows.map((row) => (
+                    <div
+                      key={row.id}
+                      className="flex flex-col sm:flex-row gap-2 sm:items-center"
+                    >
+                      <input
+                        type="text"
+                        value={row.key}
+                        onChange={(e) => handleAttributeChange(row.id, 'key', e.target.value)}
+                        className="flex-1 bg-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Label (e.g., Tax ID)"
+                      />
+                      <input
+                        type="text"
+                        value={row.value}
+                        onChange={(e) => handleAttributeChange(row.id, 'value', e.target.value)}
+                        className="flex-1 bg-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Value (e.g., 12-3456789)"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAttribute(row.id)}
+                        className="text-xs text-red-600 hover:text-red-800 px-2 py-1 rounded-md hover:bg-red-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {editingVendor && (
@@ -325,7 +515,29 @@ export default function VendorsPage() {
             { key: 'name', header: 'Name' },
             { key: 'email', header: 'Email' },
             { key: 'phone', header: 'Phone', cell: (row) => row.phone || 'N/A' },
-            { key: 'address', header: 'Address', cell: (row) => row.address || 'N/A' },
+            { 
+              key: 'bankDetails', 
+              header: 'Bank Details', 
+              cell: (row) => (
+                <div className="text-xs">
+                  {row.bankName ? (
+                    <div>
+                      <div className="font-medium">{row.bankName}</div>
+                      {row.bankAccountNumber && (
+                        <div className="text-gray-500 mt-0.5">{row.bankAccountNumber}</div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">—</span>
+                  )}
+                </div>
+              )
+            },
+            { 
+              key: 'customFields', 
+              header: 'Custom Fields', 
+              cell: (row) => renderAttributeBadges(row.attributes)
+            },
             { 
               key: 'isActive', 
               header: 'Status', 
@@ -377,7 +589,33 @@ export default function VendorsPage() {
               { key: 'name', header: 'Name', cell: (row) => <span className="text-gray-500">{row.name}</span> },
               { key: 'email', header: 'Email', cell: (row) => <span className="text-gray-500">{row.email}</span> },
               { key: 'phone', header: 'Phone', cell: (row) => <span className="text-gray-500">{row.phone || 'N/A'}</span> },
-              { key: 'address', header: 'Address', cell: (row) => <span className="text-gray-500">{row.address || 'N/A'}</span> },
+              { 
+                key: 'bankDetails', 
+                header: 'Bank Details', 
+                cell: (row) => (
+                  <div className="text-xs text-gray-500">
+                    {row.bankName ? (
+                      <div>
+                        <div className="font-medium">{row.bankName}</div>
+                        {row.bankAccountNumber && (
+                          <div className="mt-0.5">{row.bankAccountNumber}</div>
+                        )}
+                      </div>
+                    ) : (
+                      <span>—</span>
+                    )}
+                  </div>
+                )
+              },
+              { 
+                key: 'customFields', 
+                header: 'Custom Fields', 
+                cell: (row) => (
+                  <div className="text-gray-500">
+                    {renderAttributeBadges(row.attributes)}
+                  </div>
+                )
+              },
               { 
                 key: 'isActive', 
                 header: 'Status', 

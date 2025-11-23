@@ -44,16 +44,19 @@ model AuditLog {
 }
 
 model Vendor {
-  id             String          @id @default(cuid())
-  name           String
-  email          String          @unique
-  phone          String?
-  address        String?
-  isActive       Boolean         @default(true)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  rfqs           RFQ[]
-  vendorProducts VendorProduct[]
+  id               String          @id @default(cuid())
+  name             String
+  email            String          @unique
+  phone            String?
+  address          String?
+  bankName         String?
+  bankAccountNumber String?
+  attributes       Json            @default("{}")
+  isActive         Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  rfqs             RFQ[]
+  vendorProducts   VendorProduct[]
 }
 
 model Product {
