@@ -41,8 +41,11 @@ export default function DashboardLayout({ children }) {
   // Check if user is admin
   const isAdmin = session?.user?.role === 'super_admin' || session?.user?.role === 'admin'
   const isPurchaseManager = session?.user?.role === 'purchase_manager'
+  const isPurchaseUser = session?.user?.role === 'purchase_user'
+  const isPurchaseRole = isPurchaseManager || isPurchaseUser
 
-  const navigation = [
+  // Base navigation items
+  const allNavigationItems = [
     { 
       name: 'Dashboard', 
       href: '/dashboard', 
@@ -141,6 +144,17 @@ export default function DashboardLayout({ children }) {
       current: pathname === '/dashboard/settings'
     },
   ]
+
+  // Filter navigation based on role
+  // Purchase users and managers only see Purchase, Settings, and Analytics
+  // Admin sees all items
+  const navigation = isPurchaseRole
+    ? allNavigationItems.filter(item => 
+        item.name === 'Purchase' || 
+        item.name === 'Analytics' || 
+        item.name === 'Settings'
+      )
+    : allNavigationItems
 
   const toggleMenu = (menuName) => {
     const newExpanded = new Set(expandedMenus)
