@@ -90,6 +90,14 @@ export async function POST(req, { params }) {
       })
     );
 
+    // Fetch shipment lines with product relation for response
+    const shipmentLinesWithProducts = await prisma.incomingShipmentLine.findMany({
+      where: { shipmentId: incomingShipment.id },
+      include: {
+        product: true
+      }
+    });
+
     // Return the updated PO with shipment info
     const result = await prisma.purchaseOrder.findUnique({
       where: { poId: id },
@@ -124,9 +132,9 @@ export async function POST(req, { params }) {
           id: incomingShipment.id,
           shipmentNumber: incomingShipment.shipmentNumber,
           status: incomingShipment.status,
-          lines: shipmentLines.map(line => ({
+          lines: shipmentLinesWithProducts.map(line => ({
             id: line.id,
-            productName: line.product.name,
+            productName: line.product?.name || 'Unknown Product',
             quantityExpected: line.quantityExpected,
             unitPrice: line.unitPrice
           }))

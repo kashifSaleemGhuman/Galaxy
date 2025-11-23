@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { hasPermission, PERMISSIONS } from '@/lib/permissions'
+import { hasPermission, PERMISSIONS } from '@/lib/constants/roles'
 
 // GET /api/inventory/receipts - Get all goods receipts
 export async function GET(request) {
@@ -14,7 +14,7 @@ export async function GET(request) {
     }
 
     // Check permissions
-    if (!hasPermission(session.user.role?.name, PERMISSIONS.INVENTORY.RECEIPT_READ)) {
+    if (!hasPermission(session.user.role, PERMISSIONS.INVENTORY.RECEIPT_READ)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -105,7 +105,7 @@ export async function POST(request) {
     }
 
     // Check permissions
-    if (!hasPermission(session.user.role?.name, PERMISSIONS.INVENTORY.RECEIPT_CREATE)) {
+    if (!hasPermission(session.user.role, PERMISSIONS.INVENTORY.RECEIPT_CREATE)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     

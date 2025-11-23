@@ -1,45 +1,65 @@
 import { useSession } from 'next-auth/react';
-import { ROLE_PERMISSIONS } from '@/lib/constants/roles';
+import { hasPermission as checkPermission, hasAnyPermission as checkAnyPermission, hasAllPermissions as checkAllPermissions } from '@/lib/constants/roles';
 
+/**
+ * Hook to check user permissions based on their role
+ * Uses the unified permission system from @/lib/constants/roles
+ */
 export function usePermissions() {
   const { data: session } = useSession();
   const userRole = session?.user?.role;
+  const userPermissions = session?.user?.permissions || [];
 
+  /**
+   * Check if user has a specific permission
+   * @param {string} permission - Permission string to check
+   * @returns {boolean}
+   */
   const hasPermission = (permission) => {
-    if (!userRole) {
+    if (!userRole || !permission) {
       return false;
     }
     
-    // Handle role mapping - convert database roles to permission keys
-    const roleKey = userRole === 'SUPER_ADMIN' ? 'Admin' : 
-                   userRole === 'PURCHASE_MANAGER' ? 'Purchase Manager' :
-                   userRole === 'INVENTORY_MANAGER' ? 'Inventory Manager' :
-                   userRole;
-    
-    const rolePermissions = ROLE_PERMISSIONS[roleKey];
-    if (!rolePermissions) {
-      // If no specific role permissions, check if user is admin/super admin
-      if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') {
-        return true; // Super admin and admin have all permissions
+    // First check if permissions are available in session (faster)
+    if (userPermissions && userPermissions.length > 0) {
+      if (userPermissions.includes(permission)) {
+        return true;
       }
-      return false;
     }
     
-    return rolePermissions.includes(permission);
+    // Fallback to role-based permission check
+    return checkPermission(userRole, permission);
   };
 
+  /**
+   * Check if user has any of the specified permissions
+   * @param {string[]} permissions - Array of permission strings
+   * @returns {boolean}
+   */
   const hasAnyPermission = (permissions) => {
-    return permissions.some(permission => hasPermission(permission));
+    if (!userRole || !permissions || permissions.length === 0) {
+      return false;
+    }
+    return checkAnyPermission(userRole, permissions);
   };
 
+  /**
+   * Check if user has all of the specified permissions
+   * @param {string[]} permissions - Array of permission strings
+   * @returns {boolean}
+   */
   const hasAllPermissions = (permissions) => {
-    return permissions.every(permission => hasPermission(permission));
+    if (!userRole || !permissions || permissions.length === 0) {
+      return false;
+    }
+    return checkAllPermissions(userRole, permissions);
   };
 
   return {
     hasPermission,
     hasAnyPermission,
     hasAllPermissions,
-    userRole
+    userRole,
+    userPermissions
   };
 }

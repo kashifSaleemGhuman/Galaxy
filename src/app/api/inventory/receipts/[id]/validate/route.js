@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { hasPermission, PERMISSIONS } from '@/lib/permissions'
+import { hasPermission, PERMISSIONS } from '@/lib/constants/roles'
 
 // POST /api/inventory/receipts/[id]/validate - Validate goods receipt and update stock
 export async function POST(request, { params }) {
@@ -14,7 +14,7 @@ export async function POST(request, { params }) {
     }
 
     // Check permissions
-    if (!hasPermission(session.user.role?.name, PERMISSIONS.INVENTORY.RECEIPT_VALIDATE)) {
+    if (!hasPermission(session.user.role, PERMISSIONS.INVENTORY.RECEIPT_VALIDATE)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
+import { hasPermission, PERMISSIONS } from '@/lib/constants/roles';
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
 export const dynamic = 'force-dynamic';
@@ -8,7 +10,7 @@ export const runtime = 'nodejs';
 
 export async function POST(req, { params }) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -62,9 +64,12 @@ export async function POST(req, { params }) {
     }
 
     // Creator, manager, or admin can record quote
-    const canRecord = rfq.createdById === currentUser.id || ['super_admin', 'admin', 'purchase_manager'].includes(currentUser.role);
+    // Users can record quotes for their own RFQs, or if they have purchase permissions
+    const canRecord = rfq.createdById === currentUser.id || 
+                     hasPermission(currentUser.role, PERMISSIONS.PURCHASE.VIEW_ALL) ||
+                     hasPermission(currentUser.role, PERMISSIONS.PURCHASE.CREATE_RFQ);
     if (!canRecord) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      return NextResponse.json({ error: 'Access denied. You can only record quotes for RFQs you created, or if you have purchase permissions.' }, { status: 403 });
     }
 
     const updated = await prisma.$transaction(async (tx) => {

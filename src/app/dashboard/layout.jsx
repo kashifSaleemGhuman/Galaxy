@@ -19,7 +19,7 @@ import {
   ClipboardDocumentListIcon,
   BuildingOfficeIcon
 } from '@heroicons/react/24/outline'
-import { ROLES, hasPermission, PERMISSIONS } from '@/lib/permissions'
+import { ROLES, PERMISSIONS } from '@/lib/constants/roles'
 
 export default function DashboardLayout({ children }) {
   const { data: session, status } = useSession()
@@ -45,6 +45,15 @@ export default function DashboardLayout({ children }) {
   // Get user role from session
   const userRole = session?.user?.role || 'PURCHASE_MANAGER'
   const isAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ADMIN'
+  
+  // Debug logging for warehouse operators
+  if (userRole === 'WAREHOUSE_OPERATOR' && process.env.NODE_ENV === 'development') {
+    console.log('🏭 Warehouse Operator Navigation Check:', {
+      role: userRole,
+      permissions: session?.user?.permissions?.slice(0, 5),
+      permissionsCount: session?.user?.permissions?.length || 0
+    });
+  }
 
   // Build navigation based on user permissions
   const getNavigation = () => {
@@ -155,8 +164,47 @@ export default function DashboardLayout({ children }) {
       )
     }
 
-    // Inventory module - for inventory managers and admins only
-    if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'INVENTORY_MANAGER') {
+    // Get user permissions for permission-based checks
+    const userPermissions = session?.user?.permissions || [];
+
+    // Warehouse module - for warehouse operators, inventory users, and admins
+    // NOTE: INVENTORY_USER should also have warehouse access
+    const hasWarehouseAccess = userRole === 'SUPER_ADMIN' || 
+                               userRole === 'ADMIN' || 
+                               userRole === 'WAREHOUSE_OPERATOR' || 
+                               userRole === 'INVENTORY_USER' ||
+                               userRole === 'INVENTORY_MANAGER' ||
+                               userPermissions.includes(PERMISSIONS.WAREHOUSE.VIEW_ALL) ||
+                               userPermissions.includes(PERMISSIONS.WAREHOUSE.SHIPMENT_READ);
+    
+    if (hasWarehouseAccess) {
+      baseNavigation.push({
+        name: 'Warehouse', 
+        href: '/dashboard/warehouse', 
+        icon: BuildingOfficeIcon,
+        current: pathname.startsWith('/dashboard/warehouse'),
+        children: [
+          { name: 'Dashboard', href: '/dashboard/warehouse', current: pathname === '/dashboard/warehouse' },
+          { name: 'Incoming Shipments', href: '/dashboard/warehouse/shipments', current: pathname === '/dashboard/warehouse/shipments' },
+          { name: 'Process Goods', href: '/dashboard/warehouse/process', current: pathname === '/dashboard/warehouse/process' },
+          { name: 'Completed Tasks', href: '/dashboard/warehouse/completed', current: pathname === '/dashboard/warehouse/completed' }
+        ]
+      })
+    }
+    
+    // Inventory module - for inventory managers and admins only (NOT warehouse operators)
+    // Explicitly exclude WAREHOUSE_OPERATOR even if they have inventory permissions
+    const hasInventoryAccess = userRole !== 'WAREHOUSE_OPERATOR' && (
+                                userRole === 'SUPER_ADMIN' || 
+                                userRole === 'ADMIN' || 
+                                userRole === 'INVENTORY_MANAGER' ||
+                                userRole === 'INVENTORY_USER' ||
+                                userPermissions.includes(PERMISSIONS.INVENTORY.VIEW_ALL) ||
+                                userPermissions.includes(PERMISSIONS.INVENTORY.PRODUCT_READ) ||
+                                userPermissions.includes(PERMISSIONS.INVENTORY.STOCK_READ)
+                              );
+    
+    if (hasInventoryAccess) {
       baseNavigation.push({
         name: 'Inventory', 
         href: '/dashboard/inventory', 
@@ -168,22 +216,6 @@ export default function DashboardLayout({ children }) {
           { name: 'Stock', href: '/dashboard/inventory/stock', current: pathname === '/dashboard/inventory/stock' },
           { name: 'Movements', href: '/dashboard/inventory/movements', current: pathname === '/dashboard/inventory/movements' },
           { name: 'Goods Receipts', href: '/dashboard/inventory/incoming-shipments', current: pathname === '/dashboard/inventory/incoming-shipments' }
-        ]
-      })
-    }
-
-    // Warehouse module - for warehouse operators and super admins only
-    if (userRole === 'SUPER_ADMIN' || userRole === 'INVENTORY_USER') {
-      baseNavigation.push({
-        name: 'Warehouse', 
-        href: '/dashboard/warehouse', 
-        icon: BuildingOfficeIcon,
-        current: pathname.startsWith('/dashboard/warehouse'),
-        children: [
-          { name: 'Dashboard', href: '/dashboard/warehouse', current: pathname === '/dashboard/warehouse' },
-          { name: 'Incoming Shipments', href: '/dashboard/warehouse/shipments', current: pathname === '/dashboard/warehouse/shipments' },
-          { name: 'Process Goods', href: '/dashboard/warehouse/process', current: pathname === '/dashboard/warehouse/process' },
-          { name: 'Completed Tasks', href: '/dashboard/warehouse/completed', current: pathname === '/dashboard/warehouse/completed' }
         ]
       })
     }

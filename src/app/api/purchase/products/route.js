@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
-import { ROLES } from '@/lib/constants/roles';
+import { hasPermission, PERMISSIONS } from '@/lib/constants/roles';
 
 export async function GET(req) {
   try {
@@ -54,10 +54,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is purchase_manager or above
-    const allowedRoles = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER];
-    if (!allowedRoles.includes(session.user.role)) {
-      return NextResponse.json({ error: 'Forbidden: Only purchase managers can add products' }, { status: 403 });
+    // Check permissions using unified permission system
+    if (!hasPermission(session.user.role, PERMISSIONS.PURCHASE.MANAGE_PRODUCTS)) {
+      return NextResponse.json({ error: 'Forbidden: You do not have permission to manage products' }, { status: 403 });
     }
 
     const body = await request.json();

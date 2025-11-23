@@ -7,7 +7,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import prismaImported from '@/lib/db';
 import { PrismaClient } from '@prisma/client';
-import { ROLES } from '@/lib/constants/roles';
+import { hasPermission, PERMISSIONS } from '@/lib/constants/roles';
 
 export async function GET(req) {
   try {
@@ -58,10 +58,9 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is purchase_manager or above
-    const allowedRoles = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER];
-    if (!allowedRoles.includes(session.user.role)) {
-      return NextResponse.json({ error: 'Forbidden: Only purchase managers can add vendors' }, { status: 403 });
+    // Check if user has permission to manage vendors using unified permission system
+    if (!hasPermission(session.user.role, PERMISSIONS.PURCHASE.MANAGE_VENDORS)) {
+      return NextResponse.json({ error: 'Forbidden: You do not have permission to manage vendors' }, { status: 403 });
     }
 
     const prisma = prismaImported ?? new PrismaClient();

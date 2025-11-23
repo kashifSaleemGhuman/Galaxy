@@ -5,10 +5,13 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Table } from '../_components/Table';
 import { useToast } from '@/components/ui/Toast';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PERMISSIONS } from '@/lib/constants/roles';
 
 export default function ProductsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { hasPermission } = usePermissions();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -26,10 +29,8 @@ export default function ProductsPage() {
   const [submitting, setSubmitting] = useState(false);
   const { showToast, ToastContainer } = useToast();
 
-  // Check if user is purchase_manager or above
-  const isAuthorized = session?.user?.role === 'purchase_manager' || 
-                       session?.user?.role === 'admin' || 
-                       session?.user?.role === 'super_admin';
+  // Check if user has permission to manage products using unified permission system
+  const isAuthorized = hasPermission(PERMISSIONS.PURCHASE.MANAGE_PRODUCTS);
 
   useEffect(() => {
     if (status === 'loading') return;

@@ -58,6 +58,21 @@ export const authOptions = {
         token.userId = user.id;
         token.isFirstLogin = user.isFirstLogin;
         token.email = user.email;
+        
+        // Debug logging (remove in production)
+        if (process.env.NODE_ENV === 'development') {
+          const hasWarehouseViewAll = token.permissions?.includes('warehouse.view_all');
+          const hasWarehouseShipmentRead = token.permissions?.includes('warehouse.shipment.read');
+          console.log('🔐 Auth JWT Callback:', {
+            userId: user.id,
+            email: user.email,
+            role: user.role,
+            permissionsCount: token.permissions?.length || 0,
+            hasWarehouseViewAll,
+            hasWarehouseShipmentRead,
+            firstFewPermissions: token.permissions?.slice(0, 5)
+          });
+        }
       }
       return token;
     },
