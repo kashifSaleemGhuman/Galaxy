@@ -11,24 +11,24 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  password      String    // Hashed password
-  role          String    // SUPER_ADMIN, ADMIN, PURCHASE_MANAGER, etc.
-  isFirstLogin  Boolean   @default(true)
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  password     String // Hashed password
+  role         String // SUPER_ADMIN, ADMIN, PURCHASE_MANAGER, etc.
+  isFirstLogin Boolean  @default(true)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Audit trail
   passwordHistory PasswordHistory[]
-  auditLogs      AuditLog[]
-  
+  auditLogs       AuditLog[]
+
   // RFQ Relations
-  createdRfqs   RFQ[]
-  approvedRfqs  RFQ[]           @relation("RFQApprovals")
-  rfqApprovals  RFQApproval[]
+  createdRfqs  RFQ[]
+  approvedRfqs RFQ[]         @relation("RFQApprovals")
+  rfqApprovals RFQApproval[]
 }
 
 // Role model for permission management
@@ -36,7 +36,7 @@ model Role {
   id          String   @id @default(cuid())
   name        String   @unique
   description String?
-  permissions Json     // JSON object containing role permissions
+  permissions Json // JSON object containing role permissions
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -45,7 +45,7 @@ model Role {
 model PasswordHistory {
   id        String   @id @default(cuid())
   userId    String
-  password  String   // Hashed password
+  password  String // Hashed password
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
 }
@@ -54,8 +54,8 @@ model PasswordHistory {
 model AuditLog {
   id        String   @id @default(cuid())
   userId    String
-  action    String   // LOGIN, PASSWORD_CHANGE, etc.
-  details   String?  // Additional information
+  action    String // LOGIN, PASSWORD_CHANGE, etc.
+  details   String? // Additional information
   ipAddress String?
   userAgent String?
   createdAt DateTime @default(now())
@@ -64,144 +64,166 @@ model AuditLog {
 
 // Vendor model
 model Vendor {
-  id          String   @id @default(cuid())
-  name        String
-  email       String   @unique
-  phone       String?
-  address     String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  address   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  rfqs        RFQ[]
+  rfqs           RFQ[]
+  vendorProducts VendorProduct[]
+}
+
+// Vendor-Product relationship (many-to-many)
+model VendorProduct {
+  id        String   @id @default(cuid())
+  vendorId  String
+  productId String
+  price     Decimal?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  vendor  Vendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorId, productId])
 }
 
 // Product model
 model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  category    String?
-  unit        String   // pcs, kg, m, etc.
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id                    String   @id @default(cuid())
+  name                  String
+  description           String?
+  category              String?
+  unit                  String // pcs, kg, m, etc.
+  attributes            Json     @default("{}")
+  traceabilityQuestions Json     @default("[]")
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
   // Relations
   rfqItems              RFQItem[]
   poLines               POLine[]
   incomingShipmentLines IncomingShipmentLine[]
   inventoryItems        InventoryItem[]
   stockMovements        StockMovement[]
+  vendorProducts        VendorProduct[]
 }
 
 // RFQ (Request for Quotation) model
 model RFQ {
-  id                String   @id @default(cuid())
-  rfqNumber         String   @unique
-  vendorId          String
-  vendor            Vendor   @relation(fields: [vendorId], references: [id])
-  createdById       String
-  createdBy         User     @relation(fields: [createdById], references: [id])
-  
+  id          String @id @default(cuid())
+  rfqNumber   String @unique
+  vendorId    String
+  vendor      Vendor @relation(fields: [vendorId], references: [id])
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
   // RFQ Details
-  orderDeadline     DateTime
-  sentDate          DateTime?
-  status            String   @default("draft") // draft, sent, received, approved, rejected, cancelled
-  
+  orderDeadline DateTime
+  sentDate      DateTime?
+  status        String    @default("draft") // draft, sent, received, approved, rejected, cancelled
+
   // Vendor Quote Details
-  vendorPrice       Decimal?
-  expectedDelivery  DateTime?
-  vendorNotes       String?
-  
+  vendorPrice      Decimal?
+  expectedDelivery DateTime?
+  vendorNotes      String?
+
   // Approval Details
-  approvedById      String?
-  approvedBy        User?    @relation("RFQApprovals", fields: [approvedById], references: [id])
-  approvedAt        DateTime?
-  rejectionReason   String?
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
+  approvedById    String?
+  approvedBy      User?     @relation("RFQApprovals", fields: [approvedById], references: [id])
+  approvedAt      DateTime?
+  rejectionReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  items             RFQItem[]
-  approvals         RFQApproval[]
+  items     RFQItem[]
+  approvals RFQApproval[]
 }
 
 // RFQ Items (Products in RFQ)
 model RFQItem {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   rfqId     String
-  rfq       RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  rfq       RFQ     @relation(fields: [rfqId], references: [id], onDelete: Cascade)
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
   quantity  Int
   unit      String
-  
+
   // Vendor Quote Details (per item)
   unitPrice            Decimal?
   expectedDeliveryDate DateTime?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  traceabilityAnswers  Json      @default("[]")
+  customFieldAnswers   Json      @default("{}")
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
 
 // RFQ Approval tracking
 model RFQApproval {
-  id          String   @id @default(cuid())
-  rfqId       String
-  rfq         RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
-  approvedBy  String
-  approver    User     @relation(fields: [approvedBy], references: [id])
-  status      String   // pending, approved, rejected
-  comments    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  rfqId      String
+  rfq        RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  approvedBy String
+  approver   User     @relation(fields: [approvedBy], references: [id])
+  status     String // pending, approved, rejected
+  comments   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 // Supplier model (legacy table mapping)
 model Supplier {
-  supplierId  String   @id @map("supplier_id")
+  supplierId  String  @id @map("supplier_id")
   name        String
-  contactInfo String?   @map("contact_info")
+  contactInfo String? @map("contact_info")
   email       String
   phone       String?
-  
+
   // Relations
   purchaseOrders PurchaseOrder[]
 }
 
 // Purchase Order model
 model PurchaseOrder {
-  poId        String   @id @map("po_id")
-  rfqId       String?  @map("rfq_id")
-  supplierId  String   @map("supplier_id")
-  dateCreated DateTime @default(now()) @map("date_created")
-  status      String   @default("draft") // draft, sent, confirmed, approved, received, cancelled
+  poId        String    @id @map("po_id")
+  rfqId       String?   @map("rfq_id")
+  supplierId  String    @map("supplier_id")
+  dateCreated DateTime  @default(now()) @map("date_created")
+  status      String    @default("draft") // draft, sent, confirmed, approved, received, cancelled
   approvedAt  DateTime?
   approvedBy  String?
-  
+
   // Relations
-  supplier    Supplier @relation(fields: [supplierId], references: [supplierId])
-  lines       POLine[]
-  goodsReceipts GoodsReceipt[]
-  vendorBills VendorBill[]
+  supplier          Supplier           @relation(fields: [supplierId], references: [supplierId])
+  lines             POLine[]
+  goodsReceipts     GoodsReceipt[]
+  vendorBills       VendorBill[]
   incomingShipments IncomingShipment[]
 }
 
 // Purchase Order Line model
 model POLine {
-  poLineId        String  @id @map("po_line_id")
-  poId            String  @map("po_id")
-  productId       String  @map("product_id")
-  quantityOrdered Int     @map("quantity_ordered")
-  quantityReceived Int    @default(0) @map("quantity_received")
-  price           Decimal
-  
+  poLineId         String  @id @map("po_line_id")
+  poId             String  @map("po_id")
+  productId        String  @map("product_id")
+  quantityOrdered  Int     @map("quantity_ordered")
+  quantityReceived Int     @default(0) @map("quantity_received")
+  price            Decimal
+
   // Relations
-  purchaseOrder   PurchaseOrder @relation(fields: [poId], references: [poId])
-  product         Product       @relation(fields: [productId], references: [id])
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
+  product       Product       @relation(fields: [productId], references: [id])
 }
 
 // Goods Receipt model
@@ -209,8 +231,8 @@ model GoodsReceipt {
   receiptId    String   @id @map("receipt_id")
   poId         String   @map("po_id")
   dateReceived DateTime @map("date_received")
-  status       String   // pending, confirmed, rejected
-  
+  status       String // pending, confirmed, rejected
+
   // Relations
   purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
 }
@@ -221,22 +243,22 @@ model VendorBill {
   poId       String   @map("po_id")
   dateBilled DateTime @map("date_billed")
   amount     Decimal
-  status     String   // pending, paid, overdue
-  
+  status     String // pending, paid, overdue
+
   // Relations
   purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
 }
 
 // Warehouse model
 model Warehouse {
-  id          String   @id @default(cuid())
-  name        String
-  code        String   @unique
-  address     String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  address   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
   incomingShipments IncomingShipment[]
   inventoryItems    InventoryItem[]
@@ -245,43 +267,43 @@ model Warehouse {
 
 // Incoming Shipment model
 model IncomingShipment {
-  id              String   @id @default(cuid())
-  shipmentNumber  String   @unique
-  poId            String   @map("po_id")
-  warehouseId     String?  @map("warehouse_id")
-  status          String   @default("pending") // pending, assigned, received, processed, rejected
-  assignedAt      DateTime?
-  assignedBy      String?
-  receivedAt      DateTime?
-  processedAt     DateTime?
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  id             String    @id @default(cuid())
+  shipmentNumber String    @unique
+  poId           String    @map("po_id")
+  warehouseId    String?   @map("warehouse_id")
+  status         String    @default("pending") // pending, assigned, received, processed, rejected
+  assignedAt     DateTime?
+  assignedBy     String?
+  receivedAt     DateTime?
+  processedAt    DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
   // Relations
-  purchaseOrder   PurchaseOrder @relation(fields: [poId], references: [poId])
-  warehouse       Warehouse?    @relation(fields: [warehouseId], references: [id])
-  lines           IncomingShipmentLine[]
-  stockMovements  StockMovement[]
+  purchaseOrder  PurchaseOrder          @relation(fields: [poId], references: [poId])
+  warehouse      Warehouse?             @relation(fields: [warehouseId], references: [id])
+  lines          IncomingShipmentLine[]
+  stockMovements StockMovement[]
 }
 
 // Incoming Shipment Line model
 model IncomingShipmentLine {
-  id                String   @id @default(cuid())
-  shipmentId        String   @map("shipment_id")
-  productId         String   @map("product_id")
-  quantityExpected  Int      @map("quantity_expected")
-  quantityReceived  Int      @default(0) @map("quantity_received")
-  quantityAccepted  Int      @default(0) @map("quantity_accepted")
-  quantityRejected  Int      @default(0) @map("quantity_rejected")
-  unitPrice         Decimal  @map("unit_price")
-  notes             String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
+  id               String   @id @default(cuid())
+  shipmentId       String   @map("shipment_id")
+  productId        String   @map("product_id")
+  quantityExpected Int      @map("quantity_expected")
+  quantityReceived Int      @default(0) @map("quantity_received")
+  quantityAccepted Int      @default(0) @map("quantity_accepted")
+  quantityRejected Int      @default(0) @map("quantity_rejected")
+  unitPrice        Decimal  @map("unit_price")
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
   // Relations
-  shipment          IncomingShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
-  product           Product          @relation(fields: [productId], references: [id])
+  shipment IncomingShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  product  Product          @relation(fields: [productId], references: [id])
 }
 
 // Inventory Item model
@@ -294,34 +316,34 @@ model InventoryItem {
   available   Int      @default(0)
   minLevel    Int      @default(0)
   maxLevel    Int      @default(0)
-  location    String?  // Warehouse location/bay
+  location    String? // Warehouse location/bay
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   // Relations
-  product     Product   @relation(fields: [productId], references: [id])
-  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  product        Product         @relation(fields: [productId], references: [id])
+  warehouse      Warehouse       @relation(fields: [warehouseId], references: [id])
   stockMovements StockMovement[]
-  
+
   @@unique([productId, warehouseId])
 }
 
 // Stock Movement model
 model StockMovement {
-  id              String   @id @default(cuid())
-  productId       String   @map("product_id")
-  warehouseId     String   @map("warehouse_id")
-  shipmentId      String?  @map("shipment_id")
-  type            String   // in, out, transfer, adjustment
-  quantity        Int
-  reason          String?
-  reference       String?  // PO, SO, etc.
-  createdBy       String?
-  createdAt       DateTime @default(now())
-  
+  id          String   @id @default(cuid())
+  productId   String   @map("product_id")
+  warehouseId String   @map("warehouse_id")
+  shipmentId  String?  @map("shipment_id")
+  type        String // in, out, transfer, adjustment
+  quantity    Int
+  reason      String?
+  reference   String? // PO, SO, etc.
+  createdBy   String?
+  createdAt   DateTime @default(now())
+
   // Relations
-  product         Product          @relation(fields: [productId], references: [id])
-  warehouse       Warehouse        @relation(fields: [warehouseId], references: [id])
-  shipment        IncomingShipment? @relation(fields: [shipmentId], references: [id])
-  inventoryItem   InventoryItem    @relation(fields: [productId, warehouseId], references: [productId, warehouseId])
+  product       Product           @relation(fields: [productId], references: [id])
+  warehouse     Warehouse         @relation(fields: [warehouseId], references: [id])
+  shipment      IncomingShipment? @relation(fields: [shipmentId], references: [id])
+  inventoryItem InventoryItem     @relation(fields: [productId, warehouseId], references: [productId, warehouseId])
 }

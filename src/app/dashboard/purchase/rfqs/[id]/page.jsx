@@ -237,6 +237,133 @@ export default function RFQDetailPage({ params }) {
         </div>
       )}
 
+      {/* Product Specifications (Custom Fields) */}
+      {rfq.items && rfq.items.some((item) => {
+        const attributes = item.product?.attributes;
+        const customFieldAnswers = item.customFieldAnswers;
+        return (attributes && typeof attributes === 'object' && Object.keys(attributes).length > 0) ||
+               (customFieldAnswers && typeof customFieldAnswers === 'object' && Object.keys(customFieldAnswers).length > 0);
+      }) && (
+        <div className="bg-white border rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Specifications</h3>
+          <div className="space-y-4">
+            {rfq.items.map((item) => {
+              const attributes = item.product?.attributes || {};
+              const customFieldAnswers = item.customFieldAnswers || {};
+              
+              if (typeof attributes !== 'object' || Object.keys(attributes).length === 0) {
+                return null;
+              }
+
+              const attributeEntries = Object.entries(attributes);
+
+              return (
+                <div
+                  key={item.id || item.productId}
+                  className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                >
+                  <p className="text-sm font-semibold text-gray-800 mb-3">
+                    {item.product?.name || 'Unknown Product'}
+                  </p>
+                  <dl className="space-y-2">
+                    {attributeEntries.map(([key, defaultValue]) => {
+                      // Show vendor-provided answer if available, otherwise show default or pending
+                      const vendorValue = customFieldAnswers[key];
+                      const displayValue = vendorValue !== undefined && vendorValue !== null && `${vendorValue}`.trim()
+                        ? vendorValue
+                        : (rfq.status === 'sent' || rfq.status === 'draft'
+                            ? 'Pending response'
+                            : defaultValue || '—');
+
+                      return (
+                        <div
+                          key={key}
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 border-b border-gray-200 last:border-b-0"
+                        >
+                          <dt className="text-sm font-medium text-gray-700 mb-1 sm:mb-0">
+                            {key}
+                          </dt>
+                          <dd className="text-sm text-gray-900 font-semibold">
+                            {displayValue}
+                          </dd>
+                        </div>
+                      );
+                    })}
+                  </dl>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Traceability Answers */}
+      {rfq.items && rfq.items.some((item) => {
+        const questions = Array.isArray(item.product?.traceabilityQuestions) 
+          ? item.product.traceabilityQuestions 
+          : [];
+        return questions.length > 0;
+      }) && (
+        <div className="bg-white border rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Traceability</h3>
+          <div className="space-y-4">
+            {rfq.items.map((item) => {
+              const questions = Array.isArray(item.product?.traceabilityQuestions)
+                ? item.product.traceabilityQuestions
+                : [];
+              if (questions.length === 0) {
+                return null;
+              }
+              
+              const answers = Array.isArray(item.traceabilityAnswers)
+                ? item.traceabilityAnswers
+                : [];
+              const answerMap = new Map(
+                answers.map((answer) => [
+                  answer.questionId || answer.id,
+                  answer.answer ?? '',
+                ])
+              );
+
+              return (
+                <div
+                  key={item.id || item.productId}
+                  className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                >
+                  <p className="text-sm font-semibold text-gray-800 mb-3">
+                    {item.product?.name || 'Unknown Product'}
+                  </p>
+                  <dl className="space-y-2">
+                    {questions.map((question) => {
+                      const answer = answerMap.get(question.id);
+                      const displayValue = answer && `${answer}`.trim()
+                        ? answer
+                        : (rfq.status === 'sent' || rfq.status === 'draft'
+                            ? 'Pending response'
+                            : '—');
+
+                      return (
+                        <div
+                          key={question.id}
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 border-b border-gray-200 last:border-b-0"
+                        >
+                          <dt className="text-sm font-medium text-gray-700 mb-1 sm:mb-0">
+                            {question.prompt}
+                          </dt>
+                          <dd className="text-sm text-gray-900 font-semibold">
+                            {displayValue}
+                          </dd>
+                        </div>
+                      );
+                    })}
+                  </dl>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex justify-between items-center">
         <Button

@@ -4,6 +4,35 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { hasPermission, PERMISSIONS } from '@/lib/constants/roles';
 
+const normalizeTraceabilityAnswers = (input) => {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .map((entry) => {
+      if (!entry) return null;
+      const questionId =
+        typeof entry.questionId === 'string'
+          ? entry.questionId.trim()
+          : typeof entry.id === 'string'
+            ? entry.id.trim()
+            : '';
+      if (!questionId) return null;
+      const rawAnswer =
+        entry.answer ?? entry.value ?? entry.response ?? entry.text ?? '';
+      const answer =
+        typeof rawAnswer === 'string' ? rawAnswer.trim() : rawAnswer;
+      return { questionId, answer };
+    })
+    .filter((entry) => entry && entry.answer !== undefined && entry.answer !== null && `${entry.answer}`.trim() !== '');
+};
+
+const hasAnswerValue = (value) =>
+  value !== undefined &&
+  value !== null &&
+  `${value}`.trim() !== '';
+
 // Force dynamic rendering - this route uses getServerSession which requires headers()
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -35,16 +64,10 @@ export async function POST(req, { params }) {
       }
     }
 
-    // Calculate total price and earliest date for RFQ-level fields (for backwards compatibility)
-    const totalPrice = items.reduce((sum, item) => {
-      return sum + (parseFloat(item.unitPrice || 0) * parseInt(item.quantity || 0));
-    }, 0);
-    
-    const allDates = items
-      .map(item => item.expectedDeliveryDate)
-      .filter(date => date)
-      .sort();
-    const earliestDeliveryDate = allDates[0];
+    const sanitizedItems = items.map((item) => ({
+      ...item,
+      traceabilityAnswers: normalizeTraceabilityAnswers(item.traceabilityAnswers),
+    }));
 
     const currentUser = await prisma.user.findUnique({
       where: { email: session.user.email }
@@ -72,6 +95,114 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: 'Access denied. You can only record quotes for RFQs you created, or if you have purchase permissions.' }, { status: 403 });
     }
 
+    const rfqItemsByProduct = new Map(
+      rfq.items.map((rfqItem) => [rfqItem.productId, rfqItem])
+    );
+
+    const enrichedItems = [];
+
+    for (const item of sanitizedItems) {
+      const rfqItem = rfqItemsByProduct.get(item.productId);
+      if (!rfqItem) {
+        return NextResponse.json(
+          { error: 'Product not found in RFQ items' },
+          { status: 400 }
+        );
+      }
+
+      const productQuestions = Array.isArray(rfqItem.product?.traceabilityQuestions)
+        ? rfqItem.product.traceabilityQuestions
+        : [];
+
+      const answersByQuestionId = new Map(
+        item.traceabilityAnswers.map((answer) => [answer.questionId, answer])
+      );
+
+      const missingRequired = productQuestions
+        .filter((question) => question.required !== false)
+        .filter((question) => {
+          const answer = answersByQuestionId.get(question.id);
+          return !answer || !hasAnswerValue(answer.answer);
+        });
+
+      if (missingRequired.length > 0) {
+        return NextResponse.json(
+          {
+            error: `Traceability answers required for ${rfqItem.product?.name || 'product'}: ${missingRequired
+              .map((q) => q.prompt)
+              .join(', ')}`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const normalizedAnswers = productQuestions.reduce((acc, question) => {
+        const answer = answersByQuestionId.get(question.id);
+        if (!answer || !hasAnswerValue(answer.answer)) {
+          return acc;
+        }
+
+        acc.push({
+          questionId: question.id,
+          prompt: question.prompt,
+          type: question.type || 'text',
+          answer: answer.answer,
+        });
+
+        return acc;
+      }, []);
+
+      // Validate and normalize custom field answers
+      const productAttributes = rfqItem.product?.attributes || {};
+      let normalizedCustomFields = {};
+      
+      // Only validate custom fields if product has attributes
+      if (productAttributes && typeof productAttributes === 'object' && Object.keys(productAttributes).length > 0) {
+        const customFieldAnswers = item.customFieldAnswers || {};
+        const attributeKeys = Object.keys(productAttributes);
+        
+        // Validate all custom fields are provided
+        const missingCustomFields = attributeKeys.filter((key) => {
+          const value = customFieldAnswers[key];
+          return !value || !hasAnswerValue(value);
+        });
+
+        if (missingCustomFields.length > 0) {
+          return NextResponse.json(
+            {
+              error: `Custom field values required for ${rfqItem.product?.name || 'product'}: ${missingCustomFields.join(', ')}`,
+            },
+            { status: 400 }
+          );
+        }
+
+        // Normalize custom field answers (only include fields that exist in product attributes)
+        normalizedCustomFields = attributeKeys.reduce((acc, key) => {
+          const value = customFieldAnswers[key];
+          if (value && hasAnswerValue(value)) {
+            acc[key] = typeof value === 'string' ? value.trim() : value;
+          }
+          return acc;
+        }, {});
+      }
+
+      enrichedItems.push({
+        ...item,
+        traceabilityAnswers: normalizedAnswers,
+        customFieldAnswers: normalizedCustomFields,
+      });
+    }
+
+    const totalPrice = enrichedItems.reduce((sum, item) => {
+      return sum + (parseFloat(item.unitPrice || 0) * parseInt(item.quantity || 0));
+    }, 0);
+
+    const allDates = enrichedItems
+      .map(item => item.expectedDeliveryDate)
+      .filter(date => date)
+      .sort();
+    const earliestDeliveryDate = allDates[0];
+
     const updated = await prisma.$transaction(async (tx) => {
       const updatedRfq = await tx.rFQ.update({
         where: { id: params.id },
@@ -90,7 +221,7 @@ export async function POST(req, { params }) {
 
       // Update RFQ items with per-item pricing and delivery dates
       await Promise.all(
-        items.map(async (item) => {
+        enrichedItems.map(async (item) => {
           // Find the RFQ item by productId
           const rfqItem = updatedRfq.items.find(
             rfqItem => rfqItem.productId === item.productId
@@ -101,7 +232,9 @@ export async function POST(req, { params }) {
               where: { id: rfqItem.id },
               data: {
                 unitPrice: parseFloat(item.unitPrice),
-                expectedDeliveryDate: new Date(item.expectedDeliveryDate)
+                expectedDeliveryDate: new Date(item.expectedDeliveryDate),
+                traceabilityAnswers: item.traceabilityAnswers,
+                customFieldAnswers: item.customFieldAnswers || {}
               }
             });
           } else {
@@ -125,6 +258,10 @@ export async function POST(req, { params }) {
     return NextResponse.json({ success: true, rfq: updated });
   } catch (error) {
     console.error('Error recording vendor quote:', error);
-    return NextResponse.json({ error: 'Failed to record vendor quote' }, { status: 500 });
+    console.error('Error stack:', error.stack);
+    return NextResponse.json({ 
+      error: 'Failed to record vendor quote',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    }, { status: 500 });
   }
 }

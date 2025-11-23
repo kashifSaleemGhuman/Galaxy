@@ -3,14 +3,35 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Mock email template for vendor
 const generateVendorEmail = (rfq) => {
+  const formatProductDetails = (product) => {
+    let details = `- ${product.name}: ${product.quantity} ${product.unit}`;
+    
+    // Add custom attributes if available
+    if (product.attributes && typeof product.attributes === 'object') {
+      const attributeEntries = Object.entries(product.attributes);
+      if (attributeEntries.length > 0) {
+        const attrStrings = attributeEntries.map(([key, value]) => `${key}: ${value || 'N/A'}`);
+        details += `\n  Specifications: ${attrStrings.join(', ')}`;
+      }
+    }
+    
+    // Add traceability questions if available
+    if (Array.isArray(product.traceabilityQuestions) && product.traceabilityQuestions.length > 0) {
+      const questions = product.traceabilityQuestions.map(q => q.prompt).join(', ');
+      details += `\n  Please provide: ${questions}`;
+    }
+    
+    return details;
+  };
+
   return `
 Dear ${rfq.vendor},
 
 We are requesting quotations for the following items:
 
-${rfq.products.map(product => 
-  `- ${product.name}: ${product.quantity} ${product.unit}`
-).join('\n')}
+${(rfq.products || rfq.items || []).map(product => 
+  formatProductDetails(product)
+).join('\n\n')}
 
 Please provide your best quote by: ${new Date(rfq.orderDeadline).toLocaleDateString()}
 

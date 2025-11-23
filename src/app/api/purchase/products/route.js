@@ -7,6 +7,10 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { hasPermission, PERMISSIONS } from '@/lib/constants/roles';
+import {
+  normalizeAttributes,
+  normalizeTraceabilityQuestions,
+} from '@/lib/purchase/productFieldUtils';
 
 export async function GET(req) {
   try {
@@ -39,6 +43,8 @@ export async function GET(req) {
       category: p.category,
       unit: p.unit,
       isActive: p.isActive,
+      attributes: p.attributes || {},
+      traceabilityQuestions: p.traceabilityQuestions || [],
     }));
 
     return NextResponse.json({ success: true, data: shaped });
@@ -60,7 +66,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { product_id, name, description, category, unit } = body;
+    const { name, description, category, unit, attributes, traceabilityQuestions } = body;
 
     // Validation
     if (!name || !unit) {
@@ -79,10 +85,12 @@ export async function POST(request) {
     const created = await prisma.product.create({
       data: {
         name,
-        description: description ?? null,
-        category: category ?? null,
-        unit: unit ?? 'pcs',
-        isActive: true
+        description: description || null,
+        category: category || null,
+        unit,
+        isActive: true,
+        attributes: normalizeAttributes(attributes),
+        traceabilityQuestions: normalizeTraceabilityQuestions(traceabilityQuestions)
       },
     });
 
@@ -106,7 +114,9 @@ export async function POST(request) {
         description: created.description, 
         category: created.category, 
         unit: created.unit,
-        isActive: created.isActive
+        isActive: created.isActive,
+        attributes: created.attributes || {},
+        traceabilityQuestions: created.traceabilityQuestions || []
       } 
     }, { status: 201 });
   } catch (error) {
