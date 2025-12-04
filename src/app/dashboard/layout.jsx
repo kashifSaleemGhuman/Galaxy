@@ -54,6 +54,18 @@ export default function DashboardLayout({ children }) {
       href: '/dashboard/users',
       icon: UsersIcon,
       current: pathname.startsWith('/dashboard/users')
+    }, {
+      name: 'Organization',
+      href: '/dashboard/organization',
+      icon: HomeIcon, // You can import a BuildingIcon or similar if available
+      current: pathname.startsWith('/dashboard/organization'),
+      children: [
+        { name: 'Overview', href: '/dashboard/organization/details', current: pathname === '/dashboard/organization/details' || pathname === '/dashboard/organization' },
+        { name: 'Document Details', href: '/dashboard/organization/documents', current: pathname === '/dashboard/organization/documents' },
+        { name: 'Employees', href: '/dashboard/organization/employees', current: pathname.startsWith('/dashboard/organization/employees') },
+        { name: 'Machines', href: '/dashboard/organization/machines', current: pathname.startsWith('/dashboard/organization/machines') },
+        { name: 'Operating Permits', href: '/dashboard/organization/permits', current: pathname.startsWith('/dashboard/organization/permits') }
+      ]
     }] : []),
     { 
       name: 'Purchase', 

@@ -27,9 +27,13 @@ const toastTypes = {
   }
 }
 
-export function Toast({ message, type = 'info', duration = 5000, onClose }) {
+export function Toast({ message, type = 'info', duration = 5000, onClose, title, variant }) {
   const [isVisible, setIsVisible] = useState(true)
-  const styles = toastTypes[type]
+  
+  // Handle destructured variant prop if provided (for compatibility with shadcn/ui style calls)
+  const actualType = variant === 'destructive' ? 'error' : (type || 'info')
+  
+  const styles = toastTypes[actualType] || toastTypes.info
   const IconComponent = styles.icon
 
   useEffect(() => {
@@ -46,14 +50,15 @@ export function Toast({ message, type = 'info', duration = 5000, onClose }) {
   if (!isVisible) return null
 
   return (
-    <div className={`max-w-sm w-full ${styles.bgColor} border ${styles.borderColor} rounded-lg shadow-lg transform transition-all duration-300 ease-in-out`}>
+    <div className={`max-w-sm w-full ${styles.bgColor} border ${styles.borderColor} rounded-lg shadow-lg transform transition-all duration-300 ease-in-out pointer-events-auto`}>
       <div className="flex items-start p-4">
         <div className="flex-shrink-0">
           <IconComponent className={`h-5 w-5 ${styles.iconColor}`} />
         </div>
         <div className="ml-3 flex-1">
-          <p className={`text-sm font-medium ${styles.textColor}`}>
-            {message}
+          {title && <p className={`text-sm font-medium ${styles.textColor}`}>{title}</p>}
+          <p className={`text-sm ${title ? 'mt-1' : ''} ${styles.textColor}`}>
+            {message || title} {/* Use title as message if message is missing */}
           </p>
         </div>
         <div className="ml-4 flex-shrink-0">
@@ -72,34 +77,57 @@ export function Toast({ message, type = 'info', duration = 5000, onClose }) {
   )
 }
 
-export function useToast() {
+// Create a singleton for managing toasts outside of React tree if needed,
+// but preferably use a Context provider. For now, let's export a helper
+// that dispatches a custom event which the ToastContainer listens to.
+export const toast = ({ title, description, variant = 'default' }) => {
+  const event = new CustomEvent('show-toast', {
+    detail: { title, message: description, type: variant === 'destructive' ? 'error' : 'success' }
+  })
+  window.dispatchEvent(event)
+}
+
+export function ToastContainer() {
   const [toasts, setToasts] = useState([])
 
-  const showToast = (message, type = 'info', duration = 5000) => {
-    const id = Date.now()
-    setToasts(prev => [...prev, { id, message, type, duration }])
-  }
+  useEffect(() => {
+    const handleShowToast = (event) => {
+      const { title, message, type, duration = 5000 } = event.detail
+      const id = Date.now()
+      setToasts(prev => [...prev, { id, title, message, type, duration }])
+    }
+
+    window.addEventListener('show-toast', handleShowToast)
+    return () => window.removeEventListener('show-toast', handleShowToast)
+  }, [])
 
   const removeToast = (id) => {
     setToasts(prev => prev.filter(toast => toast.id !== id))
   }
 
-  const ToastContainer = () => (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
-      {toasts.map(toast => (
+  return (
+    <div className="fixed top-4 right-4 z-50 space-y-2 pointer-events-none">
+      {toasts.map(t => (
         <Toast
-          key={toast.id}
-          message={toast.message}
-          type={toast.type}
-          duration={toast.duration}
-          onClose={() => removeToast(toast.id)}
+          key={t.id}
+          title={t.title}
+          message={t.message}
+          type={t.type}
+          duration={t.duration}
+          onClose={() => removeToast(t.id)}
         />
       ))}
     </div>
   )
+}
 
+// Keep existing hook for compatibility if any components use it
+export function useToast() {
+  // This hook implementation is now just a wrapper around the event dispatcher
+  // or could return the container. 
+  // For now, components should just import { toast } and call it.
   return {
-    showToast,
+    showToast: (message, type) => toast({ title: message, variant: type === 'error' ? 'destructive' : 'default' }),
     ToastContainer
   }
-} 
+}
