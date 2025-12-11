@@ -20,7 +20,8 @@ export async function POST(req, { params }) {
     }
 
     // Check if user has permission to process shipments
-    const canProcessShipment = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.INVENTORY_MANAGER].includes(currentUser.role);
+    const role = (currentUser.role || '').toUpperCase()
+    const canProcessShipment = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.INVENTORY_MANAGER].includes(role);
     if (!canProcessShipment) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }

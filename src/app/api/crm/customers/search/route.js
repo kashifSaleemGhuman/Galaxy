@@ -41,10 +41,8 @@ export async function POST(request) {
 
     const skip = (page - 1) * limit
 
-    // Build where clause
-    const where = {
-      tenantId: session.user.tenantId
-    }
+    // Build where clause (tenantId removed - single tenant mode)
+    const where = {}
 
     // Text search across multiple fields
     if (query) {

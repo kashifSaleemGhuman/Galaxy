@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
+import { ROLES } from '@/lib/constants/roles';
 
 export async function GET(request) {
   try {
@@ -21,7 +22,8 @@ export async function GET(request) {
     }
 
     // Check permissions - inventory managers and admins can view inventory
-    const canViewInventory = ['INVENTORY_MANAGER', 'INVENTORY_USER', 'SUPER_ADMIN', 'ADMIN'].includes(currentUser.role);
+    const role = (currentUser.role || '').toUpperCase()
+    const canViewInventory = [ROLES.INVENTORY_MANAGER, ROLES.INVENTORY_USER, ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(role);
     
     if (!canViewInventory) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });

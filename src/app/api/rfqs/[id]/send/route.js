@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
+import { ROLES } from '@/lib/constants/roles';
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
 export const dynamic = 'force-dynamic';
@@ -27,7 +28,8 @@ export async function POST(req, { params }) {
     }
 
     // Only creator, manager, or admin can send
-    const canSend = rfq.createdById === currentUser.id || ['super_admin', 'admin', 'purchase_manager'].includes(currentUser.role);
+    const role = (currentUser.role || '').toUpperCase()
+    const canSend = rfq.createdById === currentUser.id || [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER].includes(role);
     if (!canSend) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
+import { ROLES } from '@/lib/constants/roles';
 
 export async function GET(request, { params }) {
   try {
@@ -19,7 +20,8 @@ export async function GET(request, { params }) {
     }
 
     // Only warehouse operators and super admins can access warehouse module
-    const canAccessWarehouse = ['INVENTORY_USER', 'SUPER_ADMIN'].includes(currentUser.role);
+    const role = (currentUser.role || '').toUpperCase()
+    const canAccessWarehouse = [ROLES.INVENTORY_USER, ROLES.SUPER_ADMIN].includes(role);
     
     if (!canAccessWarehouse) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });

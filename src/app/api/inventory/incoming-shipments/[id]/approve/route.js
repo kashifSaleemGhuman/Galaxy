@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { ROLES } from '@/lib/constants/roles'
 
 export async function POST(request, { params }) {
   try {
@@ -12,7 +13,16 @@ export async function POST(request, { params }) {
     }
 
     // Check if user has permission to approve shipments
-    if (session.user.role.name !== 'Admin' && session.user.role.name !== 'Warehouse Operator') {
+    const role = (session.user.role || '').toUpperCase()
+    const canApprove = [
+      ROLES.SUPER_ADMIN,
+      ROLES.ADMIN,
+      ROLES.INVENTORY_MANAGER,
+      ROLES.INVENTORY_USER,
+      ROLES.WAREHOUSE_OPERATOR
+    ].includes(role)
+
+    if (!canApprove) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 

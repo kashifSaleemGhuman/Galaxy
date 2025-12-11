@@ -44,10 +44,8 @@ export async function POST(request) {
       )
     }
 
-    // Build where clause
-    const where = {
-      tenantId: session.user.tenantId
-    }
+    // Build where clause (tenantId removed - single tenant mode)
+    const where = {}
 
     // Apply filters
     if (filters.status && filters.status !== 'all') {

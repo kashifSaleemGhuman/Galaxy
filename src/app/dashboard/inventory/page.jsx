@@ -1,6 +1,6 @@
-'use client'
+ 'use client'
 
-import { useState, useEffect } from 'react'
+import { useMemo } from 'react'
 import { 
   Package, 
   Building2, 
@@ -18,40 +18,27 @@ import {
   Loader2
 } from 'lucide-react'
 import Link from 'next/link'
+import useSWR from 'swr'
+
+const fetcher = (url) => fetch(url).then(res => res.json())
 
 export default function InventoryOverview() {
-  const [stats, setStats] = useState({
+  const { data, error, isLoading } = useSWR('/api/inventory/stats', fetcher, {
+    refreshInterval: 5000 // near real-time updates
+  })
+
+  const stats = useMemo(() => data?.stats || {
     totalProducts: 0,
     totalWarehouses: 0,
     totalLocations: 0,
-    totalValue: 0
-  })
-  const [recentMovements, setRecentMovements] = useState([])
-  const [lowStockItems, setLowStockItems] = useState([])
-  const [pendingReceipts, setPendingReceipts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [suppliers, setSuppliers] = useState([])
+    totalStockUnits: 0
+  }, [data])
 
-  useEffect(() => {
-    fetchSuppliers()
-    
-    setLoading(false)
-  }, [])
+  const lowStockItems = data?.lowStock || []
+  const pendingReceipts = data?.pendingReceipts || []
+  const recentMovements = data?.recentMovements || []
 
-  const fetchSuppliers = async () => {
-    try {
-      const response = await fetch('/api/purchase/suppliers')
-      if (response.ok) {
-        const data = await response.json()
-        setSuppliers(data)
-      }
-    } catch (error) {
-      console.error('Error fetching suppliers:', error)
-    }
-  }
-
-
-  
+  const loading = isLoading
 
   const getMovementIcon = (type) => {
     switch (type) {
@@ -99,6 +86,17 @@ export default function InventoryOverview() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (error || data?.error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 text-red-800 border border-red-200 rounded-lg p-4">
+          <p className="font-semibold">Failed to load inventory data</p>
+          <p className="text-sm">{error?.message || data?.error || 'Unknown error'}</p>
+        </div>
       </div>
     )
   }
@@ -165,7 +163,9 @@ export default function InventoryOverview() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Value</p>
-              <p className="text-2xl font-bold text-gray-900">${Number(stats?.totalValue || 0).toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {Number(stats?.totalStockUnits || 0).toLocaleString()} units
+              </p>
             </div>
           </div>
         </div>

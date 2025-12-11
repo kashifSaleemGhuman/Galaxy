@@ -19,7 +19,8 @@ export async function GET(request) {
     }
 
     // Check if user has permission to view incoming shipments
-    const canViewShipments = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.INVENTORY_MANAGER, ROLES.PURCHASE_MANAGER].includes(currentUser.role);
+    const role = (currentUser.role || '').toUpperCase()
+    const canViewShipments = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.INVENTORY_MANAGER, ROLES.PURCHASE_MANAGER].includes(role);
     if (!canViewShipments) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }

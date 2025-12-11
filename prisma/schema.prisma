@@ -10,16 +10,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Tenant model for multi-tenancy support
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  domain    String?  @unique
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users     User[]
+  vendors   Vendor[]
+  products  Product[]
+  warehouses Warehouse[]
+  employees Employee[]
+  organizations Organization[]
+  documents Document[]
+  machines  Machine[]
+  permits   Permit[]
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
   name         String?
   password     String // Hashed password
   role         String // SUPER_ADMIN, ADMIN, PURCHASE_MANAGER, etc.
+  tenantId     String? // Optional for backward compatibility
   isFirstLogin Boolean  @default(true)
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  // Tenant relation
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
 
   // Audit trail
   passwordHistory PasswordHistory[]
@@ -69,21 +94,25 @@ model Vendor {
   email     String   @unique
   phone     String?
   address   String?
+  tenantId  String?  // Optional for backward compatibility
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Tenant relation
+  tenant     Tenant?  @relation(fields: [tenantId], references: [id])
 
   // Relations
   rfqs           RFQ[]
   vendorProducts VendorProduct[]
 }
 
-// Vendor-Product relationship (many-to-many)
+// Vendor-Product relationship (many-to-many with additional fields)
 model VendorProduct {
   id        String   @id @default(cuid())
   vendorId  String
   productId String
-  price     Decimal?
+  price     Decimal? // Optional price for this vendor-product combination
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -93,6 +122,8 @@ model VendorProduct {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([vendorId, productId])
+  @@index([vendorId])
+  @@index([productId])
 }
 
 // Product model
@@ -104,9 +135,13 @@ model Product {
   unit                  String // pcs, kg, m, etc.
   attributes            Json     @default("{}")
   traceabilityQuestions Json     @default("[]")
+  tenantId              String?  // Optional for backward compatibility
   isActive              Boolean  @default(true)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
+
+  // Tenant relation
+  tenant                Tenant?  @relation(fields: [tenantId], references: [id])
 
   // Relations
   rfqItems              RFQItem[]
@@ -192,6 +227,8 @@ model Supplier {
 
   // Relations
   purchaseOrders PurchaseOrder[]
+  
+  @@map("Supplier")
 }
 
 // Purchase Order model
@@ -210,6 +247,8 @@ model PurchaseOrder {
   goodsReceipts     GoodsReceipt[]
   vendorBills       VendorBill[]
   incomingShipments IncomingShipment[]
+  
+  @@map("PurchaseOrder")
 }
 
 // Purchase Order Line model
@@ -224,6 +263,8 @@ model POLine {
   // Relations
   purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
   product       Product       @relation(fields: [productId], references: [id])
+
+  @@map("POLine")
 }
 
 // Goods Receipt model
@@ -255,9 +296,13 @@ model Warehouse {
   name      String
   code      String   @unique
   address   String?
+  tenantId  String?  // Optional for backward compatibility
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Tenant relation
+  tenant     Tenant?  @relation(fields: [tenantId], references: [id])
 
   // Relations
   incomingShipments IncomingShipment[]
@@ -346,4 +391,129 @@ model StockMovement {
   warehouse     Warehouse         @relation(fields: [warehouseId], references: [id])
   shipment      IncomingShipment? @relation(fields: [shipmentId], references: [id])
   inventoryItem InventoryItem     @relation(fields: [productId, warehouseId], references: [productId, warehouseId])
+}
+
+// Organization model (company information)
+model Organization {
+  id                  String    @id @default(cuid())
+  companyName         String
+  companyLogo         String?   // Path to the logo file or Base64
+  shortName           String?
+  address             String?
+  factoryContactNo    String?
+  email               String?
+  fullAddress         String?
+  auditDate           DateTime?
+  internalAuditorName String?
+  dataFrom            DateTime?
+  tenantId            String?   // Optional for backward compatibility
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Tenant relation
+  tenant              Tenant?   @relation(fields: [tenantId], references: [id])
+}
+
+// Document model (document management)
+model Document {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  docNo       String?
+  revDate     String?
+  description String?
+  tenantId    String?  // Optional for backward compatibility
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Tenant relation
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+}
+
+// Employee model (HRM module)
+model Employee {
+  id                   String    @id @default(cuid())
+  employeeId           String    @unique
+  idCardNumber         String?
+  name                 String
+  photo                String?
+  parentName           String?   // Father/Mother
+  dob                  DateTime?
+  address              String?
+  gender               String?
+  contactNumber        String?
+  emergencyContact     String?
+  dateOfJoining        DateTime?
+  department           String?
+  lastEmployment       String?
+  process              String?
+  designation          String?
+  salary               Decimal?
+  dateOfLeaving        DateTime?
+  shift                String?
+  secondaryJob         String?
+  tenantId             String?   // Optional for backward compatibility
+  
+  // Certifications/Roles
+  isFirstAider         Boolean   @default(false)
+  isEmergencyResponder Boolean   @default(false)
+  isFirefighter        Boolean   @default(false)
+
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  // Tenant relation
+  tenant               Tenant?   @relation(fields: [tenantId], references: [id])
+}
+
+// Machine model (equipment management)
+model Machine {
+  id                  String    @id @default(cuid())
+  serialNumber        String?
+  machineId           String    @unique
+  name                String
+  quantity            Int       @default(1)
+  motorDetails        String?
+  powerRating         String?
+  airPressure         String?
+  modelNumber         String?
+  manufacturingYear   String?
+  length              String?
+  width               String?
+  height              String?
+  steamTemp           String?
+  steamConsumption    String?
+  electricityRating   String?
+  operationType       String?
+  department          String?
+  status              String?   // "in_use", "under_maintenance", "out_of_order"
+  remarks             String?
+  tenantId            String?   // Optional for backward compatibility
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Tenant relation
+  tenant              Tenant?   @relation(fields: [tenantId], references: [id])
+}
+
+// Permit model (compliance and permits)
+model Permit {
+  id                    String    @id @default(cuid())
+  title                 String    @unique
+  authorizedNumber      String?
+  issuingAuthority      String?
+  dateOfIssue           DateTime?
+  dateOfExpiry          DateTime?
+  renewalSubmissionDate DateTime?
+  reportingFrequency    String?
+  lastReportDate        DateTime?
+  responsiblePerson     String?
+  tenantId              String?   // Optional for backward compatibility
+
+  createdAt             DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  // Tenant relation
+  tenant                 Tenant?   @relation(fields: [tenantId], references: [id])
 }

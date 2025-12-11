@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
+import { ROLES } from '@/lib/constants/roles';
 
 export async function POST(request, { params }) {
   try {
@@ -19,7 +20,8 @@ export async function POST(request, { params }) {
     }
 
     // Only warehouse operators and super admins can process shipments
-    const canProcessShipments = ['INVENTORY_USER', 'SUPER_ADMIN'].includes(currentUser.role);
+    const role = (currentUser.role || '').toUpperCase()
+    const canProcessShipments = [ROLES.INVENTORY_USER, ROLES.SUPER_ADMIN].includes(role);
     
     if (!canProcessShipments) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });

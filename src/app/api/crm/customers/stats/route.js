@@ -37,16 +37,15 @@ export async function GET(request) {
     const includeTrends = searchParams.get('trends') === 'true'
     const includeCharts = searchParams.get('charts') === 'true'
 
-    // Build cache key
+    // Build cache key (tenantId removed - single tenant mode)
     const cacheKey = {
-      tenantId: session.user.tenantId,
       period,
       includeTrends,
       includeCharts
     }
 
     // Try to get from cache
-    const cachedStats = await crmCache.getCustomerStats(session.user.tenantId, cacheKey)
+    const cachedStats = await crmCache.getCustomerStats('default', cacheKey)
     if (cachedStats) {
       console.log('📦 Serving customer stats from cache')
       return NextResponse.json(cachedStats)
