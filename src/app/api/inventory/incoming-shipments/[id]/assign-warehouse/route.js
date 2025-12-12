@@ -69,40 +69,46 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: 'Warehouse not found' }, { status: 404 });
     }
 
-    // Update shipment with warehouse assignment and advance PO status to confirmed
-    const updatedShipment = await prisma.$transaction(async (tx) => {
-      const us = await tx.incomingShipment.update({
-        where: { id },
-        data: {
-          warehouseId,
-          status: 'assigned',
-          assignedAt: new Date(),
-          assignedBy: currentUser.id,
-          notes: notes || shipment.notes
+    // Update shipment with warehouse assignment
+    // Note: Using sequential operations instead of transaction because Prisma Accelerate doesn't support transactions
+    const us = await prisma.incomingShipment.update({
+      where: { id },
+      data: {
+        warehouseId,
+        status: 'assigned',
+        assignedAt: new Date(),
+        assignedBy: currentUser.id,
+        notes: notes || shipment.notes
+      },
+      include: {
+        warehouse: true,
+        lines: {
+          include: {
+            product: true
+          }
         },
-        include: {
-          warehouse: true,
-          lines: {
-            include: {
-              product: true
-            }
-          },
-          purchaseOrder: {
-            include: {
-              supplier: true
-            }
+        purchaseOrder: {
+          include: {
+            supplier: true
           }
         }
-      })
-
-      // Update PO status to confirmed (post-assignment)
-      await tx.purchaseOrder.update({
-        where: { poId: us.poId },
-        data: { status: 'confirmed' }
-      })
-
-      return us
+      }
     })
+
+    // Update PO status to confirmed (post-assignment) - non-blocking
+    if (us.poId) {
+      try {
+        await prisma.purchaseOrder.update({
+          where: { poId: us.poId },
+          data: { status: 'confirmed' }
+        })
+      } catch (poError) {
+        console.warn('Failed to update PO status after warehouse assignment:', poError)
+        // Continue - shipment was successfully assigned
+      }
+    }
+
+    const updatedShipment = us
 
     return NextResponse.json({
       success: true,

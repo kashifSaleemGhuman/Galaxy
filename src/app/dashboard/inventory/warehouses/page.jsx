@@ -420,12 +420,12 @@ export default function WarehousesPage() {
               
               <div className="space-y-3 mb-4">
                 <div className="flex items-center text-sm text-gray-600">
-                  <MapPinIcon className="h-4 w-4 mr-2" />
+                  <MapPin className="h-4 w-4 mr-2" />
                   <span>{warehouse.city}, {warehouse.state}</span>
                 </div>
                 {warehouse.manager && (
                   <div className="flex items-center text-sm text-gray-600">
-                    <UserIcon className="h-4 w-4 mr-2" />
+                    <User className="h-4 w-4 mr-2" />
                     <span>{warehouse.manager.firstName} {warehouse.manager.lastName}</span>
                   </div>
                 )}

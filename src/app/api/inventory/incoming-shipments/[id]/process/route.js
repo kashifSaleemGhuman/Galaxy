@@ -68,47 +68,48 @@ export async function POST(req, { params }) {
       }, { status: 400 });
     }
 
-    // Process the shipment in a transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Update shipment lines with received quantities
-      const updatedLines = [];
-      for (const lineData of lines) {
-        const { lineId, quantityReceived, quantityAccepted, quantityRejected, lineNotes } = lineData;
-        
-        if (quantityAccepted + quantityRejected !== quantityReceived) {
-          throw new Error(`Line ${lineId}: Accepted + Rejected must equal Received quantity`);
-        }
-
-        const updatedLine = await tx.incomingShipmentLine.update({
-          where: { id: lineId },
-          data: {
-            quantityReceived: quantityReceived,
-            quantityAccepted: quantityAccepted,
-            quantityRejected: quantityRejected,
-            notes: lineNotes || undefined
-          },
-          include: {
-            product: true
-          }
-        });
-        updatedLines.push(updatedLine);
+    // Process the shipment
+    // Note: Using sequential operations instead of transaction because Prisma Accelerate doesn't support transactions
+    // Update shipment lines with received quantities
+    const updatedLines = [];
+    for (const lineData of lines) {
+      const { lineId, quantityReceived, quantityAccepted, quantityRejected, lineNotes } = lineData;
+      
+      if (quantityAccepted + quantityRejected !== quantityReceived) {
+        throw new Error(`Line ${lineId}: Accepted + Rejected must equal Received quantity`);
       }
 
-      // Update shipment status
-      const updatedShipment = await tx.incomingShipment.update({
-        where: { id },
+      const updatedLine = await prisma.incomingShipmentLine.update({
+        where: { id: lineId },
         data: {
-          status: 'received',
-          receivedAt: new Date(),
-          notes: notes || shipment.notes
+          quantityReceived: quantityReceived,
+          quantityAccepted: quantityAccepted,
+          quantityRejected: quantityRejected,
+          notes: lineNotes || undefined
+        },
+        include: {
+          product: true
         }
       });
+      updatedLines.push(updatedLine);
+    }
 
-      // Create inventory items and stock movements for accepted quantities
-      for (const line of updatedLines) {
-        if (line.quantityAccepted > 0) {
+    // Update shipment status
+    const updatedShipment = await prisma.incomingShipment.update({
+      where: { id },
+      data: {
+        status: 'received',
+        receivedAt: new Date(),
+        notes: notes || shipment.notes
+      }
+    });
+
+    // Create inventory items and stock movements for accepted quantities
+    for (const line of updatedLines) {
+      if (line.quantityAccepted > 0) {
+        try {
           // Check if inventory item exists
-          let inventoryItem = await tx.inventoryItem.findUnique({
+          let inventoryItem = await prisma.inventoryItem.findUnique({
             where: {
               productId_warehouseId: {
                 productId: line.productId,
@@ -119,7 +120,7 @@ export async function POST(req, { params }) {
 
           if (inventoryItem) {
             // Update existing inventory item
-            inventoryItem = await tx.inventoryItem.update({
+            inventoryItem = await prisma.inventoryItem.update({
               where: {
                 productId_warehouseId: {
                   productId: line.productId,
@@ -133,7 +134,7 @@ export async function POST(req, { params }) {
             });
           } else {
             // Create new inventory item
-            inventoryItem = await tx.inventoryItem.create({
+            inventoryItem = await prisma.inventoryItem.create({
               data: {
                 productId: line.productId,
                 warehouseId: shipment.warehouseId,
@@ -145,7 +146,7 @@ export async function POST(req, { params }) {
           }
 
           // Create stock movement
-          await tx.stockMovement.create({
+          await prisma.stockMovement.create({
             data: {
               productId: line.productId,
               warehouseId: shipment.warehouseId,
@@ -157,56 +158,66 @@ export async function POST(req, { params }) {
               createdBy: currentUser.id
             }
           });
+        } catch (invError) {
+          console.error(`Failed to process inventory for line ${line.id}:`, invError);
+          // Continue processing other lines
         }
       }
+    }
 
-      // Update PO lines with received quantities
-      for (const line of updatedLines) {
-        const poLine = await tx.pOLine.findFirst({
-          where: {
-            poId: shipment.poId,
-            productId: line.productId
+    // Update PO lines with received quantities
+    if (shipment.poId) {
+      try {
+        for (const line of updatedLines) {
+          const poLine = await prisma.pOLine.findFirst({
+            where: {
+              poId: shipment.poId,
+              productId: line.productId
+            }
+          });
+
+          if (poLine) {
+            await prisma.pOLine.update({
+              where: { poLineId: poLine.poLineId },
+              data: {
+                quantityReceived: poLine.quantityReceived + line.quantityAccepted
+              }
+            });
           }
+        }
+
+        // Check if all PO lines are fully received
+        const allPOLines = await prisma.pOLine.findMany({
+          where: { poId: shipment.poId }
         });
 
-        if (poLine) {
-          await tx.pOLine.update({
-            where: { poLineId: poLine.poLineId },
-            data: {
-              quantityReceived: poLine.quantityReceived + line.quantityAccepted
+        const allReceived = allPOLines.every(line => 
+          line.quantityReceived >= line.quantityOrdered
+        );
+
+        if (allReceived) {
+          // Update PO status to received
+          await prisma.purchaseOrder.update({
+            where: { poId: shipment.poId },
+            data: { status: 'received' }
+          });
+
+          // Update shipment status to processed
+          await prisma.incomingShipment.update({
+            where: { id },
+            data: { 
+              status: 'processed',
+              processedAt: new Date()
             }
           });
         }
+      } catch (poError) {
+        console.error('Failed to update PO lines/status:', poError);
+        // Continue - shipment was successfully processed
       }
+    }
 
-      // Check if all PO lines are fully received
-      const allPOLines = await tx.pOLine.findMany({
-        where: { poId: shipment.poId }
-      });
-
-      const allReceived = allPOLines.every(line => 
-        line.quantityReceived >= line.quantityOrdered
-      );
-
-      if (allReceived) {
-        // Update PO status to received
-        await tx.purchaseOrder.update({
-          where: { poId: shipment.poId },
-          data: { status: 'received' }
-        });
-
-        // Update shipment status to processed
-        await tx.incomingShipment.update({
-          where: { id },
-          data: { 
-            status: 'processed',
-            processedAt: new Date()
-          }
-        });
-      }
-
-      return { updatedShipment, updatedLines };
-    });
+    const result = { updatedShipment, updatedLines };
 
     return NextResponse.json({
       success: true,

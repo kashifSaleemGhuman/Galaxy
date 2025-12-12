@@ -118,37 +118,41 @@ export async function PUT(req, { params }) {
     if (rejectionReason !== undefined) updateData.rejectionReason = rejectionReason;
 
     // Update RFQ
-    const updatedRfq = await prisma.$transaction(async (tx) => {
-      const rfq = await tx.rFQ.update({
-        where: { id: params.id },
-        data: updateData,
-        include: {
-          vendor: true,
-          createdBy: {
-            select: { id: true, name: true, email: true }
-          },
-          approvedBy: {
-            select: { id: true, name: true, email: true }
-          },
-          items: {
-            include: {
-              product: true
-            }
+    // Note: Using sequential operations instead of transaction because Prisma Accelerate doesn't support transactions
+    const rfq = await prisma.rFQ.update({
+      where: { id: params.id },
+      data: updateData,
+      include: {
+        vendor: true,
+        createdBy: {
+          select: { id: true, name: true, email: true }
+        },
+        approvedBy: {
+          select: { id: true, name: true, email: true }
+        },
+        items: {
+          include: {
+            product: true
           }
         }
-      });
+      }
+    });
 
-      // Create audit log
-      await tx.auditLog.create({
+    // Create audit log (non-blocking)
+    try {
+      await prisma.auditLog.create({
         data: {
           userId: currentUser.id,
           action: 'UPDATE_RFQ',
           details: `Updated RFQ ${rfq.rfqNumber}: ${Object.keys(updateData).join(', ')}`
         }
       });
+    } catch (auditError) {
+      console.warn('Failed to create audit log for RFQ update:', auditError);
+      // Continue - RFQ was successfully updated
+    }
 
-      return rfq;
-    });
+    const updatedRfq = rfq;
 
     return NextResponse.json({ rfq: updatedRfq });
   } catch (error) {
@@ -182,19 +186,24 @@ export async function DELETE(req, { params }) {
       return NextResponse.json({ error: 'RFQ not found' }, { status: 404 });
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.rFQ.delete({
-        where: { id: params.id }
-      });
+    // Note: Using sequential operations instead of transaction because Prisma Accelerate doesn't support transactions
+    await prisma.rFQ.delete({
+      where: { id: params.id }
+    });
 
-      await tx.auditLog.create({
+    // Create audit log (non-blocking)
+    try {
+      await prisma.auditLog.create({
         data: {
           userId: currentUser.id,
           action: 'DELETE_RFQ',
           details: `Deleted RFQ ${existingRfq.rfqNumber}`
         }
       });
-    });
+    } catch (auditError) {
+      console.warn('Failed to create audit log for RFQ deletion:', auditError);
+      // Continue - RFQ was successfully deleted
+    }
 
     return NextResponse.json({ message: 'RFQ deleted successfully' });
   } catch (error) {

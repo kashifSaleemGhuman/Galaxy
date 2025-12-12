@@ -237,7 +237,7 @@ export default function InventoryOverview() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">${receipt.totalValue.toFixed(2)}</p>
+                    <p className="text-sm font-medium text-gray-900">${(receipt.totalValue || 0).toFixed(2)}</p>
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(receipt.status)}`}>
                       {getStatusIcon(receipt.status)} {receipt.status.replace('_', ' ')}
                     </span>

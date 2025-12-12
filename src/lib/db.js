@@ -45,5 +45,27 @@ if (!globalForPrisma.prisma) {
 
 const prisma = globalForPrisma.prisma;
 
+/**
+ * Execute a transaction-safe operation.
+ * If Prisma Accelerate is enabled (doesn't support transactions), executes operations sequentially.
+ * Otherwise, uses a proper transaction.
+ * 
+ * @param {Function} callback - Function that receives the Prisma client (tx) and returns a promise
+ * @returns {Promise} Result of the callback
+ */
+export async function safeTransaction(callback) {
+  // Check if we're using Prisma Accelerate (it doesn't support transactions)
+  const isUsingAccelerate = process.env.PRISMA_DATABASE_URL?.includes('accelerate.prisma-data.net');
+  
+  if (isUsingAccelerate) {
+    // Execute sequentially without transaction
+    // Note: This is less safe but necessary when using Accelerate
+    return await callback(prisma);
+  } else {
+    // Use proper transaction
+    return await prisma.$transaction(callback);
+  }
+}
+
 export { prisma };
 export default prisma;

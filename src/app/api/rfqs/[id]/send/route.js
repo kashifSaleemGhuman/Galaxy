@@ -35,30 +35,35 @@ export async function POST(req, { params }) {
     }
 
     // Update status to sent
-    const updated = await prisma.$transaction(async (tx) => {
-      const updatedRfq = await tx.rFQ.update({
-        where: { id: params.id },
-        data: {
-          status: 'sent',
-          sentDate: new Date()
-        },
-        include: {
-          vendor: true,
-          createdBy: { select: { id: true, name: true, email: true } },
-          items: { include: { product: true } }
-        }
-      });
+    // Note: Using sequential operations instead of transaction because Prisma Accelerate doesn't support transactions
+    const updatedRfq = await prisma.rFQ.update({
+      where: { id: params.id },
+      data: {
+        status: 'sent',
+        sentDate: new Date()
+      },
+      include: {
+        vendor: true,
+        createdBy: { select: { id: true, name: true, email: true } },
+        items: { include: { product: true } }
+      }
+    });
 
-      await tx.auditLog.create({
+    // Create audit log (non-blocking - if this fails, RFQ is still sent)
+    try {
+      await prisma.auditLog.create({
         data: {
           userId: currentUser.id,
           action: 'SEND_RFQ',
           details: `RFQ ${updatedRfq.rfqNumber} sent to vendor ${rfq.vendor?.name || rfq.vendorId}`
         }
       });
+    } catch (auditError) {
+      console.warn('Failed to create audit log for RFQ send:', auditError);
+      // Continue - RFQ was successfully sent
+    }
 
-      return updatedRfq;
-    });
+    const updated = updatedRfq;
 
     // Simulate email send success
     return NextResponse.json({ success: true, rfq: updated });

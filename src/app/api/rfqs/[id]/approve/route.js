@@ -54,26 +54,27 @@ export async function POST(req, { params }) {
       }, { status: 400 });
     }
 
-    const updatedRfq = await prisma.$transaction(async (tx) => {
-      // Update RFQ status
-      const updated = await tx.rFQ.update({
-        where: { id: params.id },
-        data: {
-          status: action === 'approve' ? 'approved' : 'rejected',
-          approvedById: currentUser.id,
-          approvedAt: new Date(),
-          rejectionReason: action === 'reject' ? comments : null
-        },
-        include: {
-          vendor: true,
-          createdBy: { select: { id: true, name: true, email: true } },
-          approvedBy: { select: { id: true, name: true, email: true } },
-          items: { include: { product: true } }
-        }
-      });
+    // Update RFQ status
+    // Note: Using sequential operations instead of transaction because Prisma Accelerate doesn't support transactions
+    const updated = await prisma.rFQ.update({
+      where: { id: params.id },
+      data: {
+        status: action === 'approve' ? 'approved' : 'rejected',
+        approvedById: currentUser.id,
+        approvedAt: new Date(),
+        rejectionReason: action === 'reject' ? comments : null
+      },
+      include: {
+        vendor: true,
+        createdBy: { select: { id: true, name: true, email: true } },
+        approvedBy: { select: { id: true, name: true, email: true } },
+        items: { include: { product: true } }
+      }
+    });
 
-      // Create approval record
-      await tx.rFQApproval.create({
+    // Create approval record (non-blocking)
+    try {
+      await prisma.rFQApproval.create({
         data: {
           rfqId: params.id,
           approvedBy: currentUser.id,
@@ -81,18 +82,26 @@ export async function POST(req, { params }) {
           comments: comments || null
         }
       });
+    } catch (approvalError) {
+      console.warn('Failed to create RFQ approval record:', approvalError);
+      // Continue - RFQ was successfully updated
+    }
 
-      // Create audit log
-      await tx.auditLog.create({
+    // Create audit log (non-blocking)
+    try {
+      await prisma.auditLog.create({
         data: {
           userId: currentUser.id,
           action: action === 'approve' ? 'APPROVE_RFQ' : 'REJECT_RFQ',
           details: `RFQ ${rfq.rfqNumber} ${action}d by ${currentUser.name}${comments ? ` - ${comments}` : ''}`
         }
       });
+    } catch (auditError) {
+      console.warn('Failed to create audit log for RFQ approval:', auditError);
+      // Continue - RFQ was successfully updated
+    }
 
-      return updated;
-    });
+    const updatedRfq = updated;
 
     return NextResponse.json({ 
       rfq: updatedRfq,

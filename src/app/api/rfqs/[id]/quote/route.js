@@ -203,56 +203,61 @@ export async function POST(req, { params }) {
       .sort();
     const earliestDeliveryDate = allDates[0];
 
-    const updated = await prisma.$transaction(async (tx) => {
-      const updatedRfq = await tx.rFQ.update({
-        where: { id: params.id },
-        data: {
-          vendorPrice: parseFloat(totalPrice),
-          expectedDelivery: new Date(earliestDeliveryDate),
-          vendorNotes: vendorNotes || null,
-          status: 'received'
-        },
-        include: {
-          vendor: true,
-          createdBy: { select: { id: true, name: true, email: true } },
-          items: { include: { product: true } }
+    // Note: Using sequential operations instead of transaction because Prisma Accelerate doesn't support transactions
+    const updatedRfq = await prisma.rFQ.update({
+      where: { id: params.id },
+      data: {
+        vendorPrice: parseFloat(totalPrice),
+        expectedDelivery: new Date(earliestDeliveryDate),
+        vendorNotes: vendorNotes || null,
+        status: 'received'
+      },
+      include: {
+        vendor: true,
+        createdBy: { select: { id: true, name: true, email: true } },
+        items: { include: { product: true } }
+      }
+    });
+
+    // Update RFQ items with per-item pricing and delivery dates
+    await Promise.all(
+      enrichedItems.map(async (item) => {
+        // Find the RFQ item by productId
+        const rfqItem = updatedRfq.items.find(
+          rfqItem => rfqItem.productId === item.productId
+        );
+        
+        if (rfqItem) {
+          await prisma.rFQItem.update({
+            where: { id: rfqItem.id },
+            data: {
+              unitPrice: parseFloat(item.unitPrice),
+              expectedDeliveryDate: new Date(item.expectedDeliveryDate),
+              traceabilityAnswers: item.traceabilityAnswers,
+              customFieldAnswers: item.customFieldAnswers || {}
+            }
+          });
+        } else {
+          console.warn(`RFQ item not found for productId: ${item.productId}`);
         }
-      });
+      })
+    );
 
-      // Update RFQ items with per-item pricing and delivery dates
-      await Promise.all(
-        enrichedItems.map(async (item) => {
-          // Find the RFQ item by productId
-          const rfqItem = updatedRfq.items.find(
-            rfqItem => rfqItem.productId === item.productId
-          );
-          
-          if (rfqItem) {
-            await tx.rFQItem.update({
-              where: { id: rfqItem.id },
-              data: {
-                unitPrice: parseFloat(item.unitPrice),
-                expectedDeliveryDate: new Date(item.expectedDeliveryDate),
-                traceabilityAnswers: item.traceabilityAnswers,
-                customFieldAnswers: item.customFieldAnswers || {}
-              }
-            });
-          } else {
-            console.warn(`RFQ item not found for productId: ${item.productId}`);
-          }
-        })
-      );
-
-      await tx.auditLog.create({
+    // Create audit log (non-blocking)
+    try {
+      await prisma.auditLog.create({
         data: {
           userId: currentUser.id,
           action: 'RECORD_RFQ_QUOTE',
           details: `Recorded vendor quote for RFQ ${updatedRfq.rfqNumber}`
         }
       });
+    } catch (auditError) {
+      console.warn('Failed to create audit log for RFQ quote:', auditError);
+      // Continue - RFQ was successfully updated
+    }
 
-      return updatedRfq;
-    });
+    const updated = updatedRfq;
 
     // For approvals screen, 'received' is considered pending manager approval
     return NextResponse.json({ success: true, rfq: updated });
