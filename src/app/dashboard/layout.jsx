@@ -54,7 +54,8 @@ export default function DashboardLayout({ children }) {
       href: '/dashboard/users',
       icon: UsersIcon,
       current: pathname.startsWith('/dashboard/users')
-    }, {
+    }] : []),
+    {
       name: 'Organization',
       href: '/dashboard/organization',
       icon: HomeIcon, // You can import a BuildingIcon or similar if available
@@ -66,7 +67,7 @@ export default function DashboardLayout({ children }) {
         { name: 'Machines', href: '/dashboard/organization/machines', current: pathname.startsWith('/dashboard/organization/machines') },
         { name: 'Operating Permits', href: '/dashboard/organization/permits', current: pathname.startsWith('/dashboard/organization/permits') }
       ]
-    }] : []),
+    },
     { 
       name: 'Purchase', 
       href: '/dashboard/purchase', 
