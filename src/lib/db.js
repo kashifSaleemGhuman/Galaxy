@@ -8,14 +8,32 @@ const prismaClientSingleton = () => {
       log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
     };
 
-    // If PRISMA_DATABASE_URL is set, override the datasource URL
-    // This allows using Prisma Accelerate in production
-    if (process.env.PRISMA_DATABASE_URL) {
+    // Priority: Use DATABASE_URL if it points to production, otherwise use PRISMA_DATABASE_URL
+    // This allows connecting to production DB locally for development
+    if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('db.prisma.io')) {
+      // If DATABASE_URL points to production (Prisma hosted), use it directly
+      config.datasources = {
+        db: {
+          url: process.env.DATABASE_URL,
+        },
+      };
+      console.log('Using production DATABASE_URL for database connection');
+    } else if (process.env.PRISMA_DATABASE_URL && process.env.PRISMA_DATABASE_URL.startsWith('postgres://')) {
+      // Use PRISMA_DATABASE_URL if it's a direct postgres connection (not Accelerate)
       config.datasources = {
         db: {
           url: process.env.PRISMA_DATABASE_URL,
         },
       };
+      console.log('Using PRISMA_DATABASE_URL (direct postgres) for database connection');
+    } else if (process.env.PRISMA_DATABASE_URL && process.env.PRISMA_DATABASE_URL.startsWith('prisma+postgres://')) {
+      // Use Prisma Accelerate URL for queries (read-only for schema operations)
+      config.datasources = {
+        db: {
+          url: process.env.PRISMA_DATABASE_URL,
+        },
+      };
+      console.log('Using PRISMA_DATABASE_URL (Accelerate) for database connection');
     }
 
     const client = new PrismaClient(config);
@@ -39,11 +57,11 @@ const prismaClientSingleton = () => {
 const globalForPrisma = globalThis;
 
 // Always cache in serverless environments to prevent connection pool exhaustion
-if (!globalForPrisma.prisma) {
-  globalForPrisma.prisma = prismaClientSingleton();
+if (!globalForPrisma.prismaNew) {
+  globalForPrisma.prismaNew = prismaClientSingleton();
 }
 
-const prisma = globalForPrisma.prisma;
+const prisma = globalForPrisma.prismaNew;
 
 export { prisma };
 export default prisma;
