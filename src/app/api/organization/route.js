@@ -35,9 +35,26 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const isAdmin = session.user.role === ROLES.SUPER_ADMIN || session.user.role === ROLES.ADMIN;
+    // Verify user role from database to ensure accuracy
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { role: true }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Check if user is admin (case-insensitive check)
+    const userRole = user.role?.toLowerCase();
+    const isAdmin = userRole === ROLES.SUPER_ADMIN.toLowerCase() || userRole === ROLES.ADMIN.toLowerCase();
+    
     if (!isAdmin) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      console.log('[Organization API] Access denied for role:', user.role);
+      return NextResponse.json({ 
+        error: 'Forbidden: Only administrators can modify organization details',
+        role: user.role 
+      }, { status: 403 });
     }
 
     const body = await req.json();
