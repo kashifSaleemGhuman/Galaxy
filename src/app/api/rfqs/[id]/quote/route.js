@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
 
 const normalizeTraceabilityAnswers = (input) => {
@@ -37,9 +38,17 @@ export const runtime = 'nodejs';
 
 export async function POST(req, { params }) {
   try {
-    const session = await getServerSession();
+    // Await params if it's a Promise (Next.js 15+)
+    const resolvedParams = await params;
+    const rfqId = resolvedParams.id;
+
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!rfqId) {
+      return NextResponse.json({ error: 'RFQ ID is required' }, { status: 400 });
     }
 
     const { vendorNotes, items } = await req.json();
@@ -71,8 +80,12 @@ export async function POST(req, { params }) {
       where: { email: session.user.email }
     });
 
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const rfq = await prisma.rFQ.findUnique({
-      where: { id: params.id },
+      where: { id: rfqId },
       include: { 
         vendor: true, 
         createdBy: true,
@@ -198,29 +211,33 @@ export async function POST(req, { params }) {
       .sort();
     const earliestDeliveryDate = allDates[0];
 
-    const updated = await prisma.$transaction(async (tx) => {
-      const updatedRfq = await tx.rFQ.update({
-        where: { id: params.id },
+    // Optimize transaction by removing complex includes and fetching RFQ items first
+    const rfqItems = await prisma.rFQItem.findMany({
+      where: { rfqId: rfqId },
+      select: { id: true, productId: true }
+    });
+
+    const rfqItemsByProductId = new Map(
+      rfqItems.map(item => [item.productId, item])
+    );
+
+    // Use transaction with increased timeout and optimize queries
+    const updatedRfqId = await prisma.$transaction(async (tx) => {
+      // Update RFQ status (without complex includes to speed up transaction)
+      await tx.rFQ.update({
+        where: { id: rfqId },
         data: {
           vendorPrice: parseFloat(totalPrice),
           expectedDelivery: new Date(earliestDeliveryDate),
           vendorNotes: vendorNotes || null,
           status: 'received'
-        },
-        include: {
-          vendor: true,
-          createdBy: { select: { id: true, name: true, email: true } },
-          items: { include: { product: true } }
         }
       });
 
       // Update RFQ items with per-item pricing and delivery dates
       await Promise.all(
         enrichedItems.map(async (item) => {
-          // Find the RFQ item by productId
-          const rfqItem = updatedRfq.items.find(
-            rfqItem => rfqItem.productId === item.productId
-          );
+          const rfqItem = rfqItemsByProductId.get(item.productId);
           
           if (rfqItem) {
             await tx.rFQItem.update({
@@ -242,11 +259,24 @@ export async function POST(req, { params }) {
         data: {
           userId: currentUser.id,
           action: 'RECORD_RFQ_QUOTE',
-          details: `Recorded vendor quote for RFQ ${updatedRfq.rfqNumber}`
+          details: `Recorded vendor quote for RFQ ${rfq.rfqNumber}`
         }
       });
 
-      return updatedRfq;
+      return rfqId;
+    }, {
+      maxWait: 10000, // Maximum time to wait for a transaction slot
+      timeout: 10000, // Maximum time the transaction can run (10 seconds)
+    });
+
+    // Fetch the updated RFQ with all relations after transaction completes
+    const updated = await prisma.rFQ.findUnique({
+      where: { id: updatedRfqId },
+      include: {
+        vendor: true,
+        createdBy: { select: { id: true, name: true, email: true } },
+        items: { include: { product: true } }
+      }
     });
 
     // For approvals screen, 'received' is considered pending manager approval
