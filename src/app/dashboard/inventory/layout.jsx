@@ -21,10 +21,18 @@ export default function InventoryLayout({ children }) {
   const { data: session, status } = useSession()
   const role = session?.user?.role
 
-  // Role guard: only SUPER_ADMIN, ADMIN, INVENTORY_MANAGER can access inventory module
-  if (status !== 'loading' && role && !['SUPER_ADMIN','ADMIN','INVENTORY_MANAGER'].includes(role)) {
-    router.push('/dashboard/warehouse')
-    return null
+  // Role guard: only SUPER_ADMIN, ADMIN, INVENTORY_MANAGER, INVENTORY_USER can access inventory module
+  // WAREHOUSE_OPERATOR is explicitly blocked and redirected to warehouse module
+  const normalizedRole = role?.toUpperCase()
+  if (status !== 'loading' && normalizedRole) {
+    if (normalizedRole === 'WAREHOUSE_OPERATOR') {
+      router.push('/dashboard/warehouse')
+      return null
+    }
+    if (!['SUPER_ADMIN', 'ADMIN', 'INVENTORY_MANAGER', 'INVENTORY_USER'].includes(normalizedRole)) {
+      router.push('/dashboard')
+      return null
+    }
   }
   const isHome = pathname === '/dashboard/inventory'
   

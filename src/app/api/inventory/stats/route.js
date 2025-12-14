@@ -23,16 +23,16 @@ export async function GET() {
     }
 
     const role = (currentUser.role || '').toUpperCase()
+    // WAREHOUSE_OPERATOR is explicitly excluded from inventory stats access
     const canViewInventory = [
       ROLES.SUPER_ADMIN,
       ROLES.ADMIN,
       ROLES.INVENTORY_MANAGER,
       ROLES.INVENTORY_USER,
-      ROLES.WAREHOUSE_OPERATOR,
       ROLES.PURCHASE_MANAGER
     ].includes(role)
 
-    if (!canViewInventory) {
+    if (!canViewInventory || role === ROLES.WAREHOUSE_OPERATOR) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 

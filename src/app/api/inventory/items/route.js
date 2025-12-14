@@ -22,10 +22,16 @@ export async function GET(request) {
     }
 
     // Check permissions - inventory managers and admins can view inventory
+    // WAREHOUSE_OPERATOR is explicitly excluded from inventory access
     const role = (currentUser.role || '').toUpperCase()
-    const canViewInventory = [ROLES.INVENTORY_MANAGER, ROLES.INVENTORY_USER, ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(role);
+    const canViewInventory = [
+      ROLES.INVENTORY_MANAGER, 
+      ROLES.INVENTORY_USER, 
+      ROLES.SUPER_ADMIN, 
+      ROLES.ADMIN
+    ].includes(role);
     
-    if (!canViewInventory) {
+    if (!canViewInventory || role === ROLES.WAREHOUSE_OPERATOR) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 

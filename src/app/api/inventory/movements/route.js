@@ -24,12 +24,12 @@ export async function GET(request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // WAREHOUSE_OPERATOR is explicitly excluded - they should use warehouse module APIs only
     const canViewMovements = [
       ROLES.SUPER_ADMIN,
       ROLES.ADMIN,
       ROLES.INVENTORY_MANAGER,
-      ROLES.INVENTORY_USER,
-      ROLES.WAREHOUSE_OPERATOR
+      ROLES.INVENTORY_USER
     ].includes(currentUser.role);
 
     if (!canViewMovements) {
@@ -224,11 +224,11 @@ export async function POST(request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // WAREHOUSE_OPERATOR is explicitly excluded - they should use warehouse module APIs only
     const canCreateMovements = [
       ROLES.SUPER_ADMIN,
       ROLES.ADMIN,
-      ROLES.INVENTORY_MANAGER,
-      ROLES.WAREHOUSE_OPERATOR
+      ROLES.INVENTORY_MANAGER
     ].includes(currentUser.role);
 
     if (!canCreateMovements) {

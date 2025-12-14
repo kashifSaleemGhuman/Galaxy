@@ -19,11 +19,20 @@ export default function WarehouseLayout({ children }) {
   const router = useRouter()
   const [expandedMenus, setExpandedMenus] = useState(new Set())
 
-  // Role guard: only SUPER_ADMIN and INVENTORY_USER can access warehouse module
+  // Role guard: SUPER_ADMIN, ADMIN, WAREHOUSE_OPERATOR, INVENTORY_USER, INVENTORY_MANAGER can access warehouse module
   const role = (session?.user?.role || '').toUpperCase()
-  if (status !== 'loading' && role && ![ROLES.SUPER_ADMIN, ROLES.INVENTORY_USER].includes(role)) {
-    router.push('/dashboard/inventory')
-    return null
+  if (status !== 'loading' && role) {
+    const allowedRoles = [
+      ROLES.SUPER_ADMIN, 
+      ROLES.ADMIN,
+      ROLES.WAREHOUSE_OPERATOR,
+      ROLES.INVENTORY_USER,
+      ROLES.INVENTORY_MANAGER
+    ]
+    if (!allowedRoles.includes(role)) {
+      router.push('/dashboard')
+      return null
+    }
   }
 
   return (
