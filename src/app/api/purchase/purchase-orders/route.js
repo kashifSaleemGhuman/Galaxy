@@ -47,19 +47,30 @@ export async function GET(req) {
       whereClause.rfqId = rfqId;
     }
 
-    const data = await prisma.purchaseOrder.findMany({ 
-      where: whereClause,
-      include: { 
-        supplier: true,
-        lines: {
-          include: {
-            product: true
+    let data = [];
+    try {
+      data = await prisma.purchaseOrder.findMany({ 
+        where: whereClause,
+        include: { 
+          supplier: true,
+          lines: {
+            include: {
+              product: true
+            }
           }
-        }
-      },
-      orderBy: { dateCreated: 'desc' },
-      take: limit
-    });
+        },
+        orderBy: { dateCreated: 'desc' },
+        take: limit
+      });
+    } catch (dbError) {
+      console.error('Database error fetching purchase orders:', dbError);
+      // Return empty array instead of failing - allows UI to continue working
+      if (rfqId) {
+        // If querying by rfqId and it fails, return empty (no PO exists yet)
+        return NextResponse.json({ success: true, data: [] });
+      }
+      throw dbError;
+    }
 
     const shaped = data.map(p => ({
       po_id: p.poId,

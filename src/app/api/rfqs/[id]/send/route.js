@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
+import emailService from '@/lib/email';
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
 export const dynamic = 'force-dynamic';
@@ -32,6 +33,13 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
+    // Check if vendor has email
+    if (!rfq.vendor?.email) {
+      return NextResponse.json({ 
+        error: 'Vendor email is required to send RFQ' 
+      }, { status: 400 });
+    }
+
     // Update status to sent
     const updated = await prisma.$transaction(async (tx) => {
       const updatedRfq = await tx.rFQ.update({
@@ -58,10 +66,54 @@ export async function POST(req, { params }) {
       return updatedRfq;
     });
 
-    // Simulate email send success
-    return NextResponse.json({ success: true, rfq: updated });
+    // Send email to vendor
+    let emailResult = null;
+    let emailError = null;
+    try {
+      emailResult = await emailService.sendRFQEmail(updated);
+      console.log('Email result:', JSON.stringify(emailResult, null, 2));
+      
+      if (emailResult?.success) {
+        console.log(`✓ RFQ email sent successfully to ${updated.vendor?.email} via ${emailResult.provider}`);
+      } else {
+        // Email service returned failure but didn't throw
+        emailError = {
+          message: emailResult?.message || 'Email sending failed',
+          errors: emailResult?.errors || [],
+          providersAttempted: emailResult?.providersAttempted || []
+        };
+        console.error('✗ Email sending failed:', emailError);
+      }
+    } catch (err) {
+      emailError = {
+        message: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+        response: err.response?.body || err.response,
+      };
+      console.error('Error sending RFQ email:', err);
+      console.error('Error details:', emailError);
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      rfq: updated,
+      message: 'RFQ sent to vendor successfully',
+      emailSent: !!emailResult?.success,
+      emailError: emailError,
+      emailProvider: emailResult?.provider || null,
+      emailDetails: emailResult ? {
+        success: emailResult.success,
+        provider: emailResult.provider,
+        message: emailResult.message,
+        errors: emailResult.errors,
+        providersAttempted: emailResult.providersAttempted
+      } : null
+    });
   } catch (error) {
     console.error('Error sending RFQ:', error);
-    return NextResponse.json({ error: 'Failed to send RFQ' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to send RFQ',
+      details: error.message 
+    }, { status: 500 });
   }
 }

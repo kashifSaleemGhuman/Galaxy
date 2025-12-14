@@ -108,8 +108,15 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
   }, [rfq.id, rfq.items]);
 
   // Check if a Purchase Order already exists for this RFQ
+  // Only check if RFQ is approved (POs are only created from approved RFQs)
   useEffect(() => {
     const fetchPoForRfq = async () => {
+      // Only check for PO if RFQ is approved or later status
+      if (!rfq?.id || (rfq.status !== 'approved' && rfq.status !== 'received')) {
+        setPoInfo({ exists: false, poId: null });
+        return;
+      }
+      
       try {
         const res = await fetch(`/api/purchase/purchase-orders?rfqId=${rfq.id}`);
         if (res.ok) {
@@ -120,13 +127,19 @@ export default function RfqDetails({ rfq, onUpdateRfq, onBack }) {
           } else {
             setPoInfo({ exists: false, poId: null });
           }
+        } else {
+          // If API fails, just set to false - don't break the UI
+          console.warn('Failed to check for existing PO:', res.status);
+          setPoInfo({ exists: false, poId: null });
         }
-      } catch (_) {
-        // ignore silently
+      } catch (error) {
+        // Log error but don't break the UI
+        console.warn('Error checking for existing PO:', error);
+        setPoInfo({ exists: false, poId: null });
       }
     };
-    if (rfq?.id) fetchPoForRfq();
-  }, [rfq?.id]);
+    fetchPoForRfq();
+  }, [rfq?.id, rfq?.status]);
 
   const clearMessages = () => {
     setError(null);
