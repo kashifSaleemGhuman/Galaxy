@@ -8,6 +8,7 @@ import { authOptions } from '@/lib/auth';
 import prismaImported from '@/lib/db';
 import { PrismaClient } from '@prisma/client';
 import { ROLES } from '@/lib/constants/roles';
+import { normalizeAttributes } from '@/lib/purchase/productFieldUtils';
 
 export async function GET(req) {
   try {
@@ -66,11 +67,15 @@ export async function POST(req) {
 
     const prisma = prismaImported ?? new PrismaClient();
     const body = await req.json();
-    const { name, email, phone, address } = body;
+    const { name, email, phone, address, bankName, bankAccountNumber, attributes } = body;
 
     // Validation
     if (!name || !email) {
       return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
+    }
+
+    if (!bankName || !bankAccountNumber) {
+      return NextResponse.json({ error: 'Bank name and account number are required' }, { status: 400 });
     }
 
     // Check if vendor with this email already exists
@@ -89,6 +94,9 @@ export async function POST(req) {
         email,
         phone: phone || null,
         address: address || null,
+        bankName: bankName.trim(),
+        bankAccountNumber: bankAccountNumber.trim(),
+        attributes: normalizeAttributes(attributes),
         isActive: true
       }
     });
