@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { 
   Search, 
   Filter, 
@@ -19,8 +20,13 @@ import DataTable from '@/components/ui/DataTable'
 import WarehouseModal from './_components/WarehouseModal'
 import LocationManager from './_components/LocationManager'
 import ManagerCreator from './_components/ManagerCreator'
+import { ROLES } from '@/lib/constants/roles'
 
 export default function WarehousesPage() {
+  const { data: session } = useSession()
+  const userRole = (session?.user?.role || '').toUpperCase()
+  const isSuperAdmin = userRole === ROLES.SUPER_ADMIN
+  
   const [warehouses, setWarehouses] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -293,7 +299,7 @@ export default function WarehousesPage() {
     }
   ]
 
-  // Table actions
+  // Table actions - only Super Admin can edit/delete warehouses
   const tableActions = [
     {
       icon: <Eye className="h-4 w-4" />,
@@ -301,12 +307,12 @@ export default function WarehousesPage() {
       title: 'View',
       className: 'text-blue-600 hover:text-blue-900'
     },
-    {
+    ...(isSuperAdmin ? [{
       icon: <Edit className="h-4 w-4" />,
       onClick: (item) => handleEditWarehouse(item),
       title: 'Edit',
       className: 'text-green-600 hover:text-green-900'
-    },
+    }] : []),
     {
       icon: <MapPin className="h-4 w-4" />,
       onClick: (item) => handleManageLocations(item),
@@ -319,12 +325,12 @@ export default function WarehousesPage() {
       title: 'Manager',
       className: 'text-orange-600 hover:text-orange-900'
     },
-    {
+    ...(isSuperAdmin ? [{
       icon: <Trash2 className="h-4 w-4" />,
       onClick: (item) => handleDeleteWarehouse(item),
       title: 'Delete',
       className: 'text-red-600 hover:text-red-900'
-    }
+    }] : [])
   ]
 
   if (loading) {
@@ -344,13 +350,15 @@ export default function WarehousesPage() {
           <p className="text-gray-600 mt-2">Manage your warehouse locations and operations</p>
         </div>
         <div className="flex space-x-3">
-          <button 
-            onClick={handleCreateWarehouse}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-          >
-            <Plus className="h-5 w-5" />
-            <span>Add Warehouse</span>
-          </button>
+          {isSuperAdmin && (
+            <button 
+              onClick={handleCreateWarehouse}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+            >
+              <Plus className="h-5 w-5" />
+              <span>Add Warehouse</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -513,14 +521,16 @@ export default function WarehousesPage() {
               ? 'Try adjusting your search or filters.'
               : 'Get started by creating your first warehouse.'}
           </p>
-          <div className="mt-6">
-            <button 
-              onClick={handleCreateWarehouse}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-            >
-              Add Warehouse
-            </button>
-          </div>
+          {isSuperAdmin && (
+            <div className="mt-6">
+              <button 
+                onClick={handleCreateWarehouse}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                Add Warehouse
+              </button>
+            </div>
+          )}
         </div>
       )}
 

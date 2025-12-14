@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/db'
 import { crmCache, rateLimit } from '@/lib/redis'
+import { ROLES } from '@/lib/constants/roles'
 
 // GET /api/inventory/warehouses - Get all warehouses
 export async function GET(request) {
@@ -114,12 +115,31 @@ export async function GET(request) {
 }
 
 // POST /api/inventory/warehouses - Create new warehouse
+// Only SUPER_ADMIN can create warehouses
 export async function POST(request) {
   try {
     const session = await getServerSession(authOptions)
     
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check if user is SUPER_ADMIN
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { role: true }
+    })
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    const userRole = (currentUser.role || '').toUpperCase()
+    if (userRole !== ROLES.SUPER_ADMIN) {
+      return NextResponse.json(
+        { error: 'Only Super Admin can create warehouses' },
+        { status: 403 }
+      )
     }
     
     // Rate limiting
