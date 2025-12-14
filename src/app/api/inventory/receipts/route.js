@@ -4,6 +4,9 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { hasPermission, PERMISSIONS } from '@/lib/constants/roles'
 
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic'
+
 // GET /api/inventory/receipts - Get all goods receipts
 export async function GET(request) {
   try {

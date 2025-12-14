@@ -5,6 +5,9 @@ import prisma from '@/lib/db'
 import { crmCache, rateLimit } from '@/lib/redis'
 import { ROLES } from '@/lib/constants/roles'
 
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic'
+
 // GET /api/inventory/warehouses - Get all warehouses
 export async function GET(request) {
   try {

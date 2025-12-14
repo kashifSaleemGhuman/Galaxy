@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
 
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic';
+
 // POST /api/purchase/purchase-orders/[id]/approve - Approve a Purchase Order
 export async function POST(req, { params }) {
   try {
