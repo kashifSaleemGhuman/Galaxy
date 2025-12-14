@@ -14,8 +14,11 @@ import {
   ExclamationTriangleIcon,
   Package
 } from 'lucide-react'
+import useSWR from 'swr'
 import DataTable from '@/components/ui/DataTable'
 import AdjustmentModal from './_components/AdjustmentModal'
+
+const fetcher = (url) => fetch(url).then(res => res.json())
 
 export default function AdjustmentsPage() {
   const [adjustments, setAdjustments] = useState([])
@@ -31,135 +34,73 @@ export default function AdjustmentsPage() {
   const [selectedAdjustment, setSelectedAdjustment] = useState(null)
   const [warehouses, setWarehouses] = useState([])
 
-  // Mock data for demonstration
+  // Fetch warehouses using SWR
+  const { data: warehousesData } = useSWR('/api/inventory/warehouses?limit=1000', fetcher)
+  
+  // Fetch adjustments using SWR
+  const { data: movementsData, error: movementsError, mutate: mutateMovements } = useSWR(
+    '/api/inventory/movements?type=adjustment',
+    fetcher,
+    { refreshInterval: 5000 }
+  )
+
   useEffect(() => {
-    const mockAdjustments = [
-      {
-        id: '1',
-        adjustmentNumber: 'ADJ-2024-001',
-        warehouse: {
-          id: '1',
-          name: 'Main Warehouse',
-          code: 'WH-001'
-        },
-        reason: 'damage',
-        status: 'completed',
-        notes: 'Damaged items found during inspection',
-        adjustmentDate: '2024-01-15T10:30:00Z',
-        createdAt: '2024-01-15T10:30:00Z',
-        user: {
-          firstName: 'John',
-          lastName: 'Smith',
-          email: 'john@company.com'
-        },
-        lines: [
-          {
-            id: '1',
-            product: {
-              name: 'Laptop Pro 15',
-              sku: 'LP-001'
-            },
-            location: {
-              name: 'A-01-01',
-              code: 'A-01-01'
-            },
-            expectedQuantity: 25,
-            actualQuantity: 23,
-            difference: -2,
-            unitCost: 1200.00,
-            totalCost: -2400.00,
-            notes: '2 units damaged'
-          }
-        ]
-      },
-      {
-        id: '2',
-        adjustmentNumber: 'ADJ-2024-002',
-        warehouse: {
-          id: '1',
-          name: 'Main Warehouse',
-          code: 'WH-001'
-        },
-        reason: 'found',
-        status: 'pending',
-        notes: 'Found items during cleanup',
-        adjustmentDate: '2024-01-16T14:20:00Z',
-        createdAt: '2024-01-16T14:20:00Z',
-        user: {
-          firstName: 'Jane',
-          lastName: 'Doe',
-          email: 'jane@company.com'
-        },
-        lines: [
-          {
-            id: '2',
-            product: {
-              name: 'Wireless Mouse',
-              sku: 'WM-001'
-            },
-            location: {
-              name: 'A-01-02',
-              code: 'A-01-02'
-            },
-            expectedQuantity: 10,
-            actualQuantity: 12,
-            difference: 2,
-            unitCost: 25.00,
-            totalCost: 50.00,
-            notes: 'Found 2 extra units'
-          }
-        ]
-      },
-      {
-        id: '3',
-        adjustmentNumber: 'ADJ-2024-003',
-        warehouse: {
-          id: '2',
-          name: 'Secondary Warehouse',
-          code: 'WH-002'
-        },
-        reason: 'cycle_count',
-        status: 'approved',
-        notes: 'Cycle count adjustment',
-        adjustmentDate: '2024-01-17T09:15:00Z',
-        createdAt: '2024-01-17T09:15:00Z',
-        user: {
-          firstName: 'Mike',
-          lastName: 'Johnson',
-          email: 'mike@company.com'
-        },
-        lines: [
-          {
-            id: '3',
-            product: {
-              name: 'Office Chair',
-              sku: 'OC-001'
-            },
-            location: {
-              name: 'B-02-01',
-              code: 'B-02-01'
-            },
-            expectedQuantity: 15,
-            actualQuantity: 14,
-            difference: -1,
-            unitCost: 150.00,
-            totalCost: -150.00,
-            notes: 'Missing 1 unit'
-          }
-        ]
-      }
-    ]
+    if (warehousesData?.warehouses) {
+      setWarehouses(warehousesData.warehouses)
+    }
+  }, [warehousesData])
 
-    const mockWarehouses = [
-      { id: '1', name: 'Main Warehouse', code: 'WH-001' },
-      { id: '2', name: 'Secondary Warehouse', code: 'WH-002' },
-      { id: '3', name: 'Remote Warehouse', code: 'WH-003' }
-    ]
+  // Process movements data into adjustments format
+  useEffect(() => {
+    if (movementsData?.success && movementsData.data) {
+      // Group movements by reference (adjustment reference)
+      const adjustmentMap = new Map()
+      
+      movementsData.data
+        .filter(movement => movement.referenceId && (movement.referenceId.startsWith('ADJ-') || movement.referenceId.startsWith('CC-')))
+        .forEach(movement => {
+          if (movement.referenceId) {
+            if (!adjustmentMap.has(movement.referenceId)) {
+              adjustmentMap.set(movement.referenceId, {
+                id: movement.referenceId,
+                adjustmentNumber: movement.referenceId,
+                warehouse: movement.warehouse,
+                reason: movement.notes?.includes('Cycle Count') ? 'cycle_count' : 'other',
+                status: 'completed',
+                notes: movement.notes || '',
+                adjustmentDate: movement.movementDate,
+                createdAt: movement.createdAt,
+                user: movement.user,
+                lines: []
+              })
+            }
+            
+            const adjustment = adjustmentMap.get(movement.referenceId)
+            adjustment.lines.push({
+              id: movement.id,
+              product: movement.product,
+              location: movement.location,
+              expectedQuantity: movement.quantity < 0 ? Math.abs(movement.quantity) : 0,
+              actualQuantity: movement.quantity > 0 ? movement.quantity : 0,
+              difference: movement.quantity,
+              notes: movement.notes
+            })
+          }
+        })
+      
+      setAdjustments(Array.from(adjustmentMap.values()))
+      setLoading(false)
+    } else if (movementsError) {
+      console.error('Error fetching adjustments:', movementsError)
+      setLoading(false)
+    } else if (movementsData && !movementsData.success) {
+      setLoading(false)
+    }
+  }, [movementsData, movementsError])
 
-    setAdjustments(mockAdjustments)
-    setWarehouses(mockWarehouses)
-    setLoading(false)
-  }, [])
+  const fetchAdjustments = async () => {
+    mutateMovements()
+  }
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -249,14 +190,49 @@ export default function AdjustmentsPage() {
 
   const handleSaveAdjustment = async (adjustmentData) => {
     try {
-      // This would be an API call to save the adjustment
-      console.log('Saving adjustment:', adjustmentData)
-      // const response = await fetch('/api/inventory/adjustments', { method: 'POST', body: JSON.stringify(adjustmentData) })
-      // await fetchAdjustments()
+      // Prepare the payload for the API
+      const payload = {
+        warehouseId: adjustmentData.warehouseId,
+        reason: adjustmentData.reason || '',
+        notes: adjustmentData.notes || '',
+        reference: adjustmentData.reference || '',
+        lines: adjustmentData.lines.map(line => ({
+          productId: line.productId,
+          expectedQuantity: parseInt(line.expectedQuantity) || 0,
+          actualQuantity: parseInt(line.actualQuantity) || 0,
+          locationId: line.locationId || null,
+          notes: line.notes || null
+        }))
+      }
+
+      const response = await fetch('/api/inventory/adjustments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create adjustment')
+      }
+
+      // Check if a request was created (for WAREHOUSE_OPERATOR and INVENTORY_MANAGER)
+      if (result.message && result.message.includes('pending approval')) {
+        alert('Adjustment request created successfully! It is now pending approval from Super Admin.')
+      } else {
+        alert('Adjustment completed successfully!')
+      }
+
+      // Refresh the adjustments list
+      await fetchAdjustments()
       setShowModal(false)
       return true
     } catch (error) {
       console.error('Error saving adjustment:', error)
+      alert(`Error: ${error.message || 'Failed to create adjustment'}`)
       throw error
     }
   }

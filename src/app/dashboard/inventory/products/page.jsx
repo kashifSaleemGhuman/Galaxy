@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { 
   Search, 
   Filter, 
@@ -17,8 +18,25 @@ import {
 } from 'lucide-react'
 import DataTable from '@/components/ui/DataTable'
 import ProductModal from './_components/ProductModal'
+import { ROLES } from '@/lib/constants/roles'
 
 export default function ProductsPage() {
+  const { data: session } = useSession()
+  const userRole = session?.user?.role?.toUpperCase() || ''
+  
+  // Check if user can create/edit/delete products
+  const canManageProducts = [
+    ROLES.SUPER_ADMIN,
+    ROLES.ADMIN,
+    ROLES.PURCHASE_MANAGER,
+    ROLES.PURCHASE_USER
+  ].includes(userRole)
+  
+  // Inventory managers and warehouse operators can only view
+  const canOnlyView = [
+    ROLES.INVENTORY_MANAGER,
+    ROLES.WAREHOUSE_OPERATOR
+  ].includes(userRole)
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -314,7 +332,7 @@ export default function ProductsPage() {
     }
   ]
 
-  // Table actions
+  // Table actions - only show edit/delete for users who can manage products
   const tableActions = [
     {
       icon: <Eye className="h-4 w-4" />,
@@ -322,18 +340,20 @@ export default function ProductsPage() {
       title: 'View',
       className: 'text-blue-600 hover:text-blue-900'
     },
-    {
-      icon: <Edit className="h-4 w-4" />,
-      onClick: (item) => handleEditProduct(item),
-      title: 'Edit',
-      className: 'text-green-600 hover:text-green-900'
-    },
-    {
-      icon: <Trash2 className="h-4 w-4" />,
-      onClick: (item) => handleDeleteProduct(item),
-      title: 'Delete',
-      className: 'text-red-600 hover:text-red-900'
-    }
+    ...(canManageProducts ? [
+      {
+        icon: <Edit className="h-4 w-4" />,
+        onClick: (item) => handleEditProduct(item),
+        title: 'Edit',
+        className: 'text-green-600 hover:text-green-900'
+      },
+      {
+        icon: <Trash2 className="h-4 w-4" />,
+        onClick: (item) => handleDeleteProduct(item),
+        title: 'Delete',
+        className: 'text-red-600 hover:text-red-900'
+      }
+    ] : [])
   ]
 
   if (loading) {
@@ -353,13 +373,20 @@ export default function ProductsPage() {
           <p className="text-gray-600 mt-2">Manage your product catalog and inventory</p>
         </div>
         <div className="flex space-x-3">
-          <button 
-            onClick={handleCreateProduct}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-          >
-            <Plus className="h-5 w-5" />
-            <span>Add Product</span>
-          </button>
+          {canManageProducts && (
+            <button 
+              onClick={handleCreateProduct}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+            >
+              <Plus className="h-5 w-5" />
+              <span>Add Product</span>
+            </button>
+          )}
+          {canOnlyView && (
+            <div className="text-sm text-gray-500 flex items-center">
+              <span>Products can only be added from the Purchase module</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -519,12 +546,14 @@ export default function ProductsPage() {
                   >
                     View Details
                   </button>
-                  <button 
-                    onClick={() => handleEditProduct(product)}
-                    className="flex-1 bg-gray-50 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-100"
-                  >
-                    Edit
-                  </button>
+                  {canManageProducts && (
+                    <button 
+                      onClick={() => handleEditProduct(product)}
+                      className="flex-1 bg-gray-50 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-100"
+                    >
+                      Edit
+                    </button>
+                  )}
                 </div>
               </div>
             )
@@ -542,16 +571,20 @@ export default function ProductsPage() {
           <p className="mt-1 text-sm text-gray-500">
             {searchTerm || filterCategory !== 'all' || filterStatus !== 'all'
               ? 'Try adjusting your search or filters.'
-              : 'Get started by creating your first product.'}
+              : canOnlyView 
+                ? 'Products can only be added from the Purchase module.'
+                : 'Get started by creating your first product.'}
           </p>
-          <div className="mt-6">
-            <button 
-              onClick={handleCreateProduct}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-            >
-              Add Product
-            </button>
-          </div>
+          {canManageProducts && (
+            <div className="mt-6">
+              <button 
+                onClick={handleCreateProduct}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                Add Product
+              </button>
+            </div>
+          )}
         </div>
       )}
 

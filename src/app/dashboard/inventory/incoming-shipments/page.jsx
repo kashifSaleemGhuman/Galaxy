@@ -128,12 +128,24 @@ export default function GoodsReceipts() {
 
   const handleRejectReceipt = async (receiptId) => {
     try {
-      // Here you would implement the rejection logic
-      console.log('Rejecting receipt:', receiptId)
-      // Update the receipt status to rejected
-      // This would typically involve an API call
-      alert('Receipt rejected')
-      fetchReceipts() // Refresh the list
+      const response = await fetch(`/api/inventory/incoming-shipments/${receiptId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notes: 'Receipt rejected by inventory manager'
+        })
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        alert('Receipt rejected successfully!')
+        await fetchReceipts() // Refresh the list
+      } else {
+        alert(`Error: ${result.error || 'Failed to reject receipt'}`)
+      }
     } catch (error) {
       console.error('Error rejecting receipt:', error)
       alert('Error rejecting receipt')

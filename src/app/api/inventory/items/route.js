@@ -45,6 +45,7 @@ export async function GET(request) {
       include: {
         product: true,
         warehouse: true,
+        warehouseLocation: true, // Include location relation
         stockMovements: {
           orderBy: { createdAt: 'desc' },
           take: 1
@@ -89,10 +90,14 @@ export async function GET(request) {
           name: item.warehouse.name,
           code: item.warehouse.code
         },
-        location: {
-          id: item.location || 'default',
-          name: item.location || 'Default Location',
-          code: item.location || 'DEFAULT'
+        location: item.warehouseLocation ? {
+          id: item.warehouseLocation.id,
+          name: item.warehouseLocation.name,
+          code: item.warehouseLocation.code
+        } : {
+          id: 'default',
+          name: 'No Location',
+          code: 'N/A'
         },
         quantityOnHand: item.quantity,
         quantityReserved: item.reserved,

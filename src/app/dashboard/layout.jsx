@@ -78,6 +78,16 @@ export default function DashboardLayout({ children }) {
           { name: 'Roles', href: '/dashboard/users/roles', current: pathname === '/dashboard/users/roles' }
         ]
       })
+      
+      // Add Requests section for Super Admin only
+      if (userRole === ROLES.SUPER_ADMIN) {
+        baseNavigation.push({
+          name: 'Requests',
+          href: '/dashboard/requests',
+          icon: ClipboardDocumentListIcon,
+          current: pathname.startsWith('/dashboard/requests')
+        })
+      }
     }
 
     // Purchase module - available to all purchase-related roles

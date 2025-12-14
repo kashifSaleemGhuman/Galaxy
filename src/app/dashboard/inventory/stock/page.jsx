@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { 
   Search, 
   Filter, 
@@ -12,53 +12,44 @@ import {
   XCircle,
   Building2,
   MapPin,
-  BarChart3
+  BarChart3,
+  Download,
+  FileText
 } from 'lucide-react'
+import useSWR from 'swr'
 import DataTable from '@/components/ui/DataTable'
 
+const fetcher = (url) => fetch(url).then(res => res.json())
+
 export default function StockPage() {
-  const [stockItems, setStockItems] = useState([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterWarehouse, setFilterWarehouse] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [viewMode, setViewMode] = useState('table')
   const [selectedItems, setSelectedItems] = useState([])
-  const [warehouses, setWarehouses] = useState([])
+  const [showReportModal, setShowReportModal] = useState(false)
 
-  // Fetch real inventory data
+  // Close report modal when clicking outside
   useEffect(() => {
-    fetchInventoryData()
-  }, [])
-
-  const fetchInventoryData = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/inventory/items')
-      
-      if (response.ok) {
-        const result = await response.json()
-        if (result.success) {
-          setStockItems(result.data)
-          setWarehouses(result.warehouses)
-        } else {
-          console.error('Error fetching inventory:', result.error)
-          setStockItems([])
-          setWarehouses([])
-        }
-      } else {
-        console.error('Failed to fetch inventory data')
-        setStockItems([])
-        setWarehouses([])
+    const handleClickOutside = (event) => {
+      if (showReportModal && !event.target.closest('.report-dropdown')) {
+        setShowReportModal(false)
       }
-    } catch (error) {
-      console.error('Error fetching inventory data:', error)
-      setStockItems([])
-      setWarehouses([])
-    } finally {
-      setLoading(false)
     }
-  }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showReportModal])
+
+  // Fetch inventory data using SWR with real-time updates
+  const { data: inventoryData, error: inventoryError, mutate: mutateInventory } = useSWR(
+    '/api/inventory/items',
+    fetcher,
+    { refreshInterval: 5000 }
+  )
+
+  const stockItems = inventoryData?.data || []
+  const warehouses = inventoryData?.warehouses || []
+  const loading = !inventoryData && !inventoryError
 
   const getStockStatus = (item) => {
     if (item.quantityOnHand <= 0) {
@@ -74,9 +65,58 @@ export default function StockPage() {
   }
 
   const getStockTrend = (item) => {
-    // Mock trend calculation - in real app, this would be based on historical data
-    const trends = ['up', 'down', 'stable']
-    return trends[Math.floor(Math.random() * trends.length)]
+    // Calculate trend based on last movement
+    if (!item.lastMovementDate) return 'stable'
+    
+    // For now, return stable - can be enhanced with historical data
+    return 'stable'
+  }
+
+  // Generate CSV report
+  const generateCSVReport = () => {
+    const headers = ['Product', 'SKU', 'Warehouse', 'Location', 'Quantity On Hand', 'Available', 'Reserved', 'Status', 'Reorder Point', 'Min Stock', 'Max Stock']
+    const rows = filteredItems.map(item => [
+      item.product.name,
+      item.product.sku || item.product.id,
+      item.warehouse.name,
+      item.location.name,
+      item.quantityOnHand,
+      item.quantityAvailable,
+      item.quantityReserved,
+      getStockStatus(item).status,
+      item.reorderPoint,
+      item.minStock,
+      item.maxStock
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `stock-levels-report-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  // Generate PDF report (simplified - opens print dialog)
+  const generatePDFReport = () => {
+    window.print()
+  }
+
+  // Generate comprehensive report
+  const generateReport = (format = 'csv') => {
+    if (format === 'csv') {
+      generateCSVReport()
+    } else if (format === 'pdf') {
+      generatePDFReport()
+    }
   }
 
   const handleSelectItem = (itemId) => {
@@ -95,17 +135,19 @@ export default function StockPage() {
     }
   }
 
-  const filteredItems = stockItems.filter(item => {
-    const matchesSearch = item.product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.product.barcode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.warehouse.name.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesWarehouse = filterWarehouse === 'all' || item.warehouse.id === filterWarehouse
-    const matchesStatus = filterStatus === 'all' || item.status === filterStatus
-    
-    return matchesSearch && matchesWarehouse && matchesStatus
-  })
+  const filteredItems = useMemo(() => {
+    return stockItems.filter(item => {
+      const matchesSearch = item.product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           item.product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           item.product.barcode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           item.warehouse.name.toLowerCase().includes(searchTerm.toLowerCase())
+      
+      const matchesWarehouse = filterWarehouse === 'all' || item.warehouse.id === filterWarehouse
+      const matchesStatus = filterStatus === 'all' || item.status === filterStatus
+      
+      return matchesSearch && matchesWarehouse && matchesStatus
+    })
+  }, [stockItems, searchTerm, filterWarehouse, filterStatus])
 
   // Table columns configuration
   const tableColumns = [
@@ -144,8 +186,8 @@ export default function StockPage() {
         <div className="flex items-center">
           <MapPin className="h-4 w-4 text-gray-400 mr-2" />
           <div>
-            <div className="text-sm text-gray-900">{item.location.name}</div>
-            <div className="text-sm text-gray-500">{item.location.code}</div>
+            <div className="text-sm text-gray-900">{item.location?.name || 'No Location'}</div>
+            <div className="text-sm text-gray-500">{item.location?.code || 'N/A'}</div>
           </div>
         </div>
       )
@@ -240,14 +282,48 @@ export default function StockPage() {
           <p className="text-gray-600 mt-2">Monitor inventory levels across all warehouses</p>
         </div>
         <div className="flex space-x-3">
-          <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2">
+          <button 
+            onClick={() => window.location.href = '/dashboard/inventory/adjustments'}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2"
+          >
             <Package className="h-5 w-5" />
             <span>Stock Adjustment</span>
           </button>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2">
-            <BarChart3 className="h-5 w-5" />
-            <span>Generate Report</span>
-          </button>
+          <div className="relative report-dropdown">
+            <button 
+              onClick={() => setShowReportModal(!showReportModal)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+            >
+              <BarChart3 className="h-5 w-5" />
+              <span>Generate Report</span>
+            </button>
+            {showReportModal && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      generateReport('csv')
+                      setShowReportModal(false)
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Export as CSV</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      generateReport('pdf')
+                      setShowReportModal(false)
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span>Print/PDF Report</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -270,7 +346,7 @@ export default function StockPage() {
             <div>
               <p className="text-sm font-medium text-gray-600">In Stock</p>
               <p className="text-2xl font-bold text-green-600">
-                {stockItems.filter(item => item.quantityOnHand > 0).length}
+                {stockItems.filter(item => item.quantityOnHand > 0 && item.quantityOnHand > item.reorderPoint).length}
               </p>
             </div>
             <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -284,7 +360,7 @@ export default function StockPage() {
             <div>
               <p className="text-sm font-medium text-gray-600">Low Stock</p>
               <p className="text-2xl font-bold text-orange-600">
-                {stockItems.filter(item => item.quantityOnHand <= item.reorderPoint && item.quantityOnHand > 0).length}
+                {stockItems.filter(item => item.quantityOnHand > 0 && item.quantityOnHand <= item.reorderPoint).length}
               </p>
             </div>
             <div className="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -440,7 +516,7 @@ export default function StockPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Location:</span>
-                    <span className="font-medium">{item.location.name}</span>
+                    <span className="font-medium">{item.location?.name || 'No Location'}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Quantity:</span>
@@ -478,10 +554,16 @@ export default function StockPage() {
                 </div>
 
                 <div className="flex space-x-2">
-                  <button className="flex-1 bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-100">
+                  <button 
+                    onClick={() => window.location.href = `/dashboard/inventory/products?productId=${item.product.id}`}
+                    className="flex-1 bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-100"
+                  >
                     View Details
                   </button>
-                  <button className="flex-1 bg-green-50 text-green-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-100">
+                  <button 
+                    onClick={() => window.location.href = '/dashboard/inventory/adjustments'}
+                    className="flex-1 bg-green-50 text-green-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-100"
+                  >
                     Adjust Stock
                   </button>
                 </div>

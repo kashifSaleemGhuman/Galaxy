@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { X, Save, Loader2, Plus, Trash2, TruckIcon, Building2, MapPinIcon, Package } from 'lucide-react'
+import useSWR from 'swr'
+
+const fetcher = (url) => fetch(url).then(res => res.json())
 
 export default function TransferModal({ 
   isOpen, 
@@ -15,6 +18,7 @@ export default function TransferModal({
     fromWarehouseId: '',
     toWarehouseId: '',
     notes: '',
+    reference: '',
     transferDate: new Date().toISOString().split('T')[0],
     expectedDate: '',
     status: 'draft'
@@ -24,16 +28,23 @@ export default function TransferModal({
   const [errors, setErrors] = useState({})
   const [touched, setTouched] = useState({})
 
-  // Mock products for demonstration
-  const [products] = useState([
-    { id: '1', name: 'Laptop Pro 15', sku: 'LP-001' },
-    { id: '2', name: 'Wireless Mouse', sku: 'WM-001' },
-    { id: '3', name: 'Office Chair', sku: 'OC-001' },
-    { id: '4', name: 'Monitor 24"', sku: 'MN-001' }
-  ])
+  // Fetch products and warehouses
+  const { data: productsData } = useSWR('/api/inventory/products?limit=1000', fetcher)
+  const { data: warehousesData } = useSWR('/api/inventory/warehouses?limit=1000', fetcher)
+  const { data: fromLocationsData } = useSWR(
+    formData.fromWarehouseId ? `/api/inventory/warehouses/${formData.fromWarehouseId}/locations` : null,
+    fetcher
+  )
+  const { data: toLocationsData } = useSWR(
+    formData.toWarehouseId ? `/api/inventory/warehouses/${formData.toWarehouseId}/locations` : null,
+    fetcher
+  )
 
-  // Mock locations for demonstration
-  const [locations, setLocations] = useState([])
+  const products = productsData?.products || []
+  const warehousesFromAPI = warehousesData?.warehouses || []
+  const warehousesList = warehouses.length > 0 ? warehouses : warehousesFromAPI // Use prop if provided, otherwise API
+  const fromLocations = fromLocationsData?.data || []
+  const toLocations = toLocationsData?.data || []
 
   useEffect(() => {
     if (transfer && mode === 'edit') {
@@ -61,23 +72,6 @@ export default function TransferModal({
     setTouched({})
   }, [transfer, mode])
 
-  // Update locations when warehouse changes
-  useEffect(() => {
-    if (formData.fromWarehouseId) {
-      // Mock locations based on warehouse
-      const mockLocations = [
-        { id: '1', name: 'A-01-01', code: 'A-01-01', warehouseId: '1' },
-        { id: '2', name: 'A-01-02', code: 'A-01-02', warehouseId: '1' },
-        { id: '3', name: 'A-02-01', code: 'A-02-01', warehouseId: '1' },
-        { id: '4', name: 'B-01-01', code: 'B-01-01', warehouseId: '2' },
-        { id: '5', name: 'B-01-02', code: 'B-01-02', warehouseId: '2' },
-        { id: '6', name: 'C-01-01', code: 'C-01-01', warehouseId: '3' }
-      ]
-      setLocations(mockLocations.filter(loc => 
-        loc.warehouseId === formData.fromWarehouseId || loc.warehouseId === formData.toWarehouseId
-      ))
-    }
-  }, [formData.fromWarehouseId, formData.toWarehouseId])
 
   const validateForm = () => {
     const newErrors = {}
@@ -120,18 +114,35 @@ export default function TransferModal({
       return
     }
     
+    // Validate transfer lines
+    const validLines = transferLines.filter(line => line.productId && line.quantity > 0)
+    if (validLines.length === 0) {
+      setErrors({ lines: 'At least one valid transfer line is required' })
+      return
+    }
+    
     setLoading(true)
     
     try {
       const payload = {
-        ...formData,
-        lines: transferLines
+        fromWarehouseId: formData.fromWarehouseId,
+        toWarehouseId: formData.toWarehouseId,
+        notes: formData.notes || '',
+        reference: formData.reference || '',
+        lines: validLines.map(line => ({
+          productId: line.productId,
+          quantity: parseInt(line.quantity) || 1,
+          fromLocationId: line.fromLocationId || null,
+          toLocationId: line.toLocationId || null,
+          reason: line.notes || null
+        }))
       }
       
       await onSave(payload)
       onClose()
     } catch (error) {
       console.error('Error saving transfer:', error)
+      setErrors({ submit: error.message || 'Failed to save transfer' })
     } finally {
       setLoading(false)
     }
@@ -200,12 +211,13 @@ export default function TransferModal({
 
   const getProductName = (productId) => {
     const product = products.find(p => p.id === productId)
-    return product ? `${product.name} (${product.sku})` : ''
+    return product ? `${product.name} (${product.id})` : ''
   }
 
-  const getLocationName = (locationId) => {
-    const location = locations.find(l => l.id === locationId)
-    return location ? `${location.name} (${location.code})` : ''
+  const getLocationName = (locationId, isFrom) => {
+    const locationList = isFrom ? fromLocations : toLocations
+    const location = locationList.find(l => l.id === locationId)
+    return location ? `${location.code}${location.name ? ` - ${location.name}` : ''}` : ''
   }
 
   if (!isOpen) return null
@@ -250,7 +262,7 @@ export default function TransferModal({
                   disabled={mode === 'view'}
                 >
                   <option value="">Select from warehouse</option>
-                  {warehouses.map(warehouse => (
+                  {warehousesList.map(warehouse => (
                     <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>
                   ))}
                 </select>
@@ -276,7 +288,7 @@ export default function TransferModal({
                   disabled={mode === 'view'}
                 >
                   <option value="">Select to warehouse</option>
-                  {warehouses.filter(w => w.id !== formData.fromWarehouseId).map(warehouse => (
+                  {warehousesList.filter(w => w.id !== formData.fromWarehouseId).map(warehouse => (
                     <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>
                   ))}
                 </select>
@@ -342,8 +354,25 @@ export default function TransferModal({
               </select>
             </div>
 
+            {/* Reference */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Reference
+              </label>
+              <input
+                type="text"
+                name="reference"
+                value={formData.reference}
+                onChange={handleInputChange}
+                onBlur={() => handleBlur('reference')}
+                className={getFieldClassName('reference')}
+                placeholder="TR-2024-001"
+                disabled={mode === 'view'}
+              />
+            </div>
+
             {/* Notes */}
-            <div className="md:col-span-2">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Notes
               </label>
@@ -421,7 +450,9 @@ export default function TransferModal({
                         >
                           <option value="">Select product</option>
                           {products.map(product => (
-                            <option key={product.id} value={product.id}>{product.name}</option>
+                            <option key={product.id} value={product.id}>
+                              {product.name} ({product.id})
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -435,11 +466,13 @@ export default function TransferModal({
                           value={line.fromLocationId}
                           onChange={(e) => updateTransferLine(line.id, 'fromLocationId', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          disabled={mode === 'view'}
+                          disabled={mode === 'view' || !formData.fromWarehouseId}
                         >
                           <option value="">Select location</option>
-                          {locations.filter(loc => loc.warehouseId === formData.fromWarehouseId).map(location => (
-                            <option key={location.id} value={location.id}>{location.name}</option>
+                          {fromLocations.map(location => (
+                            <option key={location.id} value={location.id}>
+                              {location.code} {location.name ? `- ${location.name}` : ''}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -453,11 +486,13 @@ export default function TransferModal({
                           value={line.toLocationId}
                           onChange={(e) => updateTransferLine(line.id, 'toLocationId', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          disabled={mode === 'view'}
+                          disabled={mode === 'view' || !formData.toWarehouseId}
                         >
                           <option value="">Select location</option>
-                          {locations.filter(loc => loc.warehouseId === formData.toWarehouseId).map(location => (
-                            <option key={location.id} value={location.id}>{location.name}</option>
+                          {toLocations.map(location => (
+                            <option key={location.id} value={location.id}>
+                              {location.code} {location.name ? `- ${location.name}` : ''}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -531,6 +566,12 @@ export default function TransferModal({
               <p className="text-red-500 text-sm mt-1">{getFieldError('lines')}</p>
             )}
           </div>
+
+          {errors.submit && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-red-600 text-sm">{errors.submit}</p>
+            </div>
+          )}
 
           {/* Actions */}
           {mode !== 'view' && (

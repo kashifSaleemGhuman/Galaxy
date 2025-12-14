@@ -110,11 +110,7 @@ export default function InventoryOverview() {
           <p className="text-gray-600 mt-2">Monitor your inventory levels, movements, and operations</p>
         </div>
         <div className="flex space-x-3">
-          
-          <Link href="/dashboard/inventory/products" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2">
-            <Plus className="h-5 w-5" />
-            <span>Add Product</span>
-          </Link>
+          {/* Products can only be added from Purchase module for non-admin users */}
         </div>
       </div>
 

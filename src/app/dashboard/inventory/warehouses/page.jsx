@@ -17,6 +17,8 @@ import {
 } from 'lucide-react'
 import DataTable from '@/components/ui/DataTable'
 import WarehouseModal from './_components/WarehouseModal'
+import LocationManager from './_components/LocationManager'
+import ManagerCreator from './_components/ManagerCreator'
 
 export default function WarehousesPage() {
   const [warehouses, setWarehouses] = useState([])
@@ -29,6 +31,9 @@ export default function WarehousesPage() {
   const [modalMode, setModalMode] = useState('create')
   const [selectedWarehouse, setSelectedWarehouse] = useState(null)
   const [managers, setManagers] = useState([])
+  const [showLocationManager, setShowLocationManager] = useState(false)
+  const [showManagerCreator, setShowManagerCreator] = useState(false)
+  const [selectedWarehouseForManager, setSelectedWarehouseForManager] = useState(null)
 
   // Fetch warehouses from API
   useEffect(() => {
@@ -63,15 +68,25 @@ export default function WarehousesPage() {
 
   const fetchManagers = async () => {
     try {
-      // This would be a separate API call to get users who can be managers
-      // For now, using mock data
-      setManagers([
-        { id: '1', name: 'John Smith', email: 'john@company.com' },
-        { id: '2', name: 'Jane Doe', email: 'jane@company.com' },
-        { id: '3', name: 'Mike Johnson', email: 'mike@company.com' }
-      ])
+      // Fetch users with WAREHOUSE_OPERATOR role who can be managers
+      const response = await fetch('/api/users?role=WAREHOUSE_OPERATOR')
+      if (response.ok) {
+        const result = await response.json()
+        if (result.users) {
+          setManagers(result.users.map(user => ({
+            id: user.id,
+            name: user.name,
+            email: user.email
+          })))
+        } else {
+          setManagers([])
+        }
+      } else {
+        setManagers([])
+      }
     } catch (error) {
       console.error('Error fetching managers:', error)
+      setManagers([])
     }
   }
 
@@ -141,6 +156,26 @@ export default function WarehousesPage() {
       console.error('Error saving warehouse:', error)
       throw error
     }
+  }
+
+  const handleManageLocations = (warehouse) => {
+    setSelectedWarehouse(warehouse)
+    setShowLocationManager(true)
+  }
+
+  const handleCreateManager = (warehouse) => {
+    // Check if warehouse already has a manager
+    if (warehouse.managerId || warehouse.manager) {
+      // Show manager info or allow viewing credentials
+      alert(`Manager already assigned: ${warehouse.manager?.name || warehouse.manager?.email || 'N/A'}\n\nNote: Password cannot be retrieved. Please contact Super Admin to reset if needed.`)
+      return
+    }
+    setSelectedWarehouseForManager(warehouse)
+    setShowManagerCreator(true)
+  }
+
+  const handleManagerCreated = () => {
+    fetchWarehouses() // Refresh to show new manager
   }
 
   const getStatusColor = (isActive) => {
@@ -217,7 +252,7 @@ export default function WarehousesPage() {
           <div>
             {item.manager ? (
               <>
-                <div className="text-sm text-gray-900">{item.manager.firstName} {item.manager.lastName}</div>
+                <div className="text-sm text-gray-900">{item.manager.name || item.manager.email}</div>
                 <div className="text-sm text-gray-500">{item.manager.email}</div>
               </>
             ) : (
@@ -271,6 +306,18 @@ export default function WarehousesPage() {
       onClick: (item) => handleEditWarehouse(item),
       title: 'Edit',
       className: 'text-green-600 hover:text-green-900'
+    },
+    {
+      icon: <MapPin className="h-4 w-4" />,
+      onClick: (item) => handleManageLocations(item),
+      title: 'Manage Locations',
+      className: 'text-purple-600 hover:text-purple-900'
+    },
+    {
+      icon: <User className="h-4 w-4" />,
+      onClick: (item) => handleCreateManager(item),
+      title: 'Manager',
+      className: 'text-orange-600 hover:text-orange-900'
     },
     {
       icon: <Trash2 className="h-4 w-4" />,
@@ -426,7 +473,7 @@ export default function WarehousesPage() {
                 {warehouse.manager && (
                   <div className="flex items-center text-sm text-gray-600">
                     <User className="h-4 w-4 mr-2" />
-                    <span>{warehouse.manager.firstName} {warehouse.manager.lastName}</span>
+                    <span>{warehouse.manager.name || warehouse.manager.email}</span>
                   </div>
                 )}
                 <div className="flex items-center text-sm text-gray-600">
@@ -486,6 +533,33 @@ export default function WarehousesPage() {
           mode={modalMode}
           onSave={handleSaveWarehouse}
           managers={managers}
+        />
+      )}
+
+      {/* Location Manager Modal */}
+      {showLocationManager && selectedWarehouse && (
+        <LocationManager
+          warehouseId={selectedWarehouse.id}
+          isOpen={showLocationManager}
+          onClose={() => {
+            setShowLocationManager(false)
+            setSelectedWarehouse(null)
+          }}
+          onLocationChange={fetchWarehouses}
+        />
+      )}
+
+      {/* Manager Creator Modal */}
+      {showManagerCreator && selectedWarehouseForManager && (
+        <ManagerCreator
+          warehouseId={selectedWarehouseForManager.id}
+          warehouseName={selectedWarehouseForManager.name}
+          isOpen={showManagerCreator}
+          onClose={() => {
+            setShowManagerCreator(false)
+            setSelectedWarehouseForManager(null)
+          }}
+          onManagerCreated={handleManagerCreated}
         />
       )}
     </div>

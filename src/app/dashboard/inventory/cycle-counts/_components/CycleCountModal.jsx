@@ -1,7 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { X, Save, Loader2, Plus, Trash2, ClipboardList, Building2, MapPinIcon, Package } from 'lucide-react'
+import useSWR from 'swr'
+
+const fetcher = (url) => fetch(url).then(res => res.json())
 
 export default function CycleCountModal({ 
   isOpen, 
@@ -16,6 +19,7 @@ export default function CycleCountModal({
     locationId: '',
     countDate: new Date().toISOString().split('T')[0],
     notes: '',
+    reference: '',
     status: 'draft'
   })
   const [cycleCountLines, setCycleCountLines] = useState([])
@@ -23,16 +27,18 @@ export default function CycleCountModal({
   const [errors, setErrors] = useState({})
   const [touched, setTouched] = useState({})
 
-  // Mock products for demonstration
-  const [products] = useState([
-    { id: '1', name: 'Laptop Pro 15', sku: 'LP-001' },
-    { id: '2', name: 'Wireless Mouse', sku: 'WM-001' },
-    { id: '3', name: 'Office Chair', sku: 'OC-001' },
-    { id: '4', name: 'Monitor 24"', sku: 'MN-001' }
-  ])
+  // Fetch products and warehouses
+  const { data: productsData } = useSWR('/api/inventory/products?limit=1000', fetcher)
+  const { data: warehousesData } = useSWR('/api/inventory/warehouses?limit=1000', fetcher)
+  const { data: locationsData } = useSWR(
+    formData.warehouseId ? `/api/inventory/warehouses/${formData.warehouseId}/locations` : null,
+    fetcher
+  )
 
-  // Mock locations for demonstration
-  const [locations, setLocations] = useState([])
+  const products = productsData?.products || []
+  const warehousesFromAPI = warehousesData?.warehouses || []
+  const warehousesList = warehouses.length > 0 ? warehouses : warehousesFromAPI
+  const locations = locationsData?.data || []
 
   useEffect(() => {
     if (cycleCount && mode === 'edit') {
@@ -41,6 +47,7 @@ export default function CycleCountModal({
         locationId: cycleCount.location?.id || '',
         countDate: cycleCount.countDate ? cycleCount.countDate.split('T')[0] : new Date().toISOString().split('T')[0],
         notes: cycleCount.notes || '',
+        reference: cycleCount.reference || '',
         status: cycleCount.status || 'draft'
       })
       setCycleCountLines(cycleCount.lines || [])
@@ -50,6 +57,7 @@ export default function CycleCountModal({
         locationId: '',
         countDate: new Date().toISOString().split('T')[0],
         notes: '',
+        reference: '',
         status: 'draft'
       })
       setCycleCountLines([])
@@ -57,22 +65,6 @@ export default function CycleCountModal({
     setErrors({})
     setTouched({})
   }, [cycleCount, mode])
-
-  // Update locations when warehouse changes
-  useEffect(() => {
-    if (formData.warehouseId) {
-      // Mock locations based on warehouse
-      const mockLocations = [
-        { id: '1', name: 'A-01-01', code: 'A-01-01', warehouseId: '1' },
-        { id: '2', name: 'A-01-02', code: 'A-01-02', warehouseId: '1' },
-        { id: '3', name: 'A-02-01', code: 'A-02-01', warehouseId: '1' },
-        { id: '4', name: 'B-01-01', code: 'B-01-01', warehouseId: '2' },
-        { id: '5', name: 'B-01-02', code: 'B-01-02', warehouseId: '2' },
-        { id: '6', name: 'C-01-01', code: 'C-01-01', warehouseId: '3' }
-      ]
-      setLocations(mockLocations.filter(loc => loc.warehouseId === formData.warehouseId))
-    }
-  }, [formData.warehouseId])
 
   const validateForm = () => {
     const newErrors = {}
@@ -107,18 +99,40 @@ export default function CycleCountModal({
       return
     }
     
+    // Validate cycle count lines
+    const validLines = cycleCountLines.filter(line => 
+      line.productId && 
+      line.actualQuantity !== undefined && 
+      line.actualQuantity !== null &&
+      line.actualQuantity >= 0
+    )
+    if (validLines.length === 0) {
+      setErrors({ lines: 'At least one valid cycle count line is required' })
+      return
+    }
+    
     setLoading(true)
     
     try {
       const payload = {
-        ...formData,
-        lines: cycleCountLines
+        warehouseId: formData.warehouseId,
+        locationId: formData.locationId || null,
+        countDate: formData.countDate || new Date().toISOString().split('T')[0],
+        notes: formData.notes || '',
+        reference: formData.reference || '',
+        lines: validLines.map(line => ({
+          productId: line.productId,
+          actualQuantity: parseInt(line.actualQuantity) || 0,
+          locationId: line.locationId || formData.locationId || null,
+          notes: line.notes || null
+        }))
       }
       
       await onSave(payload)
       onClose()
     } catch (error) {
       console.error('Error saving cycle count:', error)
+      setErrors({ submit: error.message || 'Failed to save cycle count' })
     } finally {
       setLoading(false)
     }
@@ -153,8 +167,9 @@ export default function CycleCountModal({
     const newLine = {
       id: Date.now().toString(),
       productId: '',
+      locationId: formData.locationId || null,
       expectedQuantity: 0,
-      countedQuantity: null,
+      actualQuantity: null, // Use actualQuantity instead of countedQuantity to match API
       difference: null,
       unitCost: 0,
       totalCost: 0,
@@ -167,17 +182,43 @@ export default function CycleCountModal({
     setCycleCountLines(prev => prev.filter(line => line.id !== lineId))
   }
 
-  const updateCycleCountLine = (lineId, field, value) => {
+  // Fetch inventory items for the selected warehouse
+  const { data: inventoryData } = useSWR(
+    formData.warehouseId ? `/api/inventory/items?warehouseId=${formData.warehouseId}` : null,
+    fetcher
+  )
+  const inventoryItems = inventoryData?.data || []
+  const inventoryMap = useMemo(() => {
+    const map = new Map()
+    inventoryItems.forEach(item => {
+      map.set(`${item.productId}-${item.warehouseId}`, item)
+    })
+    return map
+  }, [inventoryItems])
+
+  const updateCycleCountLine = async (lineId, field, value) => {
     setCycleCountLines(prev => prev.map(line => {
       if (line.id === lineId) {
         const updatedLine = { ...line, [field]: value }
         
-        // Calculate difference if expected or counted quantity changes
-        if (field === 'expectedQuantity' || field === 'countedQuantity') {
+        // If product is selected and warehouse is set, auto-populate expected quantity from inventory
+        if (field === 'productId' && formData.warehouseId && value) {
+          const inventoryKey = `${value}-${formData.warehouseId}`
+          const inventoryItem = inventoryMap.get(inventoryKey)
+          if (inventoryItem) {
+            updatedLine.expectedQuantity = inventoryItem.quantity || 0
+            updatedLine.locationId = inventoryItem.locationId || formData.locationId || null
+          } else {
+            updatedLine.expectedQuantity = 0
+          }
+        }
+        
+        // Calculate difference if expected or actual quantity changes
+        if (field === 'expectedQuantity' || field === 'actualQuantity') {
           const expected = field === 'expectedQuantity' ? parseFloat(value) || 0 : line.expectedQuantity
-          const counted = field === 'countedQuantity' ? (value ? parseFloat(value) : null) : line.countedQuantity
-          if (counted !== null) {
-            updatedLine.difference = counted - expected
+          const actual = field === 'actualQuantity' ? (value ? parseFloat(value) : null) : line.actualQuantity
+          if (actual !== null) {
+            updatedLine.difference = actual - expected
           } else {
             updatedLine.difference = null
           }
@@ -419,15 +460,15 @@ export default function CycleCountModal({
                         />
                       </div>
 
-                      {/* Counted Quantity */}
+                      {/* Actual Quantity (Counted) */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Counted Qty
                         </label>
                         <input
                           type="number"
-                          value={line.countedQuantity || ''}
-                          onChange={(e) => updateCycleCountLine(line.id, 'countedQuantity', e.target.value)}
+                          value={line.actualQuantity || ''}
+                          onChange={(e) => updateCycleCountLine(line.id, 'actualQuantity', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           min="0"
                           placeholder="Enter counted quantity"

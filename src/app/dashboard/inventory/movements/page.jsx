@@ -5,181 +5,161 @@ import {
   Search, 
   Filter, 
   Package,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  ArrowRightIcon,
-  ClockIcon,
-  UserIcon,
+  ArrowUp,
+  ArrowDown,
+  ArrowRight,
+  User,
   Building2,
-  MapPinIcon,
-  PlusIcon
+  MapPin
 } from 'lucide-react'
 import DataTable from '@/components/ui/DataTable'
+import useSWR, { mutate } from 'swr'
+import StockMovementModal from './_components/StockMovementModal'
+import TransferModal from '../transfers/_components/TransferModal'
+import AdjustmentModal from '../adjustments/_components/AdjustmentModal'
+
+const fetcher = (url) => fetch(url).then(res => res.json())
 
 export default function MovementsPage() {
-  const [movements, setMovements] = useState([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('all')
   const [filterWarehouse, setFilterWarehouse] = useState('all')
   const [filterDateRange, setFilterDateRange] = useState('all')
   const [viewMode, setViewMode] = useState('table')
   const [selectedMovements, setSelectedMovements] = useState([])
-  const [warehouses, setWarehouses] = useState([])
+  
+  // Modal states
+  const [stockInModalOpen, setStockInModalOpen] = useState(false)
+  const [stockOutModalOpen, setStockOutModalOpen] = useState(false)
+  const [adjustmentModalOpen, setAdjustmentModalOpen] = useState(false)
+  const [transferModalOpen, setTransferModalOpen] = useState(false)
 
-  // Mock data for demonstration
-  useEffect(() => {
-    const mockMovements = [
-      {
-        id: '1',
-        product: {
-          id: '1',
-          name: 'Laptop Pro 15',
-          sku: 'LP-001',
-          barcode: '1234567890123'
-        },
-        warehouse: {
-          id: '1',
-          name: 'Main Warehouse',
-          code: 'WH-001'
-        },
-        location: {
-          id: '1',
-          name: 'A-01-01',
-          code: 'A-01-01'
-        },
-        movementType: 'in',
-        quantity: 10,
-        unitCost: 1200.00,
-        totalCost: 12000.00,
-        referenceType: 'purchase',
-        referenceId: 'PO-2024-001',
-        notes: 'Received from supplier',
-        movementDate: '2024-01-16T10:30:00Z',
-        createdAt: '2024-01-16T10:30:00Z',
-        user: {
-          firstName: 'John',
-          lastName: 'Smith',
-          email: 'john@company.com'
-        }
-      },
-      {
-        id: '2',
-        product: {
-          id: '2',
-          name: 'Wireless Mouse',
-          sku: 'WM-001',
-          barcode: '1234567890124'
-        },
-        warehouse: {
-          id: '1',
-          name: 'Main Warehouse',
-          code: 'WH-001'
-        },
-        location: {
-          id: '2',
-          name: 'A-01-02',
-          code: 'A-01-02'
-        },
-        movementType: 'out',
-        quantity: -5,
-        unitCost: 25.00,
-        totalCost: -125.00,
-        referenceType: 'sale',
-        referenceId: 'SO-2024-001',
-        notes: 'Sold to customer',
-        movementDate: '2024-01-16T14:20:00Z',
-        createdAt: '2024-01-16T14:20:00Z',
-        user: {
-          firstName: 'Jane',
-          lastName: 'Doe',
-          email: 'jane@company.com'
-        }
-      },
-      {
-        id: '3',
-        product: {
-          id: '3',
-          name: 'Office Chair',
-          sku: 'OC-001',
-          barcode: '1234567890125'
-        },
-        warehouse: {
-          id: '1',
-          name: 'Main Warehouse',
-          code: 'WH-001'
-        },
-        location: {
-          id: '3',
-          name: 'A-02-01',
-          code: 'A-02-01'
-        },
-        movementType: 'transfer',
-        quantity: 2,
-        unitCost: 150.00,
-        totalCost: 300.00,
-        referenceType: 'transfer',
-        referenceId: 'TR-2024-001',
-        notes: 'Transferred to secondary warehouse',
-        movementDate: '2024-01-15T09:15:00Z',
-        createdAt: '2024-01-15T09:15:00Z',
-        user: {
-          firstName: 'Mike',
-          lastName: 'Johnson',
-          email: 'mike@company.com'
-        }
-      },
-      {
-        id: '4',
-        product: {
-          id: '4',
-          name: 'Monitor 24"',
-          sku: 'MN-001',
-          barcode: '1234567890126'
-        },
-        warehouse: {
-          id: '1',
-          name: 'Main Warehouse',
-          code: 'WH-001'
-        },
-        location: {
-          id: '4',
-          name: 'A-02-02',
-          code: 'A-02-02'
-        },
-        movementType: 'adjustment',
-        quantity: 1,
-        unitCost: 300.00,
-        totalCost: 300.00,
-        referenceType: 'adjustment',
-        referenceId: 'ADJ-2024-001',
-        notes: 'Stock adjustment - found item',
-        movementDate: '2024-01-14T16:45:00Z',
-        createdAt: '2024-01-14T16:45:00Z',
-        user: {
-          firstName: 'Sarah',
-          lastName: 'Wilson',
-          email: 'sarah@company.com'
-        }
+  // Build API URL with filters
+  const buildApiUrl = () => {
+    const params = new URLSearchParams()
+    if (filterType !== 'all') params.append('type', filterType)
+    if (filterWarehouse !== 'all') params.append('warehouseId', filterWarehouse)
+    if (searchTerm) params.append('search', searchTerm)
+    params.append('limit', '100')
+    return `/api/inventory/movements?${params.toString()}`
+  }
+
+  // Fetch movements data
+  const { data: movementsData, error, isLoading } = useSWR(buildApiUrl(), fetcher, {
+    refreshInterval: 5000 // Refresh every 5 seconds
+  })
+
+  // Fetch warehouses for filter
+  const { data: warehousesData } = useSWR('/api/inventory/warehouses', fetcher)
+
+  const movements = movementsData?.data || []
+  const stats = movementsData?.stats || { total: 0, stockIn: 0, stockOut: 0, transfers: 0, adjustments: 0 }
+  const warehouses = warehousesData?.warehouses || []
+
+  // Handle saving stock movement
+  const handleSaveStockMovement = async (payload) => {
+    try {
+      const response = await fetch('/api/inventory/movements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to save stock movement')
       }
-    ]
 
-    const mockWarehouses = [
-      { id: '1', name: 'Main Warehouse', code: 'WH-001' },
-      { id: '2', name: 'Secondary Warehouse', code: 'WH-002' },
-      { id: '3', name: 'Remote Warehouse', code: 'WH-003' }
-    ]
+      // Refresh data
+      mutate(buildApiUrl())
+      return await response.json()
+    } catch (error) {
+      console.error('Error saving stock movement:', error)
+      throw error
+    }
+  }
 
-    setMovements(mockMovements)
-    setWarehouses(mockWarehouses)
-    setLoading(false)
-  }, [])
+  // Handle saving transfer
+  const handleSaveTransfer = async (payload) => {
+    try {
+      // Transform payload to match API format
+      const transferPayload = {
+        fromWarehouseId: payload.fromWarehouseId,
+        toWarehouseId: payload.toWarehouseId,
+        notes: payload.notes || null,
+        reference: payload.reference || `TR-${Date.now()}`,
+        lines: payload.lines.map(line => ({
+          productId: line.productId,
+          quantity: parseInt(line.quantity),
+          fromLocationId: line.fromLocationId || null,
+          toLocationId: line.toLocationId || null,
+          reason: line.notes || null
+        }))
+      }
+
+      const response = await fetch('/api/inventory/transfers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(transferPayload)
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to create transfer')
+      }
+
+      // Refresh data
+      mutate(buildApiUrl())
+      return await response.json()
+    } catch (error) {
+      console.error('Error saving transfer:', error)
+      throw error
+    }
+  }
+
+  // Handle saving adjustment
+  const handleSaveAdjustment = async (payload) => {
+    try {
+      // Transform payload to match API format
+      const adjustmentPayload = {
+        warehouseId: payload.warehouseId,
+        reason: payload.reason,
+        reference: payload.reference || `ADJ-${Date.now()}`,
+        lines: payload.lines.map(line => ({
+          productId: line.productId,
+          expectedQuantity: parseInt(line.expectedQuantity || 0),
+          actualQuantity: parseInt(line.actualQuantity || 0),
+          locationId: line.locationId || null,
+          notes: line.notes || null
+        }))
+      }
+
+      const response = await fetch('/api/inventory/adjustments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(adjustmentPayload)
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to create adjustment')
+      }
+
+      // Refresh data
+      mutate(buildApiUrl())
+      return await response.json()
+    } catch (error) {
+      console.error('Error saving adjustment:', error)
+      throw error
+    }
+  }
+
 
   const getMovementIcon = (type) => {
     switch (type) {
-      case 'in': return <ArrowUpIcon className="h-4 w-4 text-green-600" />
-      case 'out': return <ArrowDownIcon className="h-4 w-4 text-red-600" />
-      case 'transfer': return <ArrowRightIcon className="h-4 w-4 text-blue-600" />
+      case 'in': return <ArrowUp className="h-4 w-4 text-green-600" />
+      case 'out': return <ArrowDown className="h-4 w-4 text-red-600" />
+      case 'transfer': return <ArrowRight className="h-4 w-4 text-blue-600" />
       case 'adjustment': return <Package className="h-4 w-4 text-orange-600" />
       default: return <Package className="h-4 w-4 text-gray-600" />
     }
@@ -231,17 +211,14 @@ export default function MovementsPage() {
     }
   }
 
+  // Filter movements client-side (API already filters by type and warehouse, but we filter by search term)
   const filteredMovements = movements.filter(movement => {
-    const matchesSearch = movement.product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         movement.product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         movement.product.barcode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         movement.warehouse.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         movement.referenceId?.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesType = filterType === 'all' || movement.movementType === filterType
-    const matchesWarehouse = filterWarehouse === 'all' || movement.warehouse.id === filterWarehouse
-    
-    return matchesSearch && matchesType && matchesWarehouse
+    if (!searchTerm) return true
+    const searchLower = searchTerm.toLowerCase()
+    return movement.product.name?.toLowerCase().includes(searchLower) ||
+           movement.product.sku?.toLowerCase().includes(searchLower) ||
+           movement.warehouse.name?.toLowerCase().includes(searchLower) ||
+           movement.referenceId?.toLowerCase().includes(searchLower)
   })
 
   // Table columns configuration
@@ -299,10 +276,10 @@ export default function MovementsPage() {
       label: 'Location',
       render: (item) => (
         <div className="flex items-center">
-          <MapPinIcon className="h-4 w-4 text-gray-400 mr-2" />
+          <MapPin className="h-4 w-4 text-gray-400 mr-2" />
           <div>
-            <div className="text-sm text-gray-900">{item.location.name}</div>
-            <div className="text-sm text-gray-500">{item.location.code}</div>
+            <div className="text-sm text-gray-900">{item.location?.name || 'N/A'}</div>
+            <div className="text-sm text-gray-500">{item.location?.code || 'N/A'}</div>
           </div>
         </div>
       )
@@ -312,8 +289,8 @@ export default function MovementsPage() {
       label: 'Reference',
       render: (item) => (
         <div className="text-center">
-          <div className="text-sm font-medium text-gray-900">{item.referenceId}</div>
-          <div className="text-xs text-gray-500">{item.referenceType}</div>
+          <div className="text-sm font-medium text-gray-900">{item.referenceId || 'N/A'}</div>
+          <div className="text-xs text-gray-500">{item.referenceType || 'N/A'}</div>
         </div>
       )
     },
@@ -323,10 +300,10 @@ export default function MovementsPage() {
       render: (item) => (
         <div className="text-right">
           <div className="text-sm font-medium text-gray-900">
-            ${Math.abs(item.totalCost).toFixed(2)}
+            {item.totalCost ? `$${Math.abs(item.totalCost).toFixed(2)}` : 'N/A'}
           </div>
           <div className="text-xs text-gray-500">
-            ${item.unitCost?.toFixed(2)} per unit
+            {item.unitCost ? `$${item.unitCost.toFixed(2)} per unit` : ''}
           </div>
         </div>
       )
@@ -336,10 +313,10 @@ export default function MovementsPage() {
       label: 'User',
       render: (item) => (
         <div className="flex items-center">
-          <UserIcon className="h-4 w-4 text-gray-400 mr-2" />
+          <User className="h-4 w-4 text-gray-400 mr-2" />
           <div>
-            <div className="text-sm text-gray-900">{item.user.firstName} {item.user.lastName}</div>
-            <div className="text-sm text-gray-500">{item.user.email}</div>
+            <div className="text-sm text-gray-900">{item.user?.firstName || ''} {item.user?.lastName || ''}</div>
+            <div className="text-sm text-gray-500">{item.user?.email || 'N/A'}</div>
           </div>
         </div>
       )
@@ -355,7 +332,7 @@ export default function MovementsPage() {
     }
   ]
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
@@ -372,19 +349,31 @@ export default function MovementsPage() {
           <p className="text-gray-600 mt-2">Track all inventory movements and transactions</p>
         </div>
         <div className="flex space-x-3">
-          <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2">
-            <ArrowUpIcon className="h-5 w-5" />
+          <button 
+            onClick={() => setStockInModalOpen(true)}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2"
+          >
+            <ArrowUp className="h-5 w-5" />
             <span>Stock In</span>
           </button>
-          <button className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center space-x-2">
-            <ArrowDownIcon className="h-5 w-5" />
+          <button 
+            onClick={() => setStockOutModalOpen(true)}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center space-x-2"
+          >
+            <ArrowDown className="h-5 w-5" />
             <span>Stock Out</span>
           </button>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2">
-            <ArrowRightIcon className="h-5 w-5" />
+          <button 
+            onClick={() => setTransferModalOpen(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+          >
+            <ArrowRight className="h-5 w-5" />
             <span>Transfer</span>
           </button>
-          <button className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 flex items-center space-x-2">
+          <button 
+            onClick={() => setAdjustmentModalOpen(true)}
+            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 flex items-center space-x-2"
+          >
             <Package className="h-5 w-5" />
             <span>Adjustment</span>
           </button>
@@ -397,7 +386,7 @@ export default function MovementsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Movements</p>
-              <p className="text-2xl font-bold text-gray-900">{movements.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.total || movements.length}</p>
             </div>
             <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
               <Package className="h-6 w-6 text-blue-600" />
@@ -410,11 +399,11 @@ export default function MovementsPage() {
             <div>
               <p className="text-sm font-medium text-gray-600">Stock In</p>
               <p className="text-2xl font-bold text-green-600">
-                {movements.filter(m => m.movementType === 'in').length}
+                {stats.stockIn || movements.filter(m => m.movementType === 'in').length}
               </p>
             </div>
             <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <ArrowUpIcon className="h-6 w-6 text-green-600" />
+              <ArrowUp className="h-6 w-6 text-green-600" />
             </div>
           </div>
         </div>
@@ -424,11 +413,11 @@ export default function MovementsPage() {
             <div>
               <p className="text-sm font-medium text-gray-600">Stock Out</p>
               <p className="text-2xl font-bold text-red-600">
-                {movements.filter(m => m.movementType === 'out').length}
+                {stats.stockOut || movements.filter(m => m.movementType === 'out').length}
               </p>
             </div>
             <div className="h-12 w-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <ArrowDownIcon className="h-6 w-6 text-red-600" />
+              <ArrowDown className="h-6 w-6 text-red-600" />
             </div>
           </div>
         </div>
@@ -438,11 +427,11 @@ export default function MovementsPage() {
             <div>
               <p className="text-sm font-medium text-gray-600">Transfers</p>
               <p className="text-2xl font-bold text-blue-600">
-                {movements.filter(m => m.movementType === 'transfer').length}
+                {stats.transfers || movements.filter(m => m.movementType === 'transfer').length}
               </p>
             </div>
             <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <ArrowRightIcon className="h-6 w-6 text-blue-600" />
+              <ArrowRight className="h-6 w-6 text-blue-600" />
             </div>
           </div>
         </div>
@@ -594,19 +583,24 @@ export default function MovementsPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Location:</span>
-                  <span className="font-medium">{movement.location.name}</span>
+                  <span className="font-medium">{movement.location?.name || movement.location?.code || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Reference:</span>
-                  <span className="font-medium">{movement.referenceId}</span>
+                  <span className="font-medium">{movement.referenceId || 'N/A'}</span>
                 </div>
+                {movement.totalCost && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Cost:</span>
                   <span className="font-medium">${Math.abs(movement.totalCost).toFixed(2)}</span>
                 </div>
+                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">User:</span>
-                  <span className="font-medium">{movement.user.firstName} {movement.user.lastName}</span>
+                  <span className="font-medium">
+                    {movement.user?.firstName || ''} {movement.user?.lastName || ''}
+                    {!movement.user?.firstName && !movement.user?.lastName && 'System'}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Date:</span>
@@ -646,6 +640,32 @@ export default function MovementsPage() {
           </p>
         </div>
       )}
+
+      {/* Modals */}
+      <StockMovementModal
+        isOpen={stockInModalOpen}
+        onClose={() => setStockInModalOpen(false)}
+        movementType="in"
+        onSave={handleSaveStockMovement}
+      />
+      <StockMovementModal
+        isOpen={stockOutModalOpen}
+        onClose={() => setStockOutModalOpen(false)}
+        movementType="out"
+        onSave={handleSaveStockMovement}
+      />
+      <AdjustmentModal
+        isOpen={adjustmentModalOpen}
+        onClose={() => setAdjustmentModalOpen(false)}
+        onSave={handleSaveAdjustment}
+        warehouses={warehouses}
+      />
+      <TransferModal
+        isOpen={transferModalOpen}
+        onClose={() => setTransferModalOpen(false)}
+        onSave={handleSaveTransfer}
+        warehouses={warehouses}
+      />
     </div>
   )
 }

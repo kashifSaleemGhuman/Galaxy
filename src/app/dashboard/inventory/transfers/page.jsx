@@ -15,8 +15,11 @@ import {
   ArrowRightIcon,
   Package
 } from 'lucide-react'
+import useSWR from 'swr'
 import DataTable from '@/components/ui/DataTable'
 import TransferModal from './_components/TransferModal'
+
+const fetcher = (url) => fetch(url).then(res => res.json())
 
 export default function TransfersPage() {
   const [transfers, setTransfers] = useState([])
@@ -32,174 +35,14 @@ export default function TransfersPage() {
   const [selectedTransfer, setSelectedTransfer] = useState(null)
   const [warehouses, setWarehouses] = useState([])
 
-  // Mock data for demonstration
+  // Fetch warehouses using SWR
+  const { data: warehousesData } = useSWR('/api/inventory/warehouses?limit=1000', fetcher)
+  
   useEffect(() => {
-    const mockTransfers = [
-      {
-        id: '1',
-        transferNumber: 'TR-2024-001',
-        fromWarehouse: {
-          id: '1',
-          name: 'Main Warehouse',
-          code: 'WH-001'
-        },
-        toWarehouse: {
-          id: '2',
-          name: 'Secondary Warehouse',
-          code: 'WH-002'
-        },
-        status: 'completed',
-        notes: 'Regular stock transfer',
-        transferDate: '2024-01-15T10:30:00Z',
-        expectedDate: '2024-01-15T18:00:00Z',
-        receivedDate: '2024-01-15T17:45:00Z',
-        createdAt: '2024-01-15T10:30:00Z',
-        user: {
-          firstName: 'John',
-          lastName: 'Smith',
-          email: 'john@company.com'
-        },
-        lines: [
-          {
-            id: '1',
-            product: {
-              name: 'Laptop Pro 15',
-              sku: 'LP-001'
-            },
-            fromLocation: {
-              name: 'A-01-01',
-              code: 'A-01-01'
-            },
-            toLocation: {
-              name: 'B-01-01',
-              code: 'B-01-01'
-            },
-            quantity: 5,
-            unitCost: 1200.00,
-            totalCost: 6000.00
-          },
-          {
-            id: '2',
-            product: {
-              name: 'Wireless Mouse',
-              sku: 'WM-001'
-            },
-            fromLocation: {
-              name: 'A-01-02',
-              code: 'A-01-02'
-            },
-            toLocation: {
-              name: 'B-01-02',
-              code: 'B-01-02'
-            },
-            quantity: 10,
-            unitCost: 25.00,
-            totalCost: 250.00
-          }
-        ]
-      },
-      {
-        id: '2',
-        transferNumber: 'TR-2024-002',
-        fromWarehouse: {
-          id: '1',
-          name: 'Main Warehouse',
-          code: 'WH-001'
-        },
-        toWarehouse: {
-          id: '3',
-          name: 'Remote Warehouse',
-          code: 'WH-003'
-        },
-        status: 'in_transit',
-        notes: 'Emergency stock transfer',
-        transferDate: '2024-01-16T09:00:00Z',
-        expectedDate: '2024-01-17T12:00:00Z',
-        receivedDate: null,
-        createdAt: '2024-01-16T09:00:00Z',
-        user: {
-          firstName: 'Jane',
-          lastName: 'Doe',
-          email: 'jane@company.com'
-        },
-        lines: [
-          {
-            id: '3',
-            product: {
-              name: 'Office Chair',
-              sku: 'OC-001'
-            },
-            fromLocation: {
-              name: 'A-02-01',
-              code: 'A-02-01'
-            },
-            toLocation: {
-              name: 'C-01-01',
-              code: 'C-01-01'
-            },
-            quantity: 3,
-            unitCost: 150.00,
-            totalCost: 450.00
-          }
-        ]
-      },
-      {
-        id: '3',
-        transferNumber: 'TR-2024-003',
-        fromWarehouse: {
-          id: '2',
-          name: 'Secondary Warehouse',
-          code: 'WH-002'
-        },
-        toWarehouse: {
-          id: '1',
-          name: 'Main Warehouse',
-          code: 'WH-001'
-        },
-        status: 'pending',
-        notes: 'Return transfer',
-        transferDate: '2024-01-17T14:00:00Z',
-        expectedDate: '2024-01-17T16:00:00Z',
-        receivedDate: null,
-        createdAt: '2024-01-17T14:00:00Z',
-        user: {
-          firstName: 'Mike',
-          lastName: 'Johnson',
-          email: 'mike@company.com'
-        },
-        lines: [
-          {
-            id: '4',
-            product: {
-              name: 'Monitor 24"',
-              sku: 'MN-001'
-            },
-            fromLocation: {
-              name: 'B-02-01',
-              code: 'B-02-01'
-            },
-            toLocation: {
-              name: 'A-02-02',
-              code: 'A-02-02'
-            },
-            quantity: 2,
-            unitCost: 300.00,
-            totalCost: 600.00
-          }
-        ]
-      }
-    ]
-
-    const mockWarehouses = [
-      { id: '1', name: 'Main Warehouse', code: 'WH-001' },
-      { id: '2', name: 'Secondary Warehouse', code: 'WH-002' },
-      { id: '3', name: 'Remote Warehouse', code: 'WH-003' }
-    ]
-
-    setTransfers(mockTransfers)
-    setWarehouses(mockWarehouses)
-    setLoading(false)
-  }, [])
+    if (warehousesData?.warehouses) {
+      setWarehouses(warehousesData.warehouses)
+    }
+  }, [warehousesData])
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -278,16 +121,118 @@ export default function TransfersPage() {
 
   const handleSaveTransfer = async (transferData) => {
     try {
-      // This would be an API call to save the transfer
-      console.log('Saving transfer:', transferData)
-      // const response = await fetch('/api/inventory/transfers', { method: 'POST', body: JSON.stringify(transferData) })
-      // await fetchTransfers()
+      // Prepare the payload for the API
+      const payload = {
+        fromWarehouseId: transferData.fromWarehouseId,
+        toWarehouseId: transferData.toWarehouseId,
+        notes: transferData.notes || '',
+        reference: transferData.reference || '',
+        lines: transferData.lines.map(line => ({
+          productId: line.productId,
+          quantity: parseInt(line.quantity) || 1,
+          fromLocationId: line.fromLocationId || null,
+          toLocationId: line.toLocationId || null,
+          reason: line.notes || null
+        }))
+      }
+
+      const response = await fetch('/api/inventory/transfers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create transfer')
+      }
+
+      // Check if a request was created (for WAREHOUSE_OPERATOR and INVENTORY_MANAGER)
+      if (result.message && result.message.includes('pending approval')) {
+        alert('Transfer request created successfully! It is now pending approval from Super Admin.')
+      } else {
+        alert('Transfer created successfully!')
+      }
+
+      // Refresh the transfers list
+      await fetchTransfers()
       setShowModal(false)
       return true
     } catch (error) {
       console.error('Error saving transfer:', error)
+      alert(`Error: ${error.message || 'Failed to create transfer'}`)
       throw error
     }
+  }
+
+  // Fetch transfers using SWR
+  const { data: movementsData, error: movementsError, mutate: mutateMovements } = useSWR(
+    '/api/inventory/movements?type=transfer',
+    fetcher,
+    { refreshInterval: 5000 }
+  )
+
+  // Process movements data into transfers format
+  useEffect(() => {
+    if (movementsData?.success && movementsData.data) {
+      // Group movements by reference (transfer reference)
+      const transferMap = new Map()
+      
+      movementsData.data.forEach(movement => {
+        if (movement.referenceId) {
+          if (!transferMap.has(movement.referenceId)) {
+            transferMap.set(movement.referenceId, {
+              id: movement.referenceId,
+              transferNumber: movement.referenceId,
+              fromWarehouse: null,
+              toWarehouse: null,
+              status: 'completed', // Transfers are completed when movements are created
+              notes: movement.notes || '',
+              transferDate: movement.movementDate,
+              expectedDate: movement.movementDate,
+              receivedDate: movement.movementDate,
+              createdAt: movement.createdAt,
+              user: movement.user,
+              lines: []
+            })
+          }
+          
+          const transfer = transferMap.get(movement.referenceId)
+          
+          // Set warehouses based on quantity (negative = from, positive = to)
+          if (movement.quantity < 0 && !transfer.fromWarehouse) {
+            transfer.fromWarehouse = movement.warehouse
+          } else if (movement.quantity > 0 && !transfer.toWarehouse) {
+            transfer.toWarehouse = movement.warehouse
+          }
+          
+          transfer.lines.push({
+            id: movement.id,
+            product: movement.product,
+            fromLocation: movement.quantity < 0 ? movement.location : null,
+            toLocation: movement.quantity > 0 ? movement.location : null,
+            quantity: Math.abs(movement.quantity),
+            unitCost: movement.unitCost || 0,
+            totalCost: (movement.totalCost || 0)
+          })
+        }
+      })
+      
+      setTransfers(Array.from(transferMap.values()))
+      setLoading(false)
+    } else if (movementsError) {
+      console.error('Error fetching transfers:', movementsError)
+      setLoading(false)
+    } else if (movementsData && !movementsData.success) {
+      setLoading(false)
+    }
+  }, [movementsData, movementsError])
+
+  const fetchTransfers = async () => {
+    mutateMovements()
   }
 
   const handleSelectTransfer = (transferId) => {
@@ -308,13 +253,13 @@ export default function TransfersPage() {
 
   const filteredTransfers = transfers.filter(transfer => {
     const matchesSearch = transfer.transferNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         transfer.fromWarehouse.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         transfer.toWarehouse.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         transfer.fromWarehouse?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         transfer.toWarehouse?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          transfer.notes?.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesStatus = filterStatus === 'all' || transfer.status === filterStatus
-    const matchesFromWarehouse = filterFromWarehouse === 'all' || transfer.fromWarehouse.id === filterFromWarehouse
-    const matchesToWarehouse = filterToWarehouse === 'all' || transfer.toWarehouse.id === filterToWarehouse
+    const matchesFromWarehouse = filterFromWarehouse === 'all' || transfer.fromWarehouse?.id === filterFromWarehouse
+    const matchesToWarehouse = filterToWarehouse === 'all' || transfer.toWarehouse?.id === filterToWarehouse
     
     return matchesSearch && matchesStatus && matchesFromWarehouse && matchesToWarehouse
   })
@@ -343,8 +288,8 @@ export default function TransfersPage() {
         <div className="flex items-center">
           <Building2 className="h-4 w-4 text-gray-400 mr-2" />
           <div>
-            <div className="text-sm text-gray-900">{item.fromWarehouse.name}</div>
-            <div className="text-sm text-gray-500">{item.fromWarehouse.code}</div>
+            <div className="text-sm text-gray-900">{item.fromWarehouse?.name || 'N/A'}</div>
+            <div className="text-sm text-gray-500">{item.fromWarehouse?.code || ''}</div>
           </div>
         </div>
       )
@@ -356,8 +301,8 @@ export default function TransfersPage() {
         <div className="flex items-center">
           <Building2 className="h-4 w-4 text-gray-400 mr-2" />
           <div>
-            <div className="text-sm text-gray-900">{item.toWarehouse.name}</div>
-            <div className="text-sm text-gray-500">{item.toWarehouse.code}</div>
+            <div className="text-sm text-gray-900">{item.toWarehouse?.name || 'N/A'}</div>
+            <div className="text-sm text-gray-500">{item.toWarehouse?.code || ''}</div>
           </div>
         </div>
       )
@@ -656,11 +601,11 @@ export default function TransfersPage() {
               <div className="space-y-3 mb-4">
                 <div className="flex items-center text-sm text-gray-600">
                   <Building2 className="h-4 w-4 mr-2" />
-                  <span>From: {transfer.fromWarehouse.name}</span>
+                  <span>From: {transfer.fromWarehouse?.name || 'N/A'}</span>
                 </div>
                 <div className="flex items-center text-sm text-gray-600">
                   <ArrowRightIcon className="h-4 w-4 mr-2" />
-                  <span>To: {transfer.toWarehouse.name}</span>
+                  <span>To: {transfer.toWarehouse?.name || 'N/A'}</span>
                 </div>
                 <div className="flex items-center text-sm text-gray-600">
                   <Package className="h-4 w-4 mr-2" />

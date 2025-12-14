@@ -54,6 +54,14 @@ model User {
   createdRfqs  RFQ[]
   approvedRfqs RFQ[]         @relation("RFQApprovals")
   rfqApprovals RFQApproval[]
+
+  // Warehouse Relations
+  managedWarehouses Warehouse[] @relation("WarehouseManagers")
+  
+  // Stock Movement Request Relations
+  requestedMovements StockMovementRequest[] @relation("RequestedMovements")
+  approvedMovements  StockMovementRequest[] @relation("ApprovedMovements")
+  rejectedMovements  StockMovementRequest[] @relation("RejectedMovements")
 }
 
 // Role model for permission management
@@ -150,6 +158,7 @@ model Product {
   inventoryItems        InventoryItem[]
   stockMovements        StockMovement[]
   vendorProducts        VendorProduct[]
+  movementRequests      StockMovementRequest[]
 }
 
 // RFQ (Request for Quotation) model
@@ -297,6 +306,7 @@ model Warehouse {
   code      String   @unique
   address   String?
   tenantId  String?  // Optional for backward compatibility
+  managerId String?  // Warehouse manager/operator user ID
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -304,10 +314,38 @@ model Warehouse {
   // Tenant relation
   tenant     Tenant?  @relation(fields: [tenantId], references: [id])
 
+  // Manager relation
+  manager    User?    @relation("WarehouseManagers", fields: [managerId], references: [id])
+
   // Relations
   incomingShipments IncomingShipment[]
   inventoryItems    InventoryItem[]
   stockMovements    StockMovement[]
+  locations         Location[]
+  movementRequests  StockMovementRequest[] @relation("FromWarehouseTransfers")
+  movementRequestsTo StockMovementRequest[] @relation("ToWarehouseTransfers")
+  movementRequestsWarehouse StockMovementRequest[] @relation("WarehouseMovements")
+}
+
+// Location model (storage locations within a warehouse)
+model Location {
+  id          String   @id @default(cuid())
+  warehouseId String
+  code        String   // Location code (e.g., A-01-01)
+  name        String?  // Optional location name
+  description String?  // Optional description
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  warehouse      Warehouse       @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  inventoryItems InventoryItem[] @relation("LocationInventoryItems")
+  stockMovements StockMovement[]
+  movementRequests StockMovementRequest[]
+
+  @@unique([warehouseId, code])
+  @@map("Location")
 }
 
 // Incoming Shipment model
@@ -356,18 +394,20 @@ model InventoryItem {
   id          String   @id @default(cuid())
   productId   String   @map("product_id")
   warehouseId String   @map("warehouse_id")
+  locationId   String?  @map("location_id") // Optional location within warehouse
   quantity    Int      @default(0)
   reserved    Int      @default(0)
   available   Int      @default(0)
   minLevel    Int      @default(0)
   maxLevel    Int      @default(0)
-  location    String? // Warehouse location/bay
+  location    String? // Legacy field - kept for backward compatibility
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
   product        Product         @relation(fields: [productId], references: [id])
   warehouse      Warehouse       @relation(fields: [warehouseId], references: [id])
+  warehouseLocation Location?     @relation("LocationInventoryItems", fields: [locationId], references: [id])
   stockMovements StockMovement[]
 
   @@unique([productId, warehouseId])
@@ -379,6 +419,7 @@ model StockMovement {
   productId   String   @map("product_id")
   warehouseId String   @map("warehouse_id")
   shipmentId  String?  @map("shipment_id")
+  locationId  String?  @map("location_id")
   type        String // in, out, transfer, adjustment
   quantity    Int
   reason      String?
@@ -390,7 +431,63 @@ model StockMovement {
   product       Product           @relation(fields: [productId], references: [id])
   warehouse     Warehouse         @relation(fields: [warehouseId], references: [id])
   shipment      IncomingShipment? @relation(fields: [shipmentId], references: [id])
+  location      Location?         @relation(fields: [locationId], references: [id])
   inventoryItem InventoryItem     @relation(fields: [productId, warehouseId], references: [productId, warehouseId])
+  request       StockMovementRequest? @relation(fields: [requestId], references: [id])
+  requestId     String?           @map("request_id")
+}
+
+// Stock Movement Request model (for approval workflow)
+model StockMovementRequest {
+  id          String   @id @default(cuid())
+  requestType String   @map("request_type") // 'movement', 'transfer', 'adjustment', 'cycle_count'
+  status      String   @default("pending") // pending, approved, rejected
+  requestData Json     @map("request_data") // Stores the full request data (productId, warehouseId, quantity, etc.)
+  
+  // For movement requests
+  productId   String?  @map("product_id")
+  warehouseId String?  @map("warehouse_id")
+  locationId  String?  @map("location_id")
+  type        String?  // in, out
+  quantity    Int?
+  reason      String?
+  reference   String?
+  
+  // For transfer requests
+  fromWarehouseId String? @map("from_warehouse_id")
+  toWarehouseId   String? @map("to_warehouse_id")
+  transferLines   Json?   @map("transfer_lines")
+  
+  // For adjustment requests
+  adjustmentLines Json? @map("adjustment_lines")
+  
+  // Approval tracking
+  requestedBy String   @map("requested_by")
+  requestedAt  DateTime @default(now()) @map("requested_at")
+  approvedBy   String?  @map("approved_by")
+  approvedAt   DateTime? @map("approved_at")
+  rejectedBy   String?  @map("rejected_by")
+  rejectedAt   DateTime? @map("rejected_at")
+  rejectionReason String? @map("rejection_reason")
+  notes        String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  requester    User            @relation("RequestedMovements", fields: [requestedBy], references: [id])
+  approver     User?           @relation("ApprovedMovements", fields: [approvedBy], references: [id])
+  rejecter     User?           @relation("RejectedMovements", fields: [rejectedBy], references: [id])
+  product      Product?        @relation(fields: [productId], references: [id])
+  warehouse    Warehouse?      @relation("WarehouseMovements", fields: [warehouseId], references: [id])
+  fromWarehouse Warehouse?     @relation("FromWarehouseTransfers", fields: [fromWarehouseId], references: [id])
+  toWarehouse   Warehouse?     @relation("ToWarehouseTransfers", fields: [toWarehouseId], references: [id])
+  location      Location?       @relation(fields: [locationId], references: [id])
+  movements     StockMovement[]
+  
+  @@index([status])
+  @@index([requestedBy])
+  @@index([requestType])
 }
 
 // Organization model (company information)

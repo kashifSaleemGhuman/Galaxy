@@ -65,9 +65,18 @@ export async function GET(request) {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
+          manager: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
+          },
           _count: {
             select: {
-              inventoryItems: true
+              inventoryItems: true,
+              locations: true
             }
           }
         }

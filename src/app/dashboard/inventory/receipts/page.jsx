@@ -48,7 +48,6 @@ export default function ReceiptsPage() {
         setReceipts(data.receipts || [])
       } else {
         console.error('Failed to fetch receipts:', response.status)
-        // Fallback to mock data for development
         setReceipts([])
       }
     } catch (error) {
@@ -162,7 +161,9 @@ export default function ReceiptsPage() {
       render: (item) => (
         <div className="flex items-center">
           <Building2 className="h-4 w-4 text-gray-400 mr-2" />
-          <span className="text-sm text-gray-900">Main Warehouse</span>
+          <span className="text-sm text-gray-900">
+            {item.warehouse?.name || item.purchaseOrder?.warehouse?.name || 'No Warehouse'}
+          </span>
         </div>
       )
     },

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/db'
+import prisma from '@/lib/db'
 import { crmCache, rateLimit } from '@/lib/redis'
+import { ROLES } from '@/lib/constants/roles'
 
 // GET /api/inventory/products/[id] - Get product by ID
 export async function GET(request, { params }) {
@@ -87,6 +88,29 @@ export async function PUT(request, { params }) {
     
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check if user has permission to update products
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    const userRole = (currentUser.role || '').toUpperCase()
+    const canManageProducts = [
+      ROLES.SUPER_ADMIN,
+      ROLES.ADMIN,
+      ROLES.PURCHASE_MANAGER,
+      ROLES.PURCHASE_USER
+    ].includes(userRole)
+
+    if (!canManageProducts) {
+      return NextResponse.json({ 
+        error: 'Insufficient permissions. Products can only be updated by Purchase Managers or Admins.' 
+      }, { status: 403 })
     }
     
     // Rate limiting
@@ -240,6 +264,29 @@ export async function DELETE(request, { params }) {
     
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check if user has permission to delete products
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    const userRole = (currentUser.role || '').toUpperCase()
+    const canManageProducts = [
+      ROLES.SUPER_ADMIN,
+      ROLES.ADMIN,
+      ROLES.PURCHASE_MANAGER,
+      ROLES.PURCHASE_USER
+    ].includes(userRole)
+
+    if (!canManageProducts) {
+      return NextResponse.json({ 
+        error: 'Insufficient permissions. Products can only be deleted by Purchase Managers or Admins.' 
+      }, { status: 403 })
     }
     
     // Rate limiting

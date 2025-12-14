@@ -49,8 +49,8 @@ export async function GET() {
       prisma.product.count(),
       prisma.warehouse.count({ where: { isActive: true } }),
       prisma.inventoryItem.findMany({
-        where: { location: { not: null } },
-        select: { location: true }
+        where: { locationId: { not: null } },
+        select: { locationId: true }
       }),
       prisma.inventoryItem.findMany({
         where: { quantity: { lte: prisma.inventoryItem.fields.minLevel } }, // fallback handled below
@@ -107,7 +107,7 @@ export async function GET() {
 
     const totalLocations = new Set(
       locations
-        .map(l => l.location)
+        .map(l => l.locationId)
         .filter(Boolean)
     ).size
 

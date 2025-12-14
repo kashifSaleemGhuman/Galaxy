@@ -14,8 +14,11 @@ import {
   ExclamationTriangleIcon,
   Package
 } from 'lucide-react'
+import useSWR from 'swr'
 import DataTable from '@/components/ui/DataTable'
 import CycleCountModal from './_components/CycleCountModal'
+
+const fetcher = (url) => fetch(url).then(res => res.json())
 
 export default function CycleCountsPage() {
   const [cycleCounts, setCycleCounts] = useState([])
@@ -30,134 +33,68 @@ export default function CycleCountsPage() {
   const [selectedCount, setSelectedCount] = useState(null)
   const [warehouses, setWarehouses] = useState([])
 
-  // Mock data for demonstration
+  // Fetch warehouses using SWR
+  const { data: warehousesData } = useSWR('/api/inventory/warehouses?limit=1000', fetcher)
+  
+  // Fetch cycle counts using SWR
+  const { data: movementsData, error: movementsError, mutate: mutateMovements } = useSWR(
+    '/api/inventory/movements?type=adjustment',
+    fetcher,
+    { refreshInterval: 5000 }
+  )
+
   useEffect(() => {
-    const mockCycleCounts = [
-      {
-        id: '1',
-        countNumber: 'CC-2024-001',
-        warehouse: {
-          id: '1',
-          name: 'Main Warehouse',
-          code: 'WH-001'
-        },
-        location: {
-          id: '1',
-          name: 'A-01-01',
-          code: 'A-01-01'
-        },
-        status: 'completed',
-        countDate: '2024-01-15T10:30:00Z',
-        notes: 'Monthly cycle count for section A',
-        createdAt: '2024-01-15T10:30:00Z',
-        user: {
-          firstName: 'John',
-          lastName: 'Smith',
-          email: 'john@company.com'
-        },
-        lines: [
-          {
-            id: '1',
-            product: {
-              name: 'Laptop Pro 15',
-              sku: 'LP-001'
-            },
-            expectedQuantity: 25,
-            countedQuantity: 23,
-            difference: -2,
-            unitCost: 1200.00,
-            totalCost: -2400.00,
-            notes: '2 units missing'
-          },
-          {
-            id: '2',
-            product: {
-              name: 'Wireless Mouse',
-              sku: 'WM-001'
-            },
-            expectedQuantity: 10,
-            countedQuantity: 12,
-            difference: 2,
-            unitCost: 25.00,
-            totalCost: 50.00,
-            notes: 'Found 2 extra units'
-          }
-        ]
-      },
-      {
-        id: '2',
-        countNumber: 'CC-2024-002',
-        warehouse: {
-          id: '1',
-          name: 'Main Warehouse',
-          code: 'WH-001'
-        },
-        location: {
-          id: '2',
-          name: 'A-01-02',
-          code: 'A-01-02'
-        },
-        status: 'in_progress',
-        countDate: '2024-01-16T14:20:00Z',
-        notes: 'Weekly cycle count for section A-01-02',
-        createdAt: '2024-01-16T14:20:00Z',
-        user: {
-          firstName: 'Jane',
-          lastName: 'Doe',
-          email: 'jane@company.com'
-        },
-        lines: [
-          {
-            id: '3',
-            product: {
-              name: 'Office Chair',
-              sku: 'OC-001'
-            },
-            expectedQuantity: 15,
-            countedQuantity: null,
-            difference: null,
-            unitCost: 150.00,
-            totalCost: 0,
-            notes: 'Counting in progress'
-          }
-        ]
-      },
-      {
-        id: '3',
-        countNumber: 'CC-2024-003',
-        warehouse: {
-          id: '2',
-          name: 'Secondary Warehouse',
-          code: 'WH-002'
-        },
-        location: {
-          id: '4',
-          name: 'B-01-01',
-          code: 'B-01-01'
-        },
-        status: 'draft',
-        countDate: '2024-01-17T09:15:00Z',
-        notes: 'Quarterly cycle count for section B',
-        createdAt: '2024-01-17T09:15:00Z',
-        user: {
-          firstName: 'Mike',
-          lastName: 'Johnson',
-          email: 'mike@company.com'
-        },
-        lines: []
-      }
-    ]
+    if (warehousesData?.warehouses) {
+      setWarehouses(warehousesData.warehouses)
+    }
+  }, [warehousesData])
 
-    const mockWarehouses = [
-      { id: '1', name: 'Main Warehouse', code: 'WH-001' },
-      { id: '2', name: 'Secondary Warehouse', code: 'WH-002' },
-      { id: '3', name: 'Remote Warehouse', code: 'WH-003' }
-    ]
-
-    setCycleCounts(mockCycleCounts)
-    setWarehouses(mockWarehouses)
-    setLoading(false)
-  }, [])
+  // Process movements data into cycle counts format
+  useEffect(() => {
+    if (movementsData?.success && movementsData.data) {
+      // Filter for cycle counts and group by reference
+      const cycleCountMap = new Map()
+      
+      movementsData.data
+        .filter(movement => movement.notes?.includes('Cycle Count') || movement.referenceId?.startsWith('CC-'))
+        .forEach(movement => {
+          if (movement.referenceId) {
+            if (!cycleCountMap.has(movement.referenceId)) {
+              cycleCountMap.set(movement.referenceId, {
+                id: movement.referenceId,
+                countNumber: movement.referenceId,
+                warehouse: movement.warehouse,
+                location: movement.location,
+                status: 'completed',
+                notes: movement.notes || '',
+                countDate: movement.movementDate,
+                createdAt: movement.createdAt,
+                user: movement.user,
+                lines: []
+              })
+            }
+            
+            const cycleCount = cycleCountMap.get(movement.referenceId)
+            cycleCount.lines.push({
+              id: movement.id,
+              product: movement.product,
+              expectedQuantity: movement.quantity < 0 ? Math.abs(movement.quantity) : 0,
+              countedQuantity: movement.quantity > 0 ? movement.quantity : 0,
+              difference: movement.quantity,
+              notes: movement.notes
+            })
+          }
+        })
+      
+      setCycleCounts(Array.from(cycleCountMap.values()))
+      setLoading(false)
+    } else if (movementsError) {
+      console.error('Error fetching cycle counts:', movementsError)
+      setLoading(false)
+    } else if (movementsData && !movementsData.success) {
+      setLoading(false)
+    }
+  }, [movementsData, movementsError])
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -233,16 +170,55 @@ export default function CycleCountsPage() {
 
   const handleSaveCycleCount = async (cycleCountData) => {
     try {
-      // This would be an API call to save the cycle count
-      console.log('Saving cycle count:', cycleCountData)
-      // const response = await fetch('/api/inventory/cycle-counts', { method: 'POST', body: JSON.stringify(cycleCountData) })
-      // await fetchCycleCounts()
+      // Prepare the payload for the API
+      const payload = {
+        warehouseId: cycleCountData.warehouseId,
+        locationId: cycleCountData.locationId || null,
+        countDate: cycleCountData.countDate || new Date().toISOString().split('T')[0],
+        notes: cycleCountData.notes || '',
+        reference: cycleCountData.reference || '',
+        lines: cycleCountData.lines.map(line => ({
+          productId: line.productId,
+          actualQuantity: parseInt(line.actualQuantity) || 0,
+          locationId: line.locationId || cycleCountData.locationId || null,
+          notes: line.notes || null
+        }))
+      }
+
+      const response = await fetch('/api/inventory/cycle-counts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create cycle count')
+      }
+
+      // Check if a request was created (for WAREHOUSE_OPERATOR and INVENTORY_MANAGER)
+      if (result.message && result.message.includes('pending approval')) {
+        alert('Cycle count request created successfully! It is now pending approval from Super Admin.')
+      } else {
+        alert('Cycle count completed successfully!')
+      }
+
+      // Refresh the cycle counts list
+      await fetchCycleCounts()
       setShowModal(false)
       return true
     } catch (error) {
       console.error('Error saving cycle count:', error)
+      alert(`Error: ${error.message || 'Failed to create cycle count'}`)
       throw error
     }
+  }
+
+  const fetchCycleCounts = async () => {
+    mutateMovements()
   }
 
   const handleSelectCycleCount = (cycleCountId) => {

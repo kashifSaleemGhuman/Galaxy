@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/db'
 import { crmCache, rateLimit } from '@/lib/redis'
+import { ROLES } from '@/lib/constants/roles'
 
 // GET /api/inventory/products - Get all products
 export async function GET(request) {
@@ -121,6 +122,29 @@ export async function POST(request) {
     
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check if user has permission to create products
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    const userRole = (currentUser.role || '').toUpperCase()
+    const canCreateProducts = [
+      ROLES.SUPER_ADMIN,
+      ROLES.ADMIN,
+      ROLES.PURCHASE_MANAGER,
+      ROLES.PURCHASE_USER
+    ].includes(userRole)
+
+    if (!canCreateProducts) {
+      return NextResponse.json({ 
+        error: 'Insufficient permissions. Products can only be created by Purchase Managers or Admins.' 
+      }, { status: 403 })
     }
     
     // Rate limiting

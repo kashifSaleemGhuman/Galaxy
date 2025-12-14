@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { X, Save, Loader2, Plus, Trash2, CalculatorIcon, Building2, MapPinIcon, Package } from 'lucide-react'
+import useSWR from 'swr'
+
+const fetcher = (url) => fetch(url).then(res => res.json())
 
 export default function AdjustmentModal({ 
   isOpen, 
@@ -15,6 +18,7 @@ export default function AdjustmentModal({
     warehouseId: '',
     reason: '',
     notes: '',
+    reference: '',
     adjustmentDate: new Date().toISOString().split('T')[0],
     status: 'draft'
   })
@@ -22,17 +26,17 @@ export default function AdjustmentModal({
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
   const [touched, setTouched] = useState({})
+  const [submitError, setSubmitError] = useState('')
 
-  // Mock products for demonstration
-  const [products] = useState([
-    { id: '1', name: 'Laptop Pro 15', sku: 'LP-001' },
-    { id: '2', name: 'Wireless Mouse', sku: 'WM-001' },
-    { id: '3', name: 'Office Chair', sku: 'OC-001' },
-    { id: '4', name: 'Monitor 24"', sku: 'MN-001' }
-  ])
+  // Fetch products
+  const { data: productsData } = useSWR('/api/inventory/products?limit=1000', fetcher)
+  const { data: locationsData } = useSWR(
+    formData.warehouseId ? `/api/inventory/warehouses/${formData.warehouseId}/locations` : null,
+    fetcher
+  )
 
-  // Mock locations for demonstration
-  const [locations, setLocations] = useState([])
+  const products = productsData?.products || []
+  const locations = locationsData?.data || []
 
   useEffect(() => {
     if (adjustment && mode === 'edit') {
@@ -58,21 +62,6 @@ export default function AdjustmentModal({
     setTouched({})
   }, [adjustment, mode])
 
-  // Update locations when warehouse changes
-  useEffect(() => {
-    if (formData.warehouseId) {
-      // Mock locations based on warehouse
-      const mockLocations = [
-        { id: '1', name: 'A-01-01', code: 'A-01-01', warehouseId: '1' },
-        { id: '2', name: 'A-01-02', code: 'A-01-02', warehouseId: '1' },
-        { id: '3', name: 'A-02-01', code: 'A-02-01', warehouseId: '1' },
-        { id: '4', name: 'B-01-01', code: 'B-01-01', warehouseId: '2' },
-        { id: '5', name: 'B-01-02', code: 'B-01-02', warehouseId: '2' },
-        { id: '6', name: 'C-01-01', code: 'C-01-01', warehouseId: '3' }
-      ]
-      setLocations(mockLocations.filter(loc => loc.warehouseId === formData.warehouseId))
-    }
-  }, [formData.warehouseId])
 
   const validateForm = () => {
     const newErrors = {}
@@ -111,18 +100,39 @@ export default function AdjustmentModal({
       return
     }
     
+    // Validate adjustment lines
+    const validLines = adjustmentLines.filter(line => 
+      line.productId && 
+      line.expectedQuantity !== undefined && 
+      line.actualQuantity !== undefined
+    )
+    if (validLines.length === 0) {
+      setErrors({ lines: 'At least one valid adjustment line is required' })
+      return
+    }
+    
     setLoading(true)
     
     try {
       const payload = {
-        ...formData,
-        lines: adjustmentLines
+        warehouseId: formData.warehouseId,
+        reason: formData.reason || '',
+        notes: formData.notes || '',
+        reference: formData.reference || '',
+        lines: validLines.map(line => ({
+          productId: line.productId,
+          expectedQuantity: parseInt(line.expectedQuantity) || 0,
+          actualQuantity: parseInt(line.actualQuantity) || 0,
+          locationId: line.locationId || null,
+          notes: line.notes || null
+        }))
       }
       
       await onSave(payload)
       onClose()
     } catch (error) {
       console.error('Error saving adjustment:', error)
+      setSubmitError(error.message || 'Failed to save adjustment')
     } finally {
       setLoading(false)
     }
@@ -199,12 +209,12 @@ export default function AdjustmentModal({
 
   const getProductName = (productId) => {
     const product = products.find(p => p.id === productId)
-    return product ? `${product.name} (${product.sku})` : ''
+    return product ? `${product.name} (${product.id})` : ''
   }
 
   const getLocationName = (locationId) => {
     const location = locations.find(l => l.id === locationId)
-    return location ? `${location.name} (${location.code})` : ''
+    return location ? `${location.code}${location.name ? ` - ${location.name}` : ''}` : ''
   }
 
   if (!isOpen) return null
@@ -325,8 +335,25 @@ export default function AdjustmentModal({
               </select>
             </div>
 
+            {/* Reference */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Reference
+              </label>
+              <input
+                type="text"
+                name="reference"
+                value={formData.reference}
+                onChange={handleInputChange}
+                onBlur={() => handleBlur('reference')}
+                className={getFieldClassName('reference')}
+                placeholder="ADJ-2024-001"
+                disabled={mode === 'view'}
+              />
+            </div>
+
             {/* Notes */}
-            <div className="md:col-span-2">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Notes
               </label>
@@ -404,7 +431,9 @@ export default function AdjustmentModal({
                         >
                           <option value="">Select product</option>
                           {products.map(product => (
-                            <option key={product.id} value={product.id}>{product.name}</option>
+                            <option key={product.id} value={product.id}>
+                              {product.name} ({product.id})
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -418,11 +447,13 @@ export default function AdjustmentModal({
                           value={line.locationId}
                           onChange={(e) => updateAdjustmentLine(line.id, 'locationId', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          disabled={mode === 'view'}
+                          disabled={mode === 'view' || !formData.warehouseId}
                         >
                           <option value="">Select location</option>
                           {locations.map(location => (
-                            <option key={location.id} value={location.id}>{location.name}</option>
+                            <option key={location.id} value={location.id}>
+                              {location.code} {location.name ? `- ${location.name}` : ''}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -524,6 +555,12 @@ export default function AdjustmentModal({
               <p className="text-red-500 text-sm mt-1">{getFieldError('lines')}</p>
             )}
           </div>
+
+          {submitError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-red-600 text-sm">{submitError}</p>
+            </div>
+          )}
 
           {/* Actions */}
           {mode !== 'view' && (
