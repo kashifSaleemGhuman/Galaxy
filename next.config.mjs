@@ -15,7 +15,9 @@ const nextConfig = {
   },
   
   // Configure build output
-  output: 'standalone',
+  // Note: 'standalone' output is disabled for Vercel compatibility
+  // Vercel handles the build output automatically
+  // output: 'standalone',
   
   // Image optimization
   images: {

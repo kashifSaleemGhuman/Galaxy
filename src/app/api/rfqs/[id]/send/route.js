@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
 import emailService from '@/lib/email';
 
@@ -9,17 +10,29 @@ export const runtime = 'nodejs';
 
 export async function POST(req, { params }) {
   try {
-    const session = await getServerSession();
+    // Await params if it's a Promise (Next.js 15+)
+    const resolvedParams = await params;
+    const rfqId = resolvedParams.id;
+
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!rfqId) {
+      return NextResponse.json({ error: 'RFQ ID is required' }, { status: 400 });
     }
 
     const currentUser = await prisma.user.findUnique({
       where: { email: session.user.email }
     });
 
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const rfq = await prisma.rFQ.findUnique({
-      where: { id: params.id },
+      where: { id: rfqId },
       include: { vendor: true }
     });
 
@@ -40,18 +53,18 @@ export async function POST(req, { params }) {
       }, { status: 400 });
     }
 
+    if (rfq.status !== 'draft') {
+      return NextResponse.json({ 
+        error: `RFQ cannot be sent. Current status: ${rfq.status}. Only draft RFQs can be sent.` 
+      }, { status: 400 });
+    }
     // Update status to sent
     const updated = await prisma.$transaction(async (tx) => {
       const updatedRfq = await tx.rFQ.update({
-        where: { id: params.id },
+        where: { id: rfqId },
         data: {
           status: 'sent',
           sentDate: new Date()
-        },
-        include: {
-          vendor: true,
-          createdBy: { select: { id: true, name: true, email: true } },
-          items: { include: { product: true } }
         }
       });
 
@@ -59,22 +72,35 @@ export async function POST(req, { params }) {
         data: {
           userId: currentUser.id,
           action: 'SEND_RFQ',
-          details: `RFQ ${updatedRfq.rfqNumber} sent to vendor ${rfq.vendor?.name || rfq.vendorId}`
+          details: `RFQ ${rfq.rfqNumber} sent to vendor ${rfq.vendor?.name || rfq.vendorId}`
         }
       });
 
-      return updatedRfq;
+      return rfqId;
+    }, {
+      maxWait: 10000, // Maximum time to wait for a transaction slot
+      timeout: 10000, // Maximum time the transaction can run (10 seconds)
+    });
+
+    // Fetch the updated RFQ with all relations after transaction completes
+    const updatedRfq = await prisma.rFQ.findUnique({
+      where: { id: updated },
+      include: {
+        vendor: true,
+        createdBy: { select: { id: true, name: true, email: true } },
+        items: { include: { product: true } }
+      }
     });
 
     // Send email to vendor
     let emailResult = null;
     let emailError = null;
     try {
-      emailResult = await emailService.sendRFQEmail(updated);
+      emailResult = await emailService.sendRFQEmail(updatedRfq);
       console.log('Email result:', JSON.stringify(emailResult, null, 2));
       
       if (emailResult?.success) {
-        console.log(`✓ RFQ email sent successfully to ${updated.vendor?.email} via ${emailResult.provider}`);
+        console.log(`✓ RFQ email sent successfully to ${updatedRfq.vendor?.email} via ${emailResult.provider}`);
       } else {
         // Email service returned failure but didn't throw
         emailError = {
@@ -96,7 +122,7 @@ export async function POST(req, { params }) {
 
     return NextResponse.json({ 
       success: true, 
-      rfq: updated,
+      rfq: updatedRfq,
       message: 'RFQ sent to vendor successfully',
       emailSent: !!emailResult?.success,
       emailError: emailError,
