@@ -199,8 +199,76 @@ model Organization {
   email               String?
   fullAddress         String?
   auditDate           DateTime?
-  internalAuditorName String?
+  internalAuditorNames Json?       @default("[]") // Array of auditor names
   dataFrom            DateTime?
+  
+  // Section 1: General Facility Details
+  siteNameLocalLanguage String?
+  siteURN              String?
+  fullestScopeOfOperations String? // Category A-G
+  abbreviations        Json?       @default("[]") // Array of {abbreviation, fullTitle}
+  
+  // Section 2: Company Registration
+  companyRegistrationNumber String?
+  
+  // Section 3: Geographical Coordinates
+  latitude            String?
+  longitude           String?
+  
+  // Section 4: Location
+  country             String?
+  
+  // Section 5: Contact
+  telephoneNumber     String?
+  
+  // Section 6a: Principal Contact
+  principalContactName     String?
+  principalContactPosition String?
+  principalContactEmail    String?
+  
+  // Section 6b: Environmental Responsible
+  environmentalResponsibleName     String?
+  environmentalResponsiblePosition String?
+  environmentalResponsibleEmail    String?
+  
+  // Additional Information
+  lwgCommunicationsMembers Json?  @default("[]") // Array of {email, communicationRequired}
+  website                  String?
+  facilityDescription      String? // Description of facility, site setting, environmental receptors
+  totalSiteArea            String? // Total site area in m²
+  siteAreaBoundaries       String? // Single or multiple boundaries
+  
+  // Workforce Information - Direct Labour
+  directLabourShiftAM      Int?
+  directLabourShiftPM      Int?
+  directLabourShiftNight   Int?
+  directLabourCount        Int?
+  
+  // Workforce Information - Indirect Labour
+  indirectLabourShiftAM    Int?
+  indirectLabourShiftPM    Int?
+  indirectLabourShiftNight Int?
+  indirectLabourCount      Int?
+  
+  // Workforce Information - Shift Total
+  shiftTotalAM             Int?
+  shiftTotalPM             Int?
+  shiftTotalNight          Int?
+  shiftTotal               Int?
+  
+  // Operating Schedule - Worker
+  workerDaysPerWeek        Int?
+  workerWeeksPerYear       Int?
+  workerDaysPerYear        Int?
+  
+  // Operating Schedule - Manufacturing operations
+  manufacturingDaysPerWeek Int?
+  manufacturingWeeksPerYear Int?
+  manufacturingDaysPerYear Int?
+  
+  // Environmental and Operations
+  environmentalImpacts     String? // Environmental impacts description
+  operationsForOtherOrganisations String? // Operations for other organisations
   
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
