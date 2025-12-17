@@ -6,6 +6,7 @@ export default withAuth(
   function middleware(req) {
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
+    const userRole = token?.role;
 
     // Redirect from root to dashboard if authenticated
     if (path === '/' && token) {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
+import emailService from '@/lib/email';
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
 export const dynamic = 'force-dynamic';
@@ -57,33 +58,54 @@ export async function POST(req, { params }) {
       }, { status: 400 });
     }
 
+    // Check if supplier has email
+    if (!po.supplier?.email) {
+      return NextResponse.json({ 
+        error: 'Supplier email is required to send Purchase Order' 
+      }, { status: 400 });
+    }
+
     // Update the purchase order status to 'sent'
     const updatedPO = await prisma.purchaseOrder.update({
       where: { poId: id },
       data: {
         status: 'sent'
+      },
+      include: {
+        supplier: true,
+        lines: {
+          include: {
+            product: true
+          }
+        }
       }
     });
 
-    // Here you would typically:
-    // 1. Generate a PDF of the purchase order
-    // 2. Send email to the vendor with the PO attached
-    // 3. Log the action in audit trail
-    // 4. Send notification to relevant stakeholders
+    // Send email to supplier
+    try {
+      await emailService.sendPOEmail(updatedPO);
+      console.log(`PO email sent successfully to ${updatedPO.supplier?.email}`);
+    } catch (emailError) {
+      console.error('Error sending PO email:', emailError);
+      // Don't fail the request if email fails, but log it
+      // You might want to handle this differently based on your requirements
+    }
 
-    // For now, we'll just return success with the updated status
+    // Calculate total amount
+    const totalAmount = updatedPO.lines.reduce((sum, line) => 
+      sum + (line.quantityOrdered * line.price), 0
+    );
+
     return NextResponse.json({
       success: true,
       message: 'Purchase Order sent to vendor successfully',
       data: {
         poId: updatedPO.poId,
         status: updatedPO.status,
-        supplierName: po.supplier.name,
-        supplierEmail: po.supplier.email,
-        totalAmount: po.lines.reduce((sum, line) => 
-          sum + (line.quantityOrdered * line.price), 0
-        ),
-        lineCount: po.lines.length,
+        supplierName: updatedPO.supplier.name,
+        supplierEmail: updatedPO.supplier.email,
+        totalAmount,
+        lineCount: updatedPO.lines.length,
         notes: notes || null,
         deliveryDate: deliveryDate || null
       }

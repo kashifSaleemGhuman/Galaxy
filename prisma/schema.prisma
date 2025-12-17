@@ -228,9 +228,9 @@ model RFQApproval {
 
 // Supplier model (legacy table mapping)
 model Supplier {
-  supplierId  String  @id @map("supplier_id")
+  supplierId  String  @id
   name        String
-  contactInfo String? @map("contact_info")
+  contactInfo String?
   email       String
   phone       String?
 
@@ -262,11 +262,11 @@ model PurchaseOrder {
 
 // Purchase Order Line model
 model POLine {
-  poLineId         String  @id @map("po_line_id")
-  poId             String  @map("po_id")
-  productId        String  @map("product_id")
-  quantityOrdered  Int     @map("quantity_ordered")
-  quantityReceived Int     @default(0) @map("quantity_received")
+  poLineId         String  @id
+  poId             String
+  productId        String
+  quantityOrdered  Int
+  quantityReceived Int     @default(0)
   price            Decimal
 
   // Relations
@@ -613,4 +613,104 @@ model Permit {
 
   // Tenant relation
   tenant                 Tenant?   @relation(fields: [tenantId], references: [id])
+}
+
+model Organization {
+  id                  String    @id @default(cuid())
+  companyName         String
+  companyLogo         String?   // Path to the logo file or Base64
+  shortName           String?
+  address             String?
+  factoryContactNo    String?
+  email               String?
+  fullAddress         String?
+  auditDate           DateTime?
+  internalAuditorName String?
+  dataFrom            DateTime?
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  docNo       String?
+  revDate     String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Employee {
+  id                   String    @id @default(cuid())
+  employeeId           String    @unique
+  idCardNumber         String?
+  name                 String
+  photo                String?
+  parentName           String?   // Father/Mother
+  dob                  DateTime?
+  address              String?
+  gender               String?
+  contactNumber        String?
+  emergencyContact     String?
+  dateOfJoining        DateTime?
+  department           String?
+  lastEmployment       String?
+  process              String?
+  designation          String?
+  salary               Decimal?
+  dateOfLeaving        DateTime?
+  shift                String?
+  secondaryJob         String?
+  
+  // Certifications/Roles
+  isFirstAider         Boolean   @default(false)
+  isEmergencyResponder Boolean   @default(false)
+  isFirefighter        Boolean   @default(false)
+
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+model Machine {
+  id                  String    @id @default(cuid())
+  serialNumber        String?
+  machineId           String    @unique
+  name                String
+  quantity            Int       @default(1)
+  motorDetails        String?
+  powerRating         String?
+  airPressure         String?
+  modelNumber         String?
+  manufacturingYear   String?
+  length              String?
+  width               String?
+  height              String?
+  steamTemp           String?
+  steamConsumption    String?
+  electricityRating   String?
+  operationType       String?
+  department          String?
+  status              String?   // "in_use", "under_maintenance", "out_of_order"
+  remarks             String?
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+model Permit {
+  id                    String    @id @default(cuid())
+  title                 String    @unique
+  authorizedNumber      String?
+  issuingAuthority      String?
+  dateOfIssue           DateTime?
+  dateOfExpiry          DateTime?
+  renewalSubmissionDate DateTime?
+  reportingFrequency    String?
+  lastReportDate        DateTime?
+  responsiblePerson     String?
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 }

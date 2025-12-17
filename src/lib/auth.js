@@ -1,8 +1,8 @@
 import { getServerSession } from 'next-auth/next';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare } from 'bcryptjs';
-import { ROLES, ROLE_PERMISSIONS } from './constants/roles';
-import { prisma } from './db';
+import { ROLES, ROLE_PERMISSIONS } from '@/lib/constants/roles';
+import { prisma } from '@/lib/db';
 
 export const authOptions = {
   providers: [
@@ -13,37 +13,53 @@ export const authOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) {
+          console.log('[Auth] Missing credentials');
+          return null;
+        }
 
         try {
+          console.log('[Auth] Attempting login for:', credentials.email);
+          
           // Find user in database
           const user = await prisma.user.findUnique({
             where: { email: credentials.email }
           });
 
-          if (!user) return null;
+          if (!user) {
+            console.log('[Auth] User not found:', credentials.email);
+            return null;
+          }
 
+          console.log('[Auth] User found, verifying password...');
+          
           // Verify password
           const isValidPassword = await compare(credentials.password, user.password);
           
           if (isValidPassword) {
-            // Create audit log for successful login
-            await prisma.auditLog.create({
-              data: {
-                userId: user.id,
-                action: 'LOGIN',
-                details: 'User logged in successfully'
-              }
-            });
+            console.log('[Auth] Password valid for:', credentials.email);
+            try {
+              // Create audit log for successful login
+              await prisma.auditLog.create({
+                data: {
+                  userId: user.id,
+                  action: 'LOGIN',
+                  details: 'User logged in successfully'
+                }
+              });
+            } catch (logError) {
+              console.error('Failed to create audit log:', logError);
+            }
 
             // Never send the password
             const { password, ...userWithoutPass } = user;
             return userWithoutPass;
           }
 
+          console.log('[Auth] Invalid password for:', credentials.email);
           return null;
         } catch (error) {
-          console.error('Auth error:', error);
+          console.error('[Auth] Error during authentication:', error);
           return null;
         }
       }

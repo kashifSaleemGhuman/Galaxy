@@ -44,6 +44,10 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (!rfqId) {
+      return NextResponse.json({ error: 'RFQ ID is required' }, { status: 400 });
+    }
+
     const { vendorNotes, items } = await req.json();
 
     // Validate items array is provided
@@ -73,8 +77,12 @@ export async function POST(req, { params }) {
       where: { email: session.user.email }
     });
 
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const rfq = await prisma.rFQ.findUnique({
-      where: { id: params.id },
+      where: { id: rfqId },
       include: { 
         vendor: true, 
         createdBy: true,
@@ -249,7 +257,7 @@ export async function POST(req, { params }) {
         data: {
           userId: currentUser.id,
           action: 'RECORD_RFQ_QUOTE',
-          details: `Recorded vendor quote for RFQ ${updatedRfq.rfqNumber}`
+          details: `Recorded vendor quote for RFQ ${rfq.rfqNumber}`
         }
       });
     } catch (auditError) {

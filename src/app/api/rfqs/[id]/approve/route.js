@@ -21,6 +21,10 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: 'Invalid action. Must be "approve" or "reject"' }, { status: 400 });
     }
 
+    if (!rfqId) {
+      return NextResponse.json({ error: 'RFQ ID is required' }, { status: 400 });
+    }
+
     const currentUser = await prisma.user.findUnique({
       where: { email: session.user.email }
     });
@@ -35,7 +39,7 @@ export async function POST(req, { params }) {
     }
 
     const rfq = await prisma.rFQ.findUnique({
-      where: { id: params.id },
+      where: { id: rfqId },
       include: { 
         vendor: true, 
         createdBy: { select: { id: true, name: true, email: true } },
@@ -76,7 +80,7 @@ export async function POST(req, { params }) {
     try {
       await prisma.rFQApproval.create({
         data: {
-          rfqId: params.id,
+          rfqId: rfqId,
           approvedBy: currentUser.id,
           status: action === 'approve' ? 'approved' : 'rejected',
           comments: comments || null
@@ -104,12 +108,20 @@ export async function POST(req, { params }) {
     const updatedRfq = updated;
 
     return NextResponse.json({ 
-      rfq: updatedRfq,
+      rfq: updatedRfqWithRelations,
       message: `RFQ ${action}d successfully` 
     });
 
   } catch (error) {
     console.error('Error approving/rejecting RFQ:', error);
-    return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    return NextResponse.json({ 
+      error: 'Failed to process request',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    }, { status: 500 });
   }
 }

@@ -1,9 +1,11 @@
 import React from 'react';
 import LoginForm from './_components/LoginForm';
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams = {},
 }) {
+  // Ensure searchParams is an object
+  const params = searchParams || {};
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Background Image with Overlay */}
@@ -29,9 +31,9 @@ export default function LoginPage({
             </p>
           </div>
           
-          {searchParams.message && (
+          {params.message && (
             <div className="mb-6 p-4 bg-blue-500 bg-opacity-20 backdrop-blur-sm text-blue-100 rounded-lg text-center border border-blue-400 border-opacity-30">
-              {searchParams.message}
+              {params.message}
             </div>
           )}
         </div>
