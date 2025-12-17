@@ -11,7 +11,7 @@ import {
   ClockIcon,
   CheckCircleIcon,
   XCircleIcon,
-  ExclamationTriangleIcon,
+  AlertTriangle,
   Package
 } from 'lucide-react'
 import useSWR from 'swr'
@@ -609,7 +609,7 @@ export default function AdjustmentsPage() {
                     <span>{adjustment.warehouse.name}</span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
-                    <ExclamationTriangleIcon className="h-4 w-4 mr-2" />
+                    <AlertTriangle className="h-4 w-4 mr-2" />
                     <span>Reason: {getReasonLabel(adjustment.reason)}</span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
