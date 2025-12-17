@@ -14,8 +14,11 @@ import {
   ExclamationTriangleIcon,
   Package
 } from 'lucide-react'
+import useSWR from 'swr'
 import DataTable from '@/components/ui/DataTable'
 import CycleCountModal from './_components/CycleCountModal'
+
+const fetcher = (url) => fetch(url).then(res => res.json())
 
 export default function CycleCountsPage() {
   const [cycleCounts, setCycleCounts] = useState([])
@@ -30,138 +33,40 @@ export default function CycleCountsPage() {
   const [selectedCount, setSelectedCount] = useState(null)
   const [warehouses, setWarehouses] = useState([])
 
-  // Mock data for demonstration
+  // Fetch warehouses using SWR
+  const { data: warehousesData } = useSWR('/api/inventory/warehouses?limit=1000', fetcher)
+  
+  // Fetch cycle counts using SWR
+  const { data: cycleCountsData, error: cycleCountsError, mutate: mutateCycleCounts } = useSWR(
+    '/api/inventory/cycle-counts',
+    fetcher,
+    { refreshInterval: 5000 }
+  )
+
   useEffect(() => {
-    const mockCycleCounts = [
-      {
-        id: '1',
-        countNumber: 'CC-2024-001',
-        warehouse: {
-          id: '1',
-          name: 'Main Warehouse',
-          code: 'WH-001'
-        },
-        location: {
-          id: '1',
-          name: 'A-01-01',
-          code: 'A-01-01'
-        },
-        status: 'completed',
-        countDate: '2024-01-15T10:30:00Z',
-        notes: 'Monthly cycle count for section A',
-        createdAt: '2024-01-15T10:30:00Z',
-        user: {
-          firstName: 'John',
-          lastName: 'Smith',
-          email: 'john@company.com'
-        },
-        lines: [
-          {
-            id: '1',
-            product: {
-              name: 'Laptop Pro 15',
-              sku: 'LP-001'
-            },
-            expectedQuantity: 25,
-            countedQuantity: 23,
-            difference: -2,
-            unitCost: 1200.00,
-            totalCost: -2400.00,
-            notes: '2 units missing'
-          },
-          {
-            id: '2',
-            product: {
-              name: 'Wireless Mouse',
-              sku: 'WM-001'
-            },
-            expectedQuantity: 10,
-            countedQuantity: 12,
-            difference: 2,
-            unitCost: 25.00,
-            totalCost: 50.00,
-            notes: 'Found 2 extra units'
-          }
-        ]
-      },
-      {
-        id: '2',
-        countNumber: 'CC-2024-002',
-        warehouse: {
-          id: '1',
-          name: 'Main Warehouse',
-          code: 'WH-001'
-        },
-        location: {
-          id: '2',
-          name: 'A-01-02',
-          code: 'A-01-02'
-        },
-        status: 'in_progress',
-        countDate: '2024-01-16T14:20:00Z',
-        notes: 'Weekly cycle count for section A-01-02',
-        createdAt: '2024-01-16T14:20:00Z',
-        user: {
-          firstName: 'Jane',
-          lastName: 'Doe',
-          email: 'jane@company.com'
-        },
-        lines: [
-          {
-            id: '3',
-            product: {
-              name: 'Office Chair',
-              sku: 'OC-001'
-            },
-            expectedQuantity: 15,
-            countedQuantity: null,
-            difference: null,
-            unitCost: 150.00,
-            totalCost: 0,
-            notes: 'Counting in progress'
-          }
-        ]
-      },
-      {
-        id: '3',
-        countNumber: 'CC-2024-003',
-        warehouse: {
-          id: '2',
-          name: 'Secondary Warehouse',
-          code: 'WH-002'
-        },
-        location: {
-          id: '4',
-          name: 'B-01-01',
-          code: 'B-01-01'
-        },
-        status: 'draft',
-        countDate: '2024-01-17T09:15:00Z',
-        notes: 'Quarterly cycle count for section B',
-        createdAt: '2024-01-17T09:15:00Z',
-        user: {
-          firstName: 'Mike',
-          lastName: 'Johnson',
-          email: 'mike@company.com'
-        },
-        lines: []
-      }
-    ]
+    if (warehousesData?.warehouses) {
+      setWarehouses(warehousesData.warehouses)
+    }
+  }, [warehousesData])
 
-    const mockWarehouses = [
-      { id: '1', name: 'Main Warehouse', code: 'WH-001' },
-      { id: '2', name: 'Secondary Warehouse', code: 'WH-002' },
-      { id: '3', name: 'Remote Warehouse', code: 'WH-003' }
-    ]
-
-    setCycleCounts(mockCycleCounts)
-    setWarehouses(mockWarehouses)
-    setLoading(false)
-  }, [])
+  // Apply API data
+  useEffect(() => {
+    if (cycleCountsData?.success && Array.isArray(cycleCountsData.data)) {
+      setCycleCounts(cycleCountsData.data)
+      setLoading(false)
+    } else if (cycleCountsError) {
+      console.error('Error fetching cycle counts:', cycleCountsError)
+      setLoading(false)
+    } else if (cycleCountsData && !cycleCountsData.success) {
+      setLoading(false)
+    }
+  }, [cycleCountsData, cycleCountsError])
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'draft': return 'bg-gray-100 text-gray-800'
+      case 'pending': return 'bg-yellow-100 text-yellow-800'
+      case 'approved': return 'bg-green-100 text-green-800'
       case 'in_progress': return 'bg-blue-100 text-blue-800'
       case 'completed': return 'bg-green-100 text-green-800'
       case 'cancelled': return 'bg-red-100 text-red-800'
@@ -172,6 +77,8 @@ export default function CycleCountsPage() {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'draft': return '📝'
+      case 'pending': return '⏳'
+      case 'approved': return '✅'
       case 'in_progress': return '🔄'
       case 'completed': return '✅'
       case 'cancelled': return '❌'
@@ -182,6 +89,8 @@ export default function CycleCountsPage() {
   const getStatusLabel = (status) => {
     switch (status) {
       case 'draft': return 'Draft'
+      case 'pending': return 'Pending'
+      case 'approved': return 'Approved'
       case 'in_progress': return 'In Progress'
       case 'completed': return 'Completed'
       case 'cancelled': return 'Cancelled'
@@ -233,16 +142,55 @@ export default function CycleCountsPage() {
 
   const handleSaveCycleCount = async (cycleCountData) => {
     try {
-      // This would be an API call to save the cycle count
-      console.log('Saving cycle count:', cycleCountData)
-      // const response = await fetch('/api/inventory/cycle-counts', { method: 'POST', body: JSON.stringify(cycleCountData) })
-      // await fetchCycleCounts()
+      // Prepare the payload for the API
+      const payload = {
+        warehouseId: cycleCountData.warehouseId,
+        locationId: cycleCountData.locationId || null,
+        countDate: cycleCountData.countDate || new Date().toISOString().split('T')[0],
+        notes: cycleCountData.notes || '',
+        reference: cycleCountData.reference || '',
+        lines: cycleCountData.lines.map(line => ({
+          productId: line.productId,
+          actualQuantity: parseInt(line.actualQuantity) || 0,
+          locationId: line.locationId || cycleCountData.locationId || null,
+          notes: line.notes || null
+        }))
+      }
+
+      const response = await fetch('/api/inventory/cycle-counts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create cycle count')
+      }
+
+      // Check if a request was created (for WAREHOUSE_OPERATOR and INVENTORY_MANAGER)
+      if (result.message && result.message.includes('pending approval')) {
+        alert('Cycle count request created successfully! It is now pending approval from Super Admin.')
+      } else {
+        alert('Cycle count completed successfully!')
+      }
+
+      // Refresh the cycle counts list
+      await fetchCycleCounts()
       setShowModal(false)
       return true
     } catch (error) {
       console.error('Error saving cycle count:', error)
+      alert(`Error: ${error.message || 'Failed to create cycle count'}`)
       throw error
     }
+  }
+
+  const fetchCycleCounts = async () => {
+    mutateCycleCounts()
   }
 
   const handleSelectCycleCount = (cycleCountId) => {
@@ -262,12 +210,15 @@ export default function CycleCountsPage() {
   }
 
   const filteredCycleCounts = cycleCounts.filter(cycleCount => {
-    const matchesSearch = cycleCount.countNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         cycleCount.warehouse.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         cycleCount.notes?.toLowerCase().includes(searchTerm.toLowerCase())
+    const countNumber = cycleCount.countNumber || ''
+    const warehouseName = cycleCount.warehouse?.name || ''
+    const notes = cycleCount.notes || ''
+    const matchesSearch = countNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         warehouseName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         notes.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesStatus = filterStatus === 'all' || cycleCount.status === filterStatus
-    const matchesWarehouse = filterWarehouse === 'all' || cycleCount.warehouse.id === filterWarehouse
+    const matchesWarehouse = filterWarehouse === 'all' || cycleCount.warehouse?.id === filterWarehouse
     
     return matchesSearch && matchesStatus && matchesWarehouse
   })
@@ -296,8 +247,8 @@ export default function CycleCountsPage() {
         <div className="flex items-center">
           <Building2 className="h-4 w-4 text-gray-400 mr-2" />
           <div>
-            <div className="text-sm text-gray-900">{item.warehouse.name}</div>
-            <div className="text-sm text-gray-500">{item.warehouse.code}</div>
+            <div className="text-sm text-gray-900">{item.warehouse?.name || 'N/A'}</div>
+            <div className="text-sm text-gray-500">{item.warehouse?.code || 'N/A'}</div>
           </div>
         </div>
       )
@@ -320,7 +271,7 @@ export default function CycleCountsPage() {
       label: 'Items',
       render: (item) => (
         <div className="text-center">
-          <div className="text-sm font-medium text-gray-900">{item.lines.length}</div>
+          <div className="text-sm font-medium text-gray-900">{item.lines?.length || 0}</div>
           <div className="text-xs text-gray-500">products</div>
         </div>
       )
@@ -329,8 +280,8 @@ export default function CycleCountsPage() {
       key: 'impact',
       label: 'Impact',
       render: (item) => {
-        const totalDifference = item.lines.reduce((sum, line) => sum + (line.difference || 0), 0)
-        const totalCost = item.lines.reduce((sum, line) => sum + (line.totalCost || 0), 0)
+        const totalDifference = (item.lines || []).reduce((sum, line) => sum + (line.difference || 0), 0)
+        const totalCost = (item.lines || []).reduce((sum, line) => sum + (line.totalCost || 0), 0)
         return (
           <div className="text-center">
             <div className={`text-sm font-medium ${totalDifference > 0 ? 'text-green-600' : totalDifference < 0 ? 'text-red-600' : 'text-gray-600'}`}>
@@ -357,8 +308,8 @@ export default function CycleCountsPage() {
       label: 'Created By',
       render: (item) => (
         <div className="text-center">
-          <div className="text-sm text-gray-900">{item.user.firstName} {item.user.lastName}</div>
-          <div className="text-xs text-gray-500">{item.user.email}</div>
+          <div className="text-sm text-gray-900">{item.user?.firstName || 'Unknown'} {item.user?.lastName || ''}</div>
+          <div className="text-xs text-gray-500">{item.user?.email || 'N/A'}</div>
         </div>
       )
     },
@@ -495,6 +446,8 @@ export default function CycleCountsPage() {
             >
               <option value="all">All Status</option>
               <option value="draft">Draft</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
@@ -581,8 +534,8 @@ export default function CycleCountsPage() {
       {viewMode === 'grid' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCycleCounts.map((cycleCount) => {
-            const totalDifference = cycleCount.lines.reduce((sum, line) => sum + (line.difference || 0), 0)
-            const totalCost = cycleCount.lines.reduce((sum, line) => sum + (line.totalCost || 0), 0)
+            const totalDifference = (cycleCount.lines || []).reduce((sum, line) => sum + (line.difference || 0), 0)
+            const totalCost = (cycleCount.lines || []).reduce((sum, line) => sum + (line.totalCost || 0), 0)
             
             return (
               <div key={cycleCount.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
@@ -604,7 +557,7 @@ export default function CycleCountsPage() {
                 <div className="space-y-3 mb-4">
                   <div className="flex items-center text-sm text-gray-600">
                     <Building2 className="h-4 w-4 mr-2" />
-                    <span>{cycleCount.warehouse.name}</span>
+                    <span>{cycleCount.warehouse?.name || 'N/A'}</span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <MapPinIcon className="h-4 w-4 mr-2" />
@@ -612,7 +565,7 @@ export default function CycleCountsPage() {
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <Package className="h-4 w-4 mr-2" />
-                    <span>{cycleCount.lines.length} items</span>
+                    <span>{(cycleCount.lines?.length || 0)} items</span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <ClipboardList className="h-4 w-4 mr-2" />

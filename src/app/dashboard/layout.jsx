@@ -19,7 +19,7 @@ import {
   ClipboardDocumentListIcon,
   BuildingOfficeIcon
 } from '@heroicons/react/24/outline'
-import { ROLES, hasPermission, PERMISSIONS } from '@/lib/permissions'
+import { ROLES, PERMISSIONS } from '@/lib/constants/roles'
 
 export default function DashboardLayout({ children }) {
   const { data: session, status } = useSession()
@@ -42,8 +42,18 @@ export default function DashboardLayout({ children }) {
     return null
   }
 
-  // Get user role from session
-  const userRole = session?.user?.role || 'PURCHASE_MANAGER'
+  // Get user role from session (normalize to uppercase for consistency)
+  const userRole = (session?.user?.role || ROLES.PURCHASE_MANAGER).toUpperCase()
+  const isAdmin = userRole === ROLES.SUPER_ADMIN || userRole === ROLES.ADMIN
+  
+  // Debug logging for warehouse operators
+  if (userRole === ROLES.WAREHOUSE_OPERATOR && process.env.NODE_ENV === 'development') {
+    console.log('🏭 Warehouse Operator Navigation Check:', {
+      role: userRole,
+      permissions: session?.user?.permissions?.slice(0, 5),
+      permissionsCount: session?.user?.permissions?.length || 0
+    });
+  }
 
   // Build navigation based on user permissions
   const getNavigation = () => {
@@ -56,24 +66,53 @@ export default function DashboardLayout({ children }) {
       }
     ]
 
-    // Super Admin gets access to all modules
-    if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') {
+    // Add Users section for admin users
+    if (userRole === ROLES.SUPER_ADMIN || userRole === ROLES.ADMIN) {
+      baseNavigation.push({
+        name: 'Users',
+        href: '/dashboard/users',
+        icon: UsersIcon,
+        current: pathname.startsWith('/dashboard/users'),
+        children: [
+          { name: 'Overview', href: '/dashboard/users', current: pathname === '/dashboard/users' },
+          { name: 'Roles', href: '/dashboard/users/roles', current: pathname === '/dashboard/users/roles' }
+        ]
+      })
+      
+      // Add Requests section for Super Admin only
+      if (userRole === ROLES.SUPER_ADMIN) {
+        baseNavigation.push({
+          name: 'Requests',
+          href: '/dashboard/requests',
+          icon: ClipboardDocumentListIcon,
+          current: pathname.startsWith('/dashboard/requests')
+        })
+      }
+    }
+
+    // Purchase module - available to all purchase-related roles
+    if (userRole === ROLES.SUPER_ADMIN || userRole === ROLES.ADMIN || userRole === ROLES.PURCHASE_MANAGER || userRole === ROLES.PURCHASE_USER) {
+      baseNavigation.push({
+        name: 'Purchase', 
+        href: '/dashboard/purchase', 
+        icon: ShoppingBagIcon,
+        current: pathname.startsWith('/dashboard/purchase'),
+        children: [
+          { name: 'Overview', href: '/dashboard/purchase', current: pathname === '/dashboard/purchase' },
+          { name: 'Suppliers', href: '/dashboard/purchase/suppliers', current: pathname === '/dashboard/purchase/suppliers' },
+          { name: 'Vendors', href: '/dashboard/purchase/vendors', current: pathname === '/dashboard/purchase/vendors' },
+          { name: 'Products', href: '/dashboard/purchase/products', current: pathname === '/dashboard/purchase/products' },
+          { name: 'RFQs', href: '/dashboard/purchase/rfqs', current: pathname.startsWith('/dashboard/purchase/rfqs') },
+          { name: 'Purchase Orders', href: '/dashboard/purchase/purchase-orders', current: pathname === '/dashboard/purchase/purchase-orders' },
+          { name: 'Receipts', href: '/dashboard/purchase/receipts', current: pathname === '/dashboard/purchase/receipts' },
+          { name: 'Vendor Bills', href: '/dashboard/purchase/bills', current: pathname === '/dashboard/purchase/bills' }
+        ]
+      })
+    }
+
+    // Super Admin and Admin get access to all other modules
+    if (userRole === ROLES.SUPER_ADMIN || userRole === ROLES.ADMIN) {
       baseNavigation.push(
-        { 
-          name: 'Purchase', 
-          href: '/dashboard/purchase', 
-          icon: ShoppingBagIcon,
-          current: pathname.startsWith('/dashboard/purchase'),
-          children: [
-            { name: 'Overview', href: '/dashboard/purchase', current: pathname === '/dashboard/purchase' },
-            { name: 'Suppliers', href: '/dashboard/purchase/suppliers', current: pathname === '/dashboard/purchase/suppliers' },
-            { name: 'Products', href: '/dashboard/purchase/products', current: pathname === '/dashboard/purchase/products' },
-            { name: 'RFQs', href: '/dashboard/purchase/rfqs', current: pathname.startsWith('/dashboard/purchase/rfqs') },
-            { name: 'Purchase Orders', href: '/dashboard/purchase/purchase-orders', current: pathname === '/dashboard/purchase/purchase-orders' },
-            { name: 'Receipts', href: '/dashboard/purchase/receipts', current: pathname === '/dashboard/purchase/receipts' },
-            { name: 'Vendor Bills', href: '/dashboard/purchase/bills', current: pathname === '/dashboard/purchase/bills' }
-          ]
-        },
         { 
           name: 'CRM', 
           href: '/dashboard/crm', 
@@ -135,8 +174,47 @@ export default function DashboardLayout({ children }) {
       )
     }
 
-    // All users with inventory permissions get inventory access
-    if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'PURCHASE_MANAGER') {
+    // Get user permissions for permission-based checks
+    const userPermissions = session?.user?.permissions || [];
+
+    // Warehouse module - for warehouse operators, inventory users, and admins
+    // NOTE: INVENTORY_USER should also have warehouse access
+    const hasWarehouseAccess = userRole === ROLES.SUPER_ADMIN || 
+                               userRole === ROLES.ADMIN || 
+                               userRole === ROLES.WAREHOUSE_OPERATOR || 
+                               userRole === ROLES.INVENTORY_USER ||
+                               userRole === ROLES.INVENTORY_MANAGER ||
+                               userPermissions.includes(PERMISSIONS.WAREHOUSE.VIEW_ALL) ||
+                               userPermissions.includes(PERMISSIONS.WAREHOUSE.SHIPMENT_READ);
+    
+    if (hasWarehouseAccess) {
+      baseNavigation.push({
+        name: 'Warehouse', 
+        href: '/dashboard/warehouse', 
+        icon: BuildingOfficeIcon,
+        current: pathname.startsWith('/dashboard/warehouse'),
+        children: [
+          { name: 'Dashboard', href: '/dashboard/warehouse', current: pathname === '/dashboard/warehouse' },
+          { name: 'Incoming Shipments', href: '/dashboard/warehouse/shipments', current: pathname === '/dashboard/warehouse/shipments' },
+          { name: 'Process Goods', href: '/dashboard/warehouse/process', current: pathname === '/dashboard/warehouse/process' },
+          { name: 'Completed Tasks', href: '/dashboard/warehouse/completed', current: pathname === '/dashboard/warehouse/completed' }
+        ]
+      })
+    }
+    
+    // Inventory module - for inventory managers and admins only (NOT warehouse operators)
+    // Explicitly exclude WAREHOUSE_OPERATOR even if they have inventory permissions
+    const hasInventoryAccess = userRole !== ROLES.WAREHOUSE_OPERATOR && (
+                                userRole === ROLES.SUPER_ADMIN || 
+                                userRole === 'ADMIN' || 
+                                userRole === 'INVENTORY_MANAGER' ||
+                                userRole === 'INVENTORY_USER' ||
+                                userPermissions.includes(PERMISSIONS.INVENTORY.VIEW_ALL) ||
+                                userPermissions.includes(PERMISSIONS.INVENTORY.PRODUCT_READ) ||
+                                userPermissions.includes(PERMISSIONS.INVENTORY.STOCK_READ)
+                              );
+    
+    if (hasInventoryAccess) {
       baseNavigation.push({
         name: 'Inventory', 
         href: '/dashboard/inventory', 
@@ -144,8 +222,10 @@ export default function DashboardLayout({ children }) {
         current: pathname.startsWith('/dashboard/inventory'),
         children: [
           { name: 'Overview', href: '/dashboard/inventory', current: pathname === '/dashboard/inventory' },
-          { name: 'Goods Receipts', href: '/dashboard/inventory/incoming-shipments', current: pathname === '/dashboard/inventory/incoming-shipments' },
-          { name: 'Warehouse Operations', href: '/dashboard/inventory/warehouse-operator', current: pathname === '/dashboard/inventory/warehouse-operator' }
+          { name: 'Products', href: '/dashboard/inventory/products', current: pathname === '/dashboard/inventory/products' },
+          { name: 'Stock', href: '/dashboard/inventory/stock', current: pathname === '/dashboard/inventory/stock' },
+          { name: 'Movements', href: '/dashboard/inventory/movements', current: pathname === '/dashboard/inventory/movements' },
+          { name: 'Goods Receipts', href: '/dashboard/inventory/incoming-shipments', current: pathname === '/dashboard/inventory/incoming-shipments' }
         ]
       })
     }
@@ -177,20 +257,20 @@ export default function DashboardLayout({ children }) {
     return (
       <div key={item.name}>
         <div
-          className={`flex items-center justify-between px-4 py-3 text-gray-700 rounded-lg cursor-pointer transition-all duration-200 ${
+          className={`flex items-center justify-between px-4 py-3 text-white rounded-lg cursor-pointer transition-all duration-200 ${
             item.current 
-              ? 'bg-blue-50 text-blue-700 shadow-sm' 
-              : 'hover:bg-blue-50 hover:text-blue-700 hover:shadow-sm'
+              ? 'bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-md' 
+              : 'hover:bg-gradient-to-r hover:from-blue-700 hover:to-blue-900 hover:text-white hover:shadow-sm'
           }`}
           onClick={() => hasChildren ? toggleMenu(item.name) : router.push(item.href)}
         >
           <div className="flex items-center">
-            {IconComponent && <IconComponent className="h-5 w-5 mr-3" />}
+            {IconComponent && <IconComponent className="h-5 w-5 mr-3 text-white" />}
             <span>{item.name}</span>
           </div>
           {hasChildren && (
             <ChevronDownIcon 
-              className={`h-4 w-4 transition-transform duration-200 ${
+              className={`h-4 w-4 text-white transition-transform duration-200 ${
                 isExpanded ? 'rotate-180' : ''
               }`} 
             />
@@ -205,8 +285,8 @@ export default function DashboardLayout({ children }) {
                 href={child.href}
                 className={`block px-4 py-2 text-sm rounded-lg transition-all duration-200 ${
                   child.current
-                    ? 'bg-blue-100 text-blue-700 font-medium'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-800 text-white font-medium shadow-sm'
+                    : 'text-gray-300 hover:bg-gradient-to-r hover:from-blue-700 hover:to-blue-900 hover:text-white'
                 }`}
                 onClick={() => setSidebarOpen(false)}
               >
@@ -232,10 +312,10 @@ export default function DashboardLayout({ children }) {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-blue-900 via-slate-900 to-black shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-indigo-600">
+      } flex flex-col`}>
+        <div className="flex items-center justify-between h-16 px-6 border-b border-slate-600 bg-gradient-to-r from-slate-800 to-slate-900 flex-none">
           <div className="flex items-center">
             <div className="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center backdrop-blur-sm">
               <span className="text-white text-lg">🚀</span>
@@ -252,14 +332,16 @@ export default function DashboardLayout({ children }) {
           </button>
         </div>
 
-        <nav className="mt-8 px-4">
-          <div className="space-y-2">
-            {navigation.map(renderNavItem)}
-          </div>
-        </nav>
+        <div className="flex-1 overflow-y-auto pb-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900">
+          <nav className="mt-8 px-4">
+            <div className="space-y-2">
+              {navigation.map(renderNavItem)}
+            </div>
+          </nav>
+        </div>
 
         {/* User section */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-gray-50">
+        <div className="p-4 border-t border-slate-600 bg-gradient-to-r from-slate-800 to-black flex-none">
           <div className="flex items-center">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
               <span className="text-white text-sm font-medium">
@@ -267,10 +349,10 @@ export default function DashboardLayout({ children }) {
               </span>
             </div>
             <div className="ml-3 flex-1">
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-medium text-white">
                 {session?.user?.name || 'User'}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-300">
                 {session?.user?.email || 'user@example.com'}
               </p>
             </div>
@@ -278,7 +360,7 @@ export default function DashboardLayout({ children }) {
               variant="ghost"
               size="sm"
               onClick={handleSignOut}
-              className="text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+              className="text-gray-300 hover:text-white hover:bg-blue-600"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -291,11 +373,11 @@ export default function DashboardLayout({ children }) {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <div className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
+        <div className="sticky top-0 z-40 bg-gradient-to-r from-blue-600 to-black shadow-sm border-b border-gray-200">
           <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition-colors"
+              className="lg:hidden p-2 rounded-md text-white hover:text-white hover:bg-white hover:bg-opacity-20 transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -305,8 +387,8 @@ export default function DashboardLayout({ children }) {
             <div className="flex-1 lg:hidden"></div>
             
             <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-500">
-                Welcome back, <span className="font-medium text-gray-900">{session?.user?.name || 'User'}</span>! 👋
+              <div className="text-sm text-white">
+                Welcome back, <span className="font-medium text-white">{session?.user?.name || 'User'}</span>! 👋
               </div>
             </div>
           </div>

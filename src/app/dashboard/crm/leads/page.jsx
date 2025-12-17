@@ -215,7 +215,7 @@ export default function LeadsPage() {
           <p className="text-gray-600 mt-2">Track and manage your sales pipeline</p>
         </div>
         <div className="flex space-x-3">
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2">
+          <button className="bg-gradient-to-r from-blue-600 to-black text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-gray-900 flex items-center space-x-2">
             <Plus className="h-5 w-5" />
             <span>Add Lead</span>
           </button>
@@ -525,7 +525,7 @@ export default function LeadsPage() {
               : 'Get started by creating your first lead.'}
           </p>
           <div className="mt-6">
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+            <button className="bg-gradient-to-r from-blue-600 to-black text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-gray-900">
               Add Lead
             </button>
           </div>

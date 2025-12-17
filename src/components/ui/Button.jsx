@@ -12,10 +12,10 @@ const Button = React.forwardRef(({
   const baseClasses = 'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none'
   
   const variants = {
-    default: 'bg-blue-600 text-white hover:bg-blue-700',
-    destructive: 'bg-red-600 text-white hover:bg-red-700',
+    default: 'bg-gradient-to-r from-blue-600 to-black text-white hover:from-blue-700 hover:to-gray-900',
+    destructive: 'bg-gradient-to-r from-red-600 to-red-900 text-white hover:from-red-700 hover:to-black',
     outline: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
-    secondary: 'bg-gray-600 text-white hover:bg-gray-700',
+    secondary: 'bg-gradient-to-r from-gray-600 to-gray-900 text-white hover:from-gray-700 hover:to-black',
     ghost: 'text-gray-700 hover:bg-gray-100',
     link: 'text-blue-600 underline-offset-4 hover:underline',
   }

@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "Vendor"
+ADD COLUMN IF NOT EXISTS "bankName" TEXT,
+ADD COLUMN IF NOT EXISTS "bankAccountNumber" TEXT,
+ADD COLUMN IF NOT EXISTS "attributes" JSONB NOT NULL DEFAULT '{}'::jsonb;
+

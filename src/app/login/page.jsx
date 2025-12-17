@@ -1,105 +1,64 @@
-'use client'
+import React from 'react';
+import LoginForm from './_components/LoginForm';
 
-import { useState } from 'react'
-import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-
-export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const router = useRouter()
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-
-    try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
-      })
-
-      if (result?.error) {
-        setError('Invalid email or password')
-      } else {
-        router.push('/dashboard')
-      }
-    } catch (error) {
-      setError('An error occurred. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
+export default async function LoginPage({
+  searchParams = {},
+}) {
+  // Ensure searchParams is an object
+  const params = searchParams || {};
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-            <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Background Image with Overlay */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: "url('/images/auth-bg.jpg')"
+        }}
+      />
+      
+      {/* Dark overlay for better text readability */}
+      <div className="absolute inset-0 bg-black bg-opacity-30"></div>
+      
+      {/* Content */}
+      <div className="relative z-10 min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-white drop-shadow-lg">
+              Galaxy ERP
+            </h1>
+            <p className="mt-2 text-lg text-blue-100 drop-shadow-md">
+              Enterprise Resource Planning System
+            </p>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to Galaxy ERP
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Access your enterprise resource planning system
-          </p>
-        </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <Input
-              label="Email Address"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="Enter your email"
-            />
-            
-            <Input
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="Enter your password"
-            />
-          </div>
-
-          {error && (
-            <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg border border-red-200">
-              {error}
+          
+          {params.message && (
+            <div className="mb-6 p-4 bg-blue-500 bg-opacity-20 backdrop-blur-sm text-blue-100 rounded-lg text-center border border-blue-400 border-opacity-30">
+              {params.message}
             </div>
           )}
+        </div>
 
-          <div>
-            <Button
-              type="submit"
-              className="w-full"
-              loading={loading}
-              disabled={loading}
-            >
-              Sign In
-            </Button>
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          {/* Glassmorphism Modal */}
+          <div className="bg-white bg-opacity-10 backdrop-blur-lg border border-white border-opacity-20 rounded-2xl shadow-2xl py-8 px-6 sm:px-10">
+            <div className="text-center mb-6">
+              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-600 via-slate-800 to-black rounded-xl flex items-center justify-center mb-4 shadow-lg">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-blue-600 to-slate-800 bg-clip-text text-transparent drop-shadow-md">
+                Welcome back
+              </h2>
+              <p className="mt-2 text-blue-100 text-sm">
+                Sign in to your Galaxy ERP account
+              </p>
+            </div>
+            
+            <LoginForm />
           </div>
-
-          <div className="text-center">
-            <Link href="/register" className="text-blue-600 hover:text-blue-500 text-sm font-medium transition-colors">
-              Don&apos;t have an account? Sign up
-            </Link>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
-  )
-} 
+  );
+}
