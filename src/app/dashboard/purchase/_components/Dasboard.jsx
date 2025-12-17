@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import RfqForm from './rfq/RfqForm';
@@ -46,7 +46,7 @@ const EmptyState = ({ onCreateNew }) => (
   </div>
 );
 
-export default function Dashboard() {
+function DashboardContent() {
   const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
   const [rfqs, setRfqs] = useState([]);
@@ -375,5 +375,17 @@ export default function Dashboard() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }

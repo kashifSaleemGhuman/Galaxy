@@ -68,8 +68,62 @@ export async function POST(req) {
       email,
       fullAddress,
       auditDate,
-      internalAuditorName,
-      dataFrom
+      internalAuditorNames,
+      dataFrom,
+      // Section 1
+      siteNameLocalLanguage,
+      siteURN,
+      fullestScopeOfOperations,
+      abbreviations,
+      // Section 2
+      companyRegistrationNumber,
+      // Section 3
+      latitude,
+      longitude,
+      // Section 4
+      country,
+      // Section 5
+      telephoneNumber,
+      // Section 6a
+      principalContactName,
+      principalContactPosition,
+      principalContactEmail,
+      // Section 6b
+      environmentalResponsibleName,
+      environmentalResponsiblePosition,
+      environmentalResponsibleEmail,
+      // Additional
+      lwgCommunicationsMembers,
+      website,
+      facilityDescription,
+      totalSiteArea,
+      siteAreaBoundaries,
+      // Workforce - Direct Labour
+      directLabourShiftAM,
+      directLabourShiftPM,
+      directLabourShiftNight,
+      directLabourCount,
+      // Workforce - Indirect Labour
+      indirectLabourShiftAM,
+      indirectLabourShiftPM,
+      indirectLabourShiftNight,
+      indirectLabourCount,
+      // Workforce - Shift Total
+      shiftTotalAM,
+      shiftTotalPM,
+      shiftTotalNight,
+      shiftTotal,
+      // Operating Schedule - Worker
+      workerDaysPerWeek,
+      workerWeeksPerYear,
+      workerDaysPerYear,
+      // Operating Schedule - Manufacturing operations
+      manufacturingDaysPerWeek,
+      manufacturingWeeksPerYear,
+      manufacturingDaysPerYear,
+      // Environmental
+      environmentalImpacts,
+      operationsForOtherOrganisations
     } = body;
 
     if (!companyName) {
@@ -81,38 +135,83 @@ export async function POST(req) {
     // Check if an organization record already exists
     const existingOrg = await prisma.organization.findFirst();
 
+    const organizationData = {
+      companyName,
+      companyLogo,
+      shortName,
+      address,
+      factoryContactNo,
+      email,
+      fullAddress,
+      auditDate: auditDate ? new Date(auditDate) : null,
+      internalAuditorNames: internalAuditorNames ? JSON.parse(JSON.stringify(internalAuditorNames)) : null,
+      dataFrom: dataFrom ? new Date(dataFrom) : null,
+      // Section 1
+      siteNameLocalLanguage,
+      siteURN,
+      fullestScopeOfOperations,
+      abbreviations: abbreviations ? JSON.parse(JSON.stringify(abbreviations)) : null,
+      // Section 2
+      companyRegistrationNumber,
+      // Section 3
+      latitude,
+      longitude,
+      // Section 4
+      country,
+      // Section 5
+      telephoneNumber,
+      // Section 6a
+      principalContactName,
+      principalContactPosition,
+      principalContactEmail,
+      // Section 6b
+      environmentalResponsibleName,
+      environmentalResponsiblePosition,
+      environmentalResponsibleEmail,
+      // Additional
+      lwgCommunicationsMembers: lwgCommunicationsMembers ? JSON.parse(JSON.stringify(lwgCommunicationsMembers)) : null,
+      website,
+      facilityDescription,
+      totalSiteArea,
+      siteAreaBoundaries,
+      // Workforce - Direct Labour
+      directLabourShiftAM: directLabourShiftAM ? parseInt(directLabourShiftAM) : null,
+      directLabourShiftPM: directLabourShiftPM ? parseInt(directLabourShiftPM) : null,
+      directLabourShiftNight: directLabourShiftNight ? parseInt(directLabourShiftNight) : null,
+      directLabourCount: directLabourCount ? parseInt(directLabourCount) : null,
+      // Workforce - Indirect Labour
+      indirectLabourShiftAM: indirectLabourShiftAM ? parseInt(indirectLabourShiftAM) : null,
+      indirectLabourShiftPM: indirectLabourShiftPM ? parseInt(indirectLabourShiftPM) : null,
+      indirectLabourShiftNight: indirectLabourShiftNight ? parseInt(indirectLabourShiftNight) : null,
+      indirectLabourCount: indirectLabourCount ? parseInt(indirectLabourCount) : null,
+      // Workforce - Shift Total
+      shiftTotalAM: shiftTotalAM ? parseInt(shiftTotalAM) : null,
+      shiftTotalPM: shiftTotalPM ? parseInt(shiftTotalPM) : null,
+      shiftTotalNight: shiftTotalNight ? parseInt(shiftTotalNight) : null,
+      shiftTotal: shiftTotal ? parseInt(shiftTotal) : null,
+      // Operating Schedule - Worker
+      workerDaysPerWeek: workerDaysPerWeek ? parseInt(workerDaysPerWeek) : null,
+      workerWeeksPerYear: workerWeeksPerYear ? parseInt(workerWeeksPerYear) : null,
+      workerDaysPerYear: workerDaysPerYear ? parseInt(workerDaysPerYear) : null,
+      // Operating Schedule - Manufacturing operations
+      manufacturingDaysPerWeek: manufacturingDaysPerWeek ? parseInt(manufacturingDaysPerWeek) : null,
+      manufacturingWeeksPerYear: manufacturingWeeksPerYear ? parseInt(manufacturingWeeksPerYear) : null,
+      manufacturingDaysPerYear: manufacturingDaysPerYear ? parseInt(manufacturingDaysPerYear) : null,
+      // Environmental
+      environmentalImpacts,
+      operationsForOtherOrganisations
+    };
+
     if (existingOrg) {
       // Update existing
       organization = await prisma.organization.update({
         where: { id: existingOrg.id },
-        data: {
-          companyName,
-          companyLogo,
-          shortName,
-          address,
-          factoryContactNo,
-          email,
-          fullAddress,
-          auditDate: auditDate ? new Date(auditDate) : null,
-          internalAuditorName,
-          dataFrom: dataFrom ? new Date(dataFrom) : null,
-        }
+        data: organizationData
       });
     } else {
       // Create new
       organization = await prisma.organization.create({
-        data: {
-          companyName,
-          companyLogo,
-          shortName,
-          address,
-          factoryContactNo,
-          email,
-          fullAddress,
-          auditDate: auditDate ? new Date(auditDate) : null,
-          internalAuditorName,
-          dataFrom: dataFrom ? new Date(dataFrom) : null,
-        }
+        data: organizationData
       });
     }
 
