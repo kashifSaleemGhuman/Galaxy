@@ -235,17 +235,6 @@ export default function DashboardLayout({ children }) {
 
   const navigation = getNavigation()
 
-  // Filter navigation based on role
-  // Purchase users and managers only see Purchase, Settings, and Analytics
-  // Admin sees all items
-  const navigation = isPurchaseRole
-    ? allNavigationItems.filter(item => 
-        item.name === 'Purchase' || 
-        item.name === 'Analytics' || 
-        item.name === 'Settings'
-      )
-    : allNavigationItems
-
   const toggleMenu = (menuName) => {
     const newExpanded = new Set(expandedMenus)
     if (newExpanded.has(menuName)) {
