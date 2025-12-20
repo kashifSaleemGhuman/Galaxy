@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Toast } from '@/components/ui/Toast';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
-import { EyeIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, LinkIcon } from '@heroicons/react/24/outline';
 
 export default function RawPurchasesPage() {
   const router = useRouter();
@@ -165,15 +165,26 @@ export default function RawPurchasesPage() {
                       {purchase.sqFtApprox || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewDetails(purchase)}
-                        className="flex items-center gap-2"
-                      >
-                        <EyeIcon className="h-4 w-4" />
-                        View
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/dashboard/organization/raw-purchases/${purchase.id}/traceability`)}
+                          className="flex items-center gap-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-300"
+                        >
+                          <LinkIcon className="h-4 w-4" />
+                          Traceability
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(purchase)}
+                          className="flex items-center gap-2"
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                          View
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))

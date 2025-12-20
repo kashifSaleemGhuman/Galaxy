@@ -57,19 +57,19 @@ model Vendor {
 }
 
 model Product {
-  id             String          @id @default(cuid())
-  name           String
-  description    String?
-  category       String?
-  unit           String
-  attributes     Json            @default("{}")
-  traceabilityQuestions Json     @default("[]")
-  isActive       Boolean         @default(true)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  rfqItems       RFQItem[]
-  POLine         POLine[]
-  vendorProducts VendorProduct[]
+  id                    String          @id @default(cuid())
+  name                  String
+  description           String?
+  category              String?
+  unit                  String
+  attributes            Json            @default("{}")
+  traceabilityQuestions Json            @default("[]")
+  isActive              Boolean         @default(true)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  rfqItems              RFQItem[]
+  POLine                POLine[]
+  vendorProducts        VendorProduct[]
 }
 
 model RFQ {
@@ -105,8 +105,8 @@ model RFQItem {
   // Vendor Quote Details (per item)
   unitPrice            Decimal?
   expectedDeliveryDate DateTime?
-  traceabilityAnswers  Json        @default("[]")
-  customFieldAnswers   Json        @default("{}")
+  traceabilityAnswers  Json      @default("[]")
+  customFieldAnswers   Json      @default("{}")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -136,7 +136,7 @@ model Supplier {
 
   // Relations
   purchaseOrders PurchaseOrder[]
-  
+
   @@map("Supplier")
 }
 
@@ -151,7 +151,7 @@ model PurchaseOrder {
   // Relations
   supplier Supplier @relation(fields: [supplierId], references: [supplierId])
   lines    POLine[]
-  
+
   @@map("PurchaseOrder")
 }
 
@@ -165,10 +165,62 @@ model POLine {
   price            Decimal
 
   // Relations
-  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
-  product       Product       @relation(fields: [productId], references: [id])
+  purchaseOrder PurchaseOrder        @relation(fields: [poId], references: [poId])
+  product       Product              @relation(fields: [productId], references: [id])
+  traceability  ProductTraceability?
 
   @@map("POLine")
+}
+
+// Product Traceability model - tracks the supply chain for each product in a purchase
+model ProductTraceability {
+  id       String @id @default(cuid())
+  poLineId String @unique @map("po_line_id")
+
+  // Farm Section
+  farmId             String?
+  animalType         String?
+  farmLocation       String?
+  farmCertifications Json?   @default("[]")
+
+  // Slaughter House Section
+  supplier                String?
+  slaughterAnimalType     String?
+  origin                  String?
+  hideSkinType            String?
+  hideSkinId              String?
+  slaughterDate           DateTime?
+  slaughterLocation       String?
+  slaughterCertifications Json?     @default("[]")
+
+  // Tannery Section
+  tanneryName           String?
+  tanneryLocation       String?
+  tanningType           String?
+  article               String?
+  vehicleNumber         String?
+  processedLotNumber    String?
+  envParameters         Json?   @default("{}")
+  tanneryCertifications Json?   @default("[]")
+
+  // Factory Section
+  factoryName          String?
+  factoryLocation      String?
+  materialType         String?
+  product              String?
+  finishDate           DateTime?
+  hardLabourUsed       String?
+  care                 String?
+  brand                String?
+  factoryCertification String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  poLine POLine @relation(fields: [poLineId], references: [poLineId], onDelete: Cascade)
+
+  @@map("ProductTraceability")
 }
 
 // Vendor-Product relationship (many-to-many with additional fields)
@@ -190,88 +242,88 @@ model VendorProduct {
 }
 
 model Organization {
-  id                  String    @id @default(cuid())
-  companyName         String
-  companyLogo         String?   // Path to the logo file or Base64
-  shortName           String?
-  address             String?
-  factoryContactNo    String?
-  email               String?
-  fullAddress         String?
-  auditDate           DateTime?
-  internalAuditorNames Json?       @default("[]") // Array of auditor names
-  dataFrom            DateTime?
-  
+  id                   String    @id @default(cuid())
+  companyName          String
+  companyLogo          String? // Path to the logo file or Base64
+  shortName            String?
+  address              String?
+  factoryContactNo     String?
+  email                String?
+  fullAddress          String?
+  auditDate            DateTime?
+  internalAuditorNames Json?     @default("[]") // Array of auditor names
+  dataFrom             DateTime?
+
   // Section 1: General Facility Details
-  siteNameLocalLanguage String?
-  siteURN              String?
+  siteNameLocalLanguage    String?
+  siteURN                  String?
   fullestScopeOfOperations String? // Category A-G
-  abbreviations        Json?       @default("[]") // Array of {abbreviation, fullTitle}
-  
+  abbreviations            Json?   @default("[]") // Array of {abbreviation, fullTitle}
+
   // Section 2: Company Registration
   companyRegistrationNumber String?
-  
+
   // Section 3: Geographical Coordinates
-  latitude            String?
-  longitude           String?
-  
+  latitude  String?
+  longitude String?
+
   // Section 4: Location
-  country             String?
-  
+  country String?
+
   // Section 5: Contact
-  telephoneNumber     String?
-  
+  telephoneNumber String?
+
   // Section 6a: Principal Contact
   principalContactName     String?
   principalContactPosition String?
   principalContactEmail    String?
-  
+
   // Section 6b: Environmental Responsible
   environmentalResponsibleName     String?
   environmentalResponsiblePosition String?
   environmentalResponsibleEmail    String?
-  
+
   // Additional Information
-  lwgCommunicationsMembers Json?  @default("[]") // Array of {email, communicationRequired}
+  lwgCommunicationsMembers Json?   @default("[]") // Array of {email, communicationRequired}
   website                  String?
   facilityDescription      String? // Description of facility, site setting, environmental receptors
   totalSiteArea            String? // Total site area in m²
   siteAreaBoundaries       String? // Single or multiple boundaries
-  
+
   // Workforce Information - Direct Labour
-  directLabourShiftAM      Int?
-  directLabourShiftPM      Int?
-  directLabourShiftNight   Int?
-  directLabourCount        Int?
-  
+  directLabourShiftAM    Int?
+  directLabourShiftPM    Int?
+  directLabourShiftNight Int?
+  directLabourCount      Int?
+
   // Workforce Information - Indirect Labour
   indirectLabourShiftAM    Int?
   indirectLabourShiftPM    Int?
   indirectLabourShiftNight Int?
   indirectLabourCount      Int?
-  
+
   // Workforce Information - Shift Total
-  shiftTotalAM             Int?
-  shiftTotalPM             Int?
-  shiftTotalNight          Int?
-  shiftTotal               Int?
-  
+  shiftTotalAM    Int?
+  shiftTotalPM    Int?
+  shiftTotalNight Int?
+  shiftTotal      Int?
+
   // Operating Schedule - Worker
-  workerDaysPerWeek        Int?
-  workerWeeksPerYear       Int?
-  workerDaysPerYear        Int?
-  
+  workerDaysPerWeek  Int?
+  workerWeeksPerYear Int?
+  workerDaysPerYear  Int?
+
   // Operating Schedule - Manufacturing operations
-  manufacturingDaysPerWeek Int?
+  manufacturingDaysPerWeek  Int?
   manufacturingWeeksPerYear Int?
-  manufacturingDaysPerYear Int?
-  
+  manufacturingDaysPerYear  Int?
+
   // Environmental and Operations
-  environmentalImpacts     String? // Environmental impacts description
+  environmentalImpacts            String? // Environmental impacts description
   operationsForOtherOrganisations String? // Operations for other organisations
-  
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Document {
@@ -285,60 +337,60 @@ model Document {
 }
 
 model Employee {
-  id                   String    @id @default(cuid())
-  employeeId           String    @unique
-  idCardNumber         String?
-  name                 String
-  photo                String?
-  parentName           String?   // Father/Mother
-  dob                  DateTime?
-  address              String?
-  gender               String?
-  contactNumber        String?
-  emergencyContact     String?
-  dateOfJoining        DateTime?
-  department           String?
-  lastEmployment       String?
-  process              String?
-  designation          String?
-  salary               Decimal?
-  dateOfLeaving        DateTime?
-  shift                String?
-  secondaryJob         String?
-  
-  // Certifications/Roles
-  isFirstAider         Boolean   @default(false)
-  isEmergencyResponder Boolean   @default(false)
-  isFirefighter        Boolean   @default(false)
+  id               String    @id @default(cuid())
+  employeeId       String    @unique
+  idCardNumber     String?
+  name             String
+  photo            String?
+  parentName       String? // Father/Mother
+  dob              DateTime?
+  address          String?
+  gender           String?
+  contactNumber    String?
+  emergencyContact String?
+  dateOfJoining    DateTime?
+  department       String?
+  lastEmployment   String?
+  process          String?
+  designation      String?
+  salary           Decimal?
+  dateOfLeaving    DateTime?
+  shift            String?
+  secondaryJob     String?
 
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  // Certifications/Roles
+  isFirstAider         Boolean @default(false)
+  isEmergencyResponder Boolean @default(false)
+  isFirefighter        Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Machine {
-  id                  String    @id @default(cuid())
-  serialNumber        String?
-  machineId           String    @unique
-  name                String
-  quantity            Int       @default(1)
-  motorDetails        String?
-  powerRating         String?
-  airPressure         String?
-  modelNumber         String?
-  manufacturingYear   String?
-  length              String?
-  width               String?
-  height              String?
-  steamTemp           String?
-  steamConsumption    String?
-  electricityRating   String?
-  operationType       String?
-  department          String?
-  status              String?   // "in_use", "under_maintenance", "out_of_order"
-  remarks             String?
+  id                String  @id @default(cuid())
+  serialNumber      String?
+  machineId         String  @unique
+  name              String
+  quantity          Int     @default(1)
+  motorDetails      String?
+  powerRating       String?
+  airPressure       String?
+  modelNumber       String?
+  manufacturingYear String?
+  length            String?
+  width             String?
+  height            String?
+  steamTemp         String?
+  steamConsumption  String?
+  electricityRating String?
+  operationType     String?
+  department        String?
+  status            String? // "in_use", "under_maintenance", "out_of_order"
+  remarks           String?
 
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Permit {
@@ -353,6 +405,6 @@ model Permit {
   lastReportDate        DateTime?
   responsiblePerson     String?
 
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
