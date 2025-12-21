@@ -60,7 +60,7 @@ export default function TraceabilityPage() {
   const breadcrumbs = [
     { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
     { key: 'organization', label: 'Organization', href: '/dashboard/organization' },
-    { key: 'raw-purchases', label: 'Raw Purchases', href: '/dashboard/organization/raw-purchases' },
+    { key: 'raw-purchases', label: 'Purchases', href: '/dashboard/organization/raw-purchases' },
     { key: 'traceability', label: 'Traceability', href: '#' },
   ];
 

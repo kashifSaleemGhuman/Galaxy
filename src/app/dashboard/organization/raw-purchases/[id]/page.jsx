@@ -18,7 +18,7 @@ export default function RawPurchaseDetailPage() {
   const breadcrumbs = [
     { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
     { key: 'organization', label: 'Organization', href: '/dashboard/organization' },
-    { key: 'raw-purchases', label: 'Raw Purchases', href: '/dashboard/organization/raw-purchases' },
+    { key: 'raw-purchases', label: 'Purchases', href: '/dashboard/organization/raw-purchases' },
     { key: 'detail', label: 'Product Details', href: '#' },
   ];
 
@@ -72,7 +72,7 @@ export default function RawPurchaseDetailPage() {
         <div className="bg-white shadow rounded-lg p-6">
           <p className="text-gray-500">Purchase record not found.</p>
           <Button onClick={() => router.push('/dashboard/organization/raw-purchases')} className="mt-4">
-            Back to Raw Purchases
+            Back to Purchases
           </Button>
         </div>
       </div>
