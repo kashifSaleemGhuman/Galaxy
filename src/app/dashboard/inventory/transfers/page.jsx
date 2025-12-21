@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import useSWR from 'swr'
 import DataTable from '@/components/ui/DataTable'
+import LoadingBar from '@/components/ui/LoadingBar'
 import TransferModal from './_components/TransferModal'
 
 const fetcher = (url) => fetch(url).then(res => res.json())
