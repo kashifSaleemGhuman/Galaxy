@@ -180,13 +180,13 @@ export default function WarehouseShipments() {
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => handleViewDetails(shipment)}
+                    <Link
+                      href={`/dashboard/warehouse/shipments/${shipment.id}`}
                       className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50"
                     >
                       <Eye className="w-3 h-3 mr-1" />
-                      View
-                    </button>
+                      View Details
+                    </Link>
                     {shipment.status === 'assigned' && (
                       <Link
                         href={`/dashboard/warehouse/process/${shipment.id}`}

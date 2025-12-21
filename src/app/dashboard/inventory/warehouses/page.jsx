@@ -22,6 +22,7 @@ import WarehouseModal from './_components/WarehouseModal'
 import LocationManager from './_components/LocationManager'
 import ManagerCreator from './_components/ManagerCreator'
 import { ROLES } from '@/lib/constants/roles'
+import { toast } from '@/lib/toast'
 
 export default function WarehousesPage() {
   const { data: session } = useSession()
@@ -118,30 +119,38 @@ export default function WarehousesPage() {
   const handleDeleteWarehouse = async (warehouse) => {
     if (window.confirm(`Are you sure you want to delete "${warehouse.name}"?`)) {
       try {
+        toast.info('Deleting Warehouse...', 'Please wait while the warehouse is being deleted.')
         const response = await fetch(`/api/inventory/warehouses/${warehouse.id}`, {
           method: 'DELETE'
         })
         
         if (response.ok) {
+          toast.success('Warehouse Deleted', `"${warehouse.name}" has been deleted successfully.`)
           await fetchWarehouses()
         } else {
           const error = await response.json()
-          alert(error.error || 'Failed to delete warehouse')
+          toast.error('Delete Failed', error.error || 'Failed to delete warehouse')
         }
       } catch (error) {
         console.error('Error deleting warehouse:', error)
-        alert('Failed to delete warehouse')
+        toast.error('Delete Failed', 'An error occurred while deleting the warehouse.')
       }
     }
   }
 
   const handleSaveWarehouse = async (warehouseData) => {
     try {
-      const url = modalMode === 'create' 
+      const isCreating = modalMode === 'create'
+      toast.info(
+        isCreating ? 'Creating Warehouse...' : 'Updating Warehouse...',
+        `Please wait while ${isCreating ? 'creating' : 'updating'} the warehouse.`
+      )
+
+      const url = isCreating
         ? '/api/inventory/warehouses'
         : `/api/inventory/warehouses/${selectedWarehouse.id}`
       
-      const method = modalMode === 'create' ? 'POST' : 'PUT'
+      const method = isCreating ? 'POST' : 'PUT'
       
       const response = await fetch(url, {
         method,
@@ -151,13 +160,19 @@ export default function WarehousesPage() {
         body: JSON.stringify(warehouseData),
       })
       
+      const result = await response.json()
+      
       if (response.ok) {
+        toast.success(
+          isCreating ? 'Warehouse Created' : 'Warehouse Updated',
+          `Warehouse "${warehouseData.name}" has been ${isCreating ? 'created' : 'updated'} successfully.`
+        )
         await fetchWarehouses()
         setShowModal(false)
         return true
       } else {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to save warehouse')
+        toast.error('Save Failed', result.error || 'Failed to save warehouse')
+        throw new Error(result.error || 'Failed to save warehouse')
       }
     } catch (error) {
       console.error('Error saving warehouse:', error)
@@ -170,11 +185,49 @@ export default function WarehousesPage() {
     setShowLocationManager(true)
   }
 
-  const handleCreateManager = (warehouse) => {
+  const handleCreateManager = async (warehouse) => {
     // Check if warehouse already has a manager
     if (warehouse.managerId || warehouse.manager) {
-      // Show manager info or allow viewing credentials
-      alert(`Manager already assigned: ${warehouse.manager?.name || warehouse.manager?.email || 'N/A'}\n\nNote: Password cannot be retrieved. Please contact Super Admin to reset if needed.`)
+      // Fetch and show manager credentials in modal
+      if (isSuperAdmin) {
+        try {
+          const response = await fetch(`/api/inventory/warehouses/${warehouse.id}/create-manager`)
+          if (response.ok) {
+            const data = await response.json()
+            if (data.data.credentials) {
+              const creds = data.data.credentials
+              // Store in localStorage for persistence
+              localStorage.setItem(`manager_creds_${warehouse.id}`, JSON.stringify(creds))
+              // Open modal with credentials
+              setSelectedWarehouseForManager(warehouse)
+              setShowManagerCreator(true)
+            } else {
+              alert(`Manager: ${data.data.manager.name}\nEmail: ${data.data.manager.email}\n\n${data.data.note || 'Password has expired. Please reset password if needed.'}`)
+            }
+          } else {
+            // Try to load from localStorage
+            const stored = localStorage.getItem(`manager_creds_${warehouse.id}`)
+            if (stored) {
+              setSelectedWarehouseForManager(warehouse)
+              setShowManagerCreator(true)
+            } else {
+              alert(`Manager already assigned: ${warehouse.manager?.name || warehouse.manager?.email || 'N/A'}\n\nNote: Password cannot be retrieved.`)
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching credentials:', error)
+          // Try to load from localStorage
+          const stored = localStorage.getItem(`manager_creds_${warehouse.id}`)
+          if (stored) {
+            setSelectedWarehouseForManager(warehouse)
+            setShowManagerCreator(true)
+          } else {
+            alert(`Manager already assigned: ${warehouse.manager?.name || warehouse.manager?.email || 'N/A'}`)
+          }
+        }
+      } else {
+        alert(`Manager already assigned: ${warehouse.manager?.name || warehouse.manager?.email || 'N/A'}`)
+      }
       return
     }
     setSelectedWarehouseForManager(warehouse)

@@ -60,20 +60,52 @@ export default function MovementsPage() {
   // Handle saving stock movement
   const handleSaveStockMovement = async (payload) => {
     try {
+      // Show loading message
+      const loadingEvent = new CustomEvent('show-toast', {
+        detail: { 
+          title: 'Creating Request...', 
+          message: 'Please wait while your stock movement request is being created.',
+          type: 'info',
+          duration: 3000
+        }
+      })
+      window.dispatchEvent(loadingEvent)
+
       const response = await fetch('/api/inventory/movements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
 
+      const result = await response.json()
+
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to save stock movement')
+        const errorEvent = new CustomEvent('show-toast', {
+          detail: { 
+            title: 'Error', 
+            message: result.error || 'Failed to create stock movement request',
+            type: 'error',
+            duration: 5000
+          }
+        })
+        window.dispatchEvent(errorEvent)
+        throw new Error(result.error || 'Failed to save stock movement')
       }
+
+      // Show success message
+      const successEvent = new CustomEvent('show-toast', {
+        detail: { 
+          title: 'Request Created Successfully', 
+          message: result.message || 'Your stock movement request has been created and is pending approval from Super Admin.',
+          type: 'success',
+          duration: 6000
+        }
+      })
+      window.dispatchEvent(successEvent)
 
       // Refresh data
       mutate(buildApiUrl())
-      return await response.json()
+      return result
     } catch (error) {
       console.error('Error saving stock movement:', error)
       throw error
@@ -83,6 +115,17 @@ export default function MovementsPage() {
   // Handle saving transfer
   const handleSaveTransfer = async (payload) => {
     try {
+      // Show loading message
+      const loadingEvent = new CustomEvent('show-toast', {
+        detail: { 
+          title: 'Creating Transfer Request...', 
+          message: 'Please wait while your transfer request is being created.',
+          type: 'info',
+          duration: 3000
+        }
+      })
+      window.dispatchEvent(loadingEvent)
+
       // Transform payload to match API format
       const transferPayload = {
         fromWarehouseId: payload.fromWarehouseId,
@@ -104,14 +147,35 @@ export default function MovementsPage() {
         body: JSON.stringify(transferPayload)
       })
 
+      const result = await response.json()
+
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to create transfer')
+        const errorEvent = new CustomEvent('show-toast', {
+          detail: { 
+            title: 'Error', 
+            message: result.error || 'Failed to create transfer request',
+            type: 'error',
+            duration: 5000
+          }
+        })
+        window.dispatchEvent(errorEvent)
+        throw new Error(result.error || 'Failed to create transfer')
       }
+
+      // Show success message
+      const successEvent = new CustomEvent('show-toast', {
+        detail: { 
+          title: 'Transfer Request Created', 
+          message: result.message || 'Your transfer request has been created and is pending approval from Super Admin.',
+          type: 'success',
+          duration: 6000
+        }
+      })
+      window.dispatchEvent(successEvent)
 
       // Refresh data
       mutate(buildApiUrl())
-      return await response.json()
+      return result
     } catch (error) {
       console.error('Error saving transfer:', error)
       throw error
@@ -121,6 +185,17 @@ export default function MovementsPage() {
   // Handle saving adjustment
   const handleSaveAdjustment = async (payload) => {
     try {
+      // Show loading message
+      const loadingEvent = new CustomEvent('show-toast', {
+        detail: { 
+          title: 'Creating Adjustment Request...', 
+          message: 'Please wait while your adjustment request is being created.',
+          type: 'info',
+          duration: 3000
+        }
+      })
+      window.dispatchEvent(loadingEvent)
+
       // Transform payload to match API format
       const adjustmentPayload = {
         warehouseId: payload.warehouseId,
@@ -141,14 +216,35 @@ export default function MovementsPage() {
         body: JSON.stringify(adjustmentPayload)
       })
 
+      const result = await response.json()
+
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to create adjustment')
+        const errorEvent = new CustomEvent('show-toast', {
+          detail: { 
+            title: 'Error', 
+            message: result.error || 'Failed to create adjustment request',
+            type: 'error',
+            duration: 5000
+          }
+        })
+        window.dispatchEvent(errorEvent)
+        throw new Error(result.error || 'Failed to create adjustment')
       }
+
+      // Show success message
+      const successEvent = new CustomEvent('show-toast', {
+        detail: { 
+          title: 'Adjustment Request Created', 
+          message: result.message || 'Your adjustment request has been created and is pending approval from Super Admin.',
+          type: 'success',
+          duration: 6000
+        }
+      })
+      window.dispatchEvent(successEvent)
 
       // Refresh data
       mutate(buildApiUrl())
-      return await response.json()
+      return result
     } catch (error) {
       console.error('Error saving adjustment:', error)
       throw error

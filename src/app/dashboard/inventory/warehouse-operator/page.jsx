@@ -11,6 +11,7 @@ import {
   Building2
 } from 'lucide-react'
 import Link from 'next/link'
+import { toast } from '@/lib/toast'
 
 export default function WarehouseOperator() {
   const [receipts, setReceipts] = useState([])
@@ -76,6 +77,7 @@ export default function WarehouseOperator() {
 
   const handleConfirmReceipt = async (receiptId) => {
     try {
+      toast.info('Processing Receipt...', 'Please wait while the receipt is being processed and stock is being updated.')
       console.log('Processing incoming shipment:', receiptId)
       
       const response = await fetch(`/api/inventory/incoming-shipments/${receiptId}/process`, {
@@ -91,19 +93,20 @@ export default function WarehouseOperator() {
       const result = await response.json();
       
       if (result.success) {
-        alert('Receipt confirmed successfully! Stock has been updated.')
+        toast.success('Receipt Confirmed', 'Receipt confirmed successfully! Stock has been updated.')
         fetchReceipts() // Refresh the list
       } else {
-        alert(`Error: ${result.error || 'Failed to process receipt'}`)
+        toast.error('Processing Failed', result.error || 'Failed to process receipt')
       }
     } catch (error) {
       console.error('Error confirming receipt:', error)
-      alert('Error confirming receipt')
+      toast.error('Processing Failed', 'An error occurred while processing the receipt.')
     }
   }
 
   const handleRejectReceipt = async (receiptId) => {
     try {
+      toast.info('Rejecting Receipt...', 'Please wait while the receipt is being rejected.')
       console.log('Rejecting receipt:', receiptId)
       
       const response = await fetch(`/api/inventory/incoming-shipments/${receiptId}/reject`, {
@@ -119,14 +122,14 @@ export default function WarehouseOperator() {
       const result = await response.json();
       
       if (result.success) {
-        alert('Receipt rejected successfully!')
+        toast.success('Receipt Rejected', 'Receipt has been rejected successfully.')
         fetchReceipts() // Refresh the list
       } else {
-        alert(`Error: ${result.error || 'Failed to reject receipt'}`)
+        toast.error('Rejection Failed', result.error || 'Failed to reject receipt')
       }
     } catch (error) {
       console.error('Error rejecting receipt:', error)
-      alert('Error rejecting receipt')
+      toast.error('Rejection Failed', 'An error occurred while rejecting the receipt.')
     }
   }
 

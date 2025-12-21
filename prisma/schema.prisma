@@ -62,6 +62,23 @@ model User {
   requestedMovements StockMovementRequest[] @relation("RequestedMovements")
   approvedMovements  StockMovementRequest[] @relation("ApprovedMovements")
   rejectedMovements  StockMovementRequest[] @relation("RejectedMovements")
+  
+  // Temporary password storage (for warehouse managers)
+  temporaryPassword TemporaryPassword?
+}
+
+// Temporary Password model - stores plain passwords temporarily for warehouse managers
+model TemporaryPassword {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  password  String   // Plain password (encrypted at application level if needed)
+  createdAt DateTime @default(now())
+  expiresAt DateTime // Password expires after 30 days or after first login
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("TemporaryPassword")
 }
 
 // Role model for permission management

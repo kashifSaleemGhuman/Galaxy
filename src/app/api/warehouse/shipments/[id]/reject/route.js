@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
+import { isAuthorizedForWarehouse } from '@/lib/warehouse-auth';
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
 export const dynamic = 'force-dynamic';
@@ -22,9 +23,15 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Only warehouse operators and super admins can reject shipments
+    // Only warehouse operators, inventory managers, and super admins can reject shipments
     const role = (currentUser.role || '').toUpperCase()
-    const canRejectShipments = [ROLES.INVENTORY_USER, ROLES.SUPER_ADMIN].includes(role);
+    const canRejectShipments = [
+      ROLES.WAREHOUSE_OPERATOR,
+      ROLES.INVENTORY_USER,
+      ROLES.INVENTORY_MANAGER,
+      ROLES.ADMIN,
+      ROLES.SUPER_ADMIN
+    ].includes(role);
     
     if (!canRejectShipments) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
@@ -37,7 +44,8 @@ export async function POST(request, { params }) {
     const shipment = await prisma.incomingShipment.findUnique({
       where: { id },
       include: {
-        purchaseOrder: true
+        purchaseOrder: true,
+        warehouse: true
       }
     });
 
@@ -49,6 +57,17 @@ export async function POST(request, { params }) {
       return NextResponse.json({ 
         error: 'Shipment must be assigned to a warehouse before it can be rejected' 
       }, { status: 400 });
+    }
+
+    // Check if warehouse operator is authorized for this specific warehouse
+    if (shipment.warehouseId) {
+      const isAuthorized = await isAuthorizedForWarehouse(currentUser, shipment.warehouseId)
+      if (!isAuthorized) {
+        return NextResponse.json(
+          { error: 'You are not authorized to reject shipments for this warehouse. Only the assigned warehouse manager can process shipments for their warehouse.' },
+          { status: 403 }
+        )
+      }
     }
 
     // Update shipment status to rejected

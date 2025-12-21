@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import DataTable from '@/components/ui/DataTable'
 import LoadingBar from '@/components/ui/LoadingBar'
+import { toast } from '@/lib/toast'
 
 export default function ReceiptsPage() {
   const [receipts, setReceipts] = useState([])
@@ -99,6 +100,7 @@ export default function ReceiptsPage() {
 
   const handleValidateReceipt = async (receiptId) => {
     try {
+      toast.info('Validating Receipt...', 'Please wait while the receipt is being validated and stock is being updated.')
       const response = await fetch(`/api/inventory/receipts/${receiptId}/validate`, {
         method: 'POST',
         headers: {
@@ -109,16 +111,17 @@ export default function ReceiptsPage() {
         })
       })
       
+      const result = await response.json()
+      
       if (response.ok) {
+        toast.success('Receipt Validated', 'Receipt validated successfully! Stock levels have been updated.')
         await fetchReceipts() // Refresh the list
-        alert('Receipt validated successfully! Stock levels have been updated.')
       } else {
-        const error = await response.json()
-        alert(error.error || 'Failed to validate receipt')
+        toast.error('Validation Failed', result.error || 'Failed to validate receipt')
       }
     } catch (error) {
       console.error('Error validating receipt:', error)
-      alert('Failed to validate receipt')
+      toast.error('Validation Failed', 'An error occurred while validating the receipt.')
     }
   }
 

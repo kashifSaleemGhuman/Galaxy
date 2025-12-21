@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { ROLES } from '@/lib/constants/roles'
+import { isAuthorizedForWarehouse } from '@/lib/warehouse-auth'
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
 export const dynamic = 'force-dynamic'
@@ -15,8 +16,17 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get current user from database
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     // Check if user has permission to approve shipments
-    const role = (session.user.role || '').toUpperCase()
+    const role = (currentUser.role || '').toUpperCase()
     const canApprove = [
       ROLES.SUPER_ADMIN,
       ROLES.ADMIN,
@@ -53,6 +63,17 @@ export async function POST(request, { params }) {
         { error: 'Shipment not found' },
         { status: 404 }
       )
+    }
+
+    // Check if warehouse operator is authorized for this specific warehouse
+    if (shipment.warehouseId) {
+      const isAuthorized = await isAuthorizedForWarehouse(currentUser, shipment.warehouseId)
+      if (!isAuthorized) {
+        return NextResponse.json(
+          { error: 'You are not authorized to process shipments for this warehouse. Only the assigned warehouse manager can process shipments for their warehouse.' },
+          { status: 403 }
+        )
+      }
     }
 
     if (shipment.status !== 'Assigned') {

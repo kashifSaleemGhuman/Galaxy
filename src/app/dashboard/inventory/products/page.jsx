@@ -20,6 +20,7 @@ import DataTable from '@/components/ui/DataTable'
 import LoadingBar from '@/components/ui/LoadingBar'
 import ProductModal from './_components/ProductModal'
 import { ROLES } from '@/lib/constants/roles'
+import { toast } from '@/lib/toast'
 
 export default function ProductsPage() {
   const { data: session } = useSession()
@@ -148,30 +149,38 @@ export default function ProductsPage() {
   const handleDeleteProduct = async (product) => {
     if (window.confirm(`Are you sure you want to delete "${product.name}"?`)) {
       try {
+        toast.info('Deleting Product...', 'Please wait while the product is being deleted.')
         const response = await fetch(`/api/inventory/products/${product.id}`, {
           method: 'DELETE'
         })
         
         if (response.ok) {
+          toast.success('Product Deleted', `"${product.name}" has been deleted successfully.`)
           await fetchProducts()
         } else {
           const error = await response.json()
-          alert(error.error || 'Failed to delete product')
+          toast.error('Delete Failed', error.error || 'Failed to delete product')
         }
       } catch (error) {
         console.error('Error deleting product:', error)
-        alert('Failed to delete product')
+        toast.error('Delete Failed', 'An error occurred while deleting the product.')
       }
     }
   }
 
   const handleSaveProduct = async (productData) => {
     try {
-      const url = modalMode === 'create' 
+      const isCreating = modalMode === 'create'
+      toast.info(
+        isCreating ? 'Creating Product...' : 'Updating Product...',
+        `Please wait while ${isCreating ? 'creating' : 'updating'} the product.`
+      )
+
+      const url = isCreating
         ? '/api/inventory/products'
         : `/api/inventory/products/${selectedProduct.id}`
       
-      const method = modalMode === 'create' ? 'POST' : 'PUT'
+      const method = isCreating ? 'POST' : 'PUT'
       
       const response = await fetch(url, {
         method,
@@ -181,13 +190,19 @@ export default function ProductsPage() {
         body: JSON.stringify(productData),
       })
       
+      const result = await response.json()
+      
       if (response.ok) {
+        toast.success(
+          isCreating ? 'Product Created' : 'Product Updated',
+          `Product "${productData.name}" has been ${isCreating ? 'created' : 'updated'} successfully.`
+        )
         await fetchProducts()
         setShowModal(false)
         return true
       } else {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to save product')
+        toast.error('Save Failed', result.error || 'Failed to save product')
+        throw new Error(result.error || 'Failed to save product')
       }
     } catch (error) {
       console.error('Error saving product:', error)

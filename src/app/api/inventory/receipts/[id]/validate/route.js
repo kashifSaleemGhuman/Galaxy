@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { hasPermission, PERMISSIONS } from '@/lib/constants/roles'
+import { isAuthorizedForWarehouse } from '@/lib/warehouse-auth'
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
 export const dynamic = 'force-dynamic'
@@ -16,14 +17,35 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get current user from database
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     // Check permissions
-    if (!hasPermission(session.user.role, PERMISSIONS.INVENTORY.RECEIPT_VALIDATE)) {
+    if (!hasPermission(currentUser.role, PERMISSIONS.INVENTORY.RECEIPT_VALIDATE)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     
     const { id } = params
     const body = await request.json()
     const { receivedQuantities = [] } = body // Array of { productId, quantity, warehouseId, locationId }
+    
+    // Check warehouse authorization for each warehouse in receivedQuantities
+    const warehouseIds = [...new Set(receivedQuantities.map(rq => rq.warehouseId).filter(Boolean))]
+    for (const warehouseId of warehouseIds) {
+      const isAuthorized = await isAuthorizedForWarehouse(currentUser, warehouseId)
+      if (!isAuthorized) {
+        return NextResponse.json(
+          { error: `You are not authorized to validate receipts for warehouse ${warehouseId}. Only the assigned warehouse manager can process receipts for their warehouse.` },
+          { status: 403 }
+        )
+      }
+    }
     
     // Get the goods receipt with related data
     const receipt = await prisma.goodsReceipt.findUnique({

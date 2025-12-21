@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
+import { isAuthorizedForWarehouse } from '@/lib/warehouse-auth';
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
 export const dynamic = 'force-dynamic';
@@ -24,7 +25,12 @@ export async function POST(req, { params }) {
 
     // Check if user has permission to process shipments
     const role = (currentUser.role || '').toUpperCase()
-    const canProcessShipment = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.INVENTORY_MANAGER].includes(role);
+    const canProcessShipment = [
+      ROLES.SUPER_ADMIN, 
+      ROLES.ADMIN, 
+      ROLES.INVENTORY_MANAGER,
+      ROLES.WAREHOUSE_OPERATOR
+    ].includes(role);
     if (!canProcessShipment) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
@@ -69,6 +75,15 @@ export async function POST(req, { params }) {
       return NextResponse.json({ 
         error: 'Shipment must be assigned to a warehouse before processing' 
       }, { status: 400 });
+    }
+
+    // Check if warehouse operator is authorized for this specific warehouse
+    const isAuthorized = await isAuthorizedForWarehouse(currentUser, shipment.warehouseId)
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { error: 'You are not authorized to process shipments for this warehouse. Only the assigned warehouse manager can process shipments for their warehouse.' },
+        { status: 403 }
+      )
     }
 
     // Process the shipment

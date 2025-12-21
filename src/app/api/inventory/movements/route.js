@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
+import { getAssignedWarehouseId } from '@/lib/warehouse-auth';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -24,12 +25,13 @@ export async function GET(request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // WAREHOUSE_OPERATOR is explicitly excluded - they should use warehouse module APIs only
+    // Allow warehouse operators to view movements for their warehouse
     const canViewMovements = [
       ROLES.SUPER_ADMIN,
       ROLES.ADMIN,
       ROLES.INVENTORY_MANAGER,
-      ROLES.INVENTORY_USER
+      ROLES.INVENTORY_USER,
+      ROLES.WAREHOUSE_OPERATOR
     ].includes(currentUser.role);
 
     if (!canViewMovements) {
@@ -47,16 +49,38 @@ export async function GET(request) {
     // Build where clause
     const where = {
       ...(type && type !== 'all' && { type }),
-      ...(warehouseId && warehouseId !== 'all' && { warehouseId }),
-      ...(search && {
-        OR: [
-          { product: { name: { contains: search, mode: 'insensitive' } } },
-          { product: { id: { contains: search, mode: 'insensitive' } } },
-          { warehouse: { name: { contains: search, mode: 'insensitive' } } },
-          { reference: { contains: search, mode: 'insensitive' } }
-        ]
-      })
     };
+
+    // For warehouse operators, only show movements for their assigned warehouse
+    if (currentUser.role === ROLES.WAREHOUSE_OPERATOR) {
+      const assignedWarehouseId = await getAssignedWarehouseId(currentUser.id);
+      if (!assignedWarehouseId) {
+        // Warehouse operator not assigned to any warehouse
+        return NextResponse.json({
+          success: true,
+          data: [],
+          pagination: {
+            page: 1,
+            limit,
+            total: 0,
+            totalPages: 0
+          }
+        });
+      }
+      where.warehouseId = assignedWarehouseId;
+    } else if (warehouseId && warehouseId !== 'all') {
+      where.warehouseId = warehouseId;
+    }
+
+    // Add search filter if provided
+    if (search) {
+      where.OR = [
+        { product: { name: { contains: search, mode: 'insensitive' } } },
+        { product: { id: { contains: search, mode: 'insensitive' } } },
+        { warehouse: { name: { contains: search, mode: 'insensitive' } } },
+        { reference: { contains: search, mode: 'insensitive' } }
+      ];
+    }
 
     // Get movements with relations
     const [movements, total] = await Promise.all([
@@ -224,11 +248,12 @@ export async function POST(request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // WAREHOUSE_OPERATOR is explicitly excluded - they should use warehouse module APIs only
+    // All users need approval for stock movements (stock in/out)
     const canCreateMovements = [
       ROLES.SUPER_ADMIN,
       ROLES.ADMIN,
-      ROLES.INVENTORY_MANAGER
+      ROLES.INVENTORY_MANAGER,
+      ROLES.WAREHOUSE_OPERATOR
     ].includes(currentUser.role);
 
     if (!canCreateMovements) {
@@ -245,68 +270,13 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Check if user needs approval (WAREHOUSE_OPERATOR and INVENTORY_MANAGER need approval)
-    const needsApproval = [
-      ROLES.WAREHOUSE_OPERATOR,
-      ROLES.INVENTORY_MANAGER
-    ].includes(currentUser.role);
-
-    // If user needs approval, create a request instead
-    if (needsApproval) {
-      // Verify product and warehouse exist
-      const [product, warehouse] = await Promise.all([
-        prisma.product.findUnique({ where: { id: productId } }),
-        prisma.warehouse.findUnique({ where: { id: warehouseId } })
-      ]);
-
-      if (!product) {
-        return NextResponse.json({ error: 'Product not found' }, { status: 404 });
-      }
-
-      if (!warehouse) {
-        return NextResponse.json({ error: 'Warehouse not found' }, { status: 404 });
-      }
-
-      // Create the request
-      const createdRequest = await prisma.stockMovementRequest.create({
-        data: {
-          requestType: 'movement',
-          status: 'pending',
-          requestedBy: currentUser.id,
-          requestData: body,
-          productId,
-          warehouseId,
-          locationId: locationId || null,
-          type,
-          quantity: parseInt(quantity),
-          reason: reason || null,
-          reference: reference || null
-        },
-        include: {
-          requester: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true
-            }
-          }
-        }
-      });
-
-      return NextResponse.json({
-        success: true,
-        message: 'Request created successfully and pending approval',
-        data: createdRequest
-      }, { status: 201 });
-    }
-
-    if (!['in', 'out', 'transfer', 'adjustment'].includes(type)) {
+    if (!['in', 'out'].includes(type)) {
       return NextResponse.json({ 
-        error: 'Invalid movement type. Must be: in, out, transfer, or adjustment' 
+        error: 'Invalid movement type. Must be: in or out' 
       }, { status: 400 });
     }
 
+    // ALL users (including SUPER_ADMIN and ADMIN) must create a request for approval
     // Verify product and warehouse exist
     const [product, warehouse] = await Promise.all([
       prisma.product.findUnique({ where: { id: productId } }),
@@ -321,85 +291,37 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Warehouse not found' }, { status: 404 });
     }
 
-    // Create stock movement
-    const movement = await prisma.stockMovement.create({
+    // Create the request - ALL movements require approval
+    const createdRequest = await prisma.stockMovementRequest.create({
       data: {
+        requestType: 'movement',
+        status: 'pending',
+        requestedBy: currentUser.id,
+        requestData: body,
         productId,
         warehouseId,
-        shipmentId: shipmentId || null,
         locationId: locationId || null,
         type,
         quantity: parseInt(quantity),
         reason: reason || null,
-        reference: reference || null,
-        createdBy: currentUser.id
+        reference: reference || null
       },
       include: {
-        product: {
+        requester: {
           select: {
             id: true,
             name: true,
-            category: true,
-            unit: true
-          }
-        },
-        warehouse: {
-          select: {
-            id: true,
-            name: true,
-            code: true
+            email: true,
+            role: true
           }
         }
       }
     });
-
-    // Update inventory item if it exists, or create it
-    const inventoryItem = await prisma.inventoryItem.findUnique({
-      where: {
-        productId_warehouseId: {
-          productId,
-          warehouseId
-        }
-      }
-    });
-
-    if (inventoryItem) {
-      // Update existing inventory item
-      const newQuantity = type === 'in' || type === 'adjustment' 
-        ? inventoryItem.quantity + parseInt(quantity)
-        : inventoryItem.quantity - Math.abs(parseInt(quantity));
-      
-      await prisma.inventoryItem.update({
-        where: {
-          productId_warehouseId: {
-            productId,
-            warehouseId
-          }
-        },
-        data: {
-          quantity: Math.max(0, newQuantity),
-          available: Math.max(0, newQuantity - (inventoryItem.reserved || 0)),
-          locationId: locationId || inventoryItem.locationId
-        }
-      });
-    } else if (type === 'in' || type === 'adjustment') {
-      // Create new inventory item for incoming stock
-      await prisma.inventoryItem.create({
-        data: {
-          productId,
-          warehouseId,
-          locationId: locationId || null,
-          quantity: parseInt(quantity),
-          available: parseInt(quantity),
-          reserved: 0
-        }
-      });
-    }
 
     return NextResponse.json({
       success: true,
-      message: 'Stock movement created successfully',
-      data: movement
+      message: 'Stock movement request created successfully and pending approval',
+      data: createdRequest
     }, { status: 201 });
 
   } catch (error) {

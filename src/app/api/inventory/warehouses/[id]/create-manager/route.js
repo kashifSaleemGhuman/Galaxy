@@ -95,6 +95,23 @@ export async function POST(request, { params }) {
       }
     });
 
+    // Store temporary password (expires in 30 days)
+    try {
+      const expiresAt = new Date()
+      expiresAt.setDate(expiresAt.getDate() + 30)
+      
+      await prisma.temporaryPassword.create({
+        data: {
+          userId: manager.id,
+          password: generatedPassword,
+          expiresAt: expiresAt
+        }
+      })
+    } catch (err) {
+      // If table doesn't exist yet or model not available, just log and continue
+      console.warn('Could not store temporary password:', err.message)
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Warehouse manager created successfully',
@@ -163,8 +180,21 @@ export async function GET(request, { params }) {
       }, { status: 404 });
     }
 
-    // Note: We cannot retrieve the original password as it's hashed
-    // This endpoint just confirms the manager exists
+    // Get temporary password if it exists and hasn't expired
+    let password = null
+    try {
+      const tempPassword = await prisma.temporaryPassword.findUnique({
+        where: { userId: warehouse.manager.id }
+      })
+
+      if (tempPassword && new Date(tempPassword.expiresAt) > new Date()) {
+        password = tempPassword.password
+      }
+    } catch (err) {
+      // If table doesn't exist or model not available, password will remain null
+      console.warn('Could not retrieve temporary password:', err.message)
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -174,7 +204,11 @@ export async function GET(request, { params }) {
           email: warehouse.manager.email,
           role: warehouse.manager.role
         },
-        note: 'Password cannot be retrieved as it is securely hashed. Please reset password if needed.'
+        credentials: password ? {
+          email: warehouse.manager.email,
+          password: password
+        } : null,
+        note: password ? null : 'Password has expired or was already used. Please reset password if needed.'
       }
     });
 

@@ -51,85 +51,7 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Check if user needs approval (WAREHOUSE_OPERATOR and INVENTORY_MANAGER need approval)
-    const needsApproval = [
-      ROLES.WAREHOUSE_OPERATOR,
-      ROLES.INVENTORY_MANAGER
-    ].includes(currentUser.role);
-
-    // If user needs approval, create a request instead
-    if (needsApproval) {
-      // Verify warehouse exists
-      const warehouse = await prisma.warehouse.findUnique({
-        where: { id: warehouseId }
-      });
-
-      if (!warehouse) {
-        return NextResponse.json({ error: 'Warehouse not found' }, { status: 404 });
-      }
-
-      // Convert cycle count lines to adjustment format (expectedQuantity from inventory, actualQuantity from count)
-      const adjustmentLines = await Promise.all(
-        lines.map(async (line) => {
-          // Get current inventory quantity as expected
-          const inventoryItem = await prisma.inventoryItem.findUnique({
-            where: {
-              productId_warehouseId: {
-                productId: line.productId,
-                warehouseId: warehouseId
-              }
-            }
-          });
-
-          return {
-            productId: line.productId,
-            expectedQuantity: inventoryItem?.quantity || 0,
-            actualQuantity: line.actualQuantity || 0,
-            locationId: line.locationId || locationId || null,
-            notes: line.notes || notes || 'Cycle count'
-          };
-        })
-      );
-
-      // Create the request as an adjustment type (cycle counts are essentially adjustments)
-      const createdRequest = await prisma.stockMovementRequest.create({
-        data: {
-          requestType: 'adjustment', // Cycle counts are treated as adjustments
-          status: 'pending',
-          requestedBy: currentUser.id,
-          requestData: { 
-            warehouseId, 
-            reason: 'Cycle Count', 
-            lines: adjustmentLines, 
-            reference: reference || `CC-${Date.now()}`,
-            countDate,
-            notes
-          },
-          warehouseId,
-          reason: 'Cycle Count',
-          adjustmentLines: adjustmentLines,
-          reference: reference || `CC-${Date.now()}`
-        },
-        include: {
-          requester: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true
-            }
-          }
-        }
-      });
-
-      return NextResponse.json({
-        success: true,
-        message: 'Cycle count request created successfully and pending approval',
-        data: createdRequest
-      }, { status: 201 });
-    }
-
-    // For admins, process cycle count directly as adjustment
+    // ALL users (including SUPER_ADMIN and ADMIN) must create a request for approval
     // Verify warehouse exists
     const warehouse = await prisma.warehouse.findUnique({
       where: { id: warehouseId }
@@ -139,98 +61,65 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Warehouse not found' }, { status: 404 });
     }
 
-    const adjustmentReference = reference || `CC-${Date.now()}`;
-    const createdMovements = [];
-
-    // Process each cycle count line as an adjustment
-    for (const line of lines) {
-      const { productId, actualQuantity, locationId: lineLocationId, notes: lineNotes } = line;
-
-      if (!productId || actualQuantity === undefined) {
-        continue; // Skip invalid lines
-      }
-
-      // Check if product exists
-      const product = await prisma.product.findUnique({
-        where: { id: productId }
-      });
-
-      if (!product) {
-        continue; // Skip if product doesn't exist
-      }
-
-      // Get current inventory quantity as expected
-      let inventoryItem = await prisma.inventoryItem.findUnique({
-        where: {
-          productId_warehouseId: {
-            productId,
-            warehouseId
-          }
-        }
-      });
-
-      const expectedQuantity = inventoryItem?.quantity || 0;
-      const difference = actualQuantity - expectedQuantity;
-
-      if (difference === 0) {
-        continue; // Skip if no adjustment needed
-      }
-
-      // Ensure inventory item exists before creating stock movement
-      if (!inventoryItem) {
-        const initialQuantity = difference > 0 ? actualQuantity : 0;
-        inventoryItem = await prisma.inventoryItem.create({
-          data: {
-            productId,
-            warehouseId,
-            locationId: lineLocationId || locationId || null,
-            quantity: initialQuantity,
-            available: initialQuantity,
-            reserved: 0
+    // Convert cycle count lines to adjustment format (expectedQuantity from inventory, actualQuantity from count)
+    const adjustmentLines = await Promise.all(
+      lines.map(async (line) => {
+        // Get current inventory quantity as expected
+        const inventoryItem = await prisma.inventoryItem.findUnique({
+          where: {
+            productId_warehouseId: {
+              productId: line.productId,
+              warehouseId: warehouseId
+            }
           }
         });
-      }
 
-      // Create adjustment movement
-      const movement = await prisma.stockMovement.create({
-        data: {
-          productId,
-          warehouseId,
-          locationId: lineLocationId || locationId || null,
-          type: 'adjustment',
-          quantity: difference,
-          reason: `Cycle Count${lineNotes ? ` - ${lineNotes}` : notes ? ` - ${notes}` : ''}`,
-          reference: adjustmentReference,
-          createdBy: currentUser.id
-        }
-      });
+        return {
+          productId: line.productId,
+          expectedQuantity: inventoryItem?.quantity || 0,
+          actualQuantity: line.actualQuantity || 0,
+          locationId: line.locationId || locationId || null,
+          notes: line.notes || notes || 'Cycle count'
+        };
+      })
+    );
 
-      // Update inventory with actual quantity
-      await prisma.inventoryItem.update({
-        where: {
-          productId_warehouseId: {
-            productId,
-            warehouseId
-          }
+    // Create the request as an adjustment type (cycle counts are essentially adjustments)
+    // ALL cycle counts require approval
+    const createdRequest = await prisma.stockMovementRequest.create({
+      data: {
+        requestType: 'adjustment', // Cycle counts are treated as adjustments
+        status: 'pending',
+        requestedBy: currentUser.id,
+        requestData: { 
+          warehouseId, 
+          reason: 'Cycle Count', 
+          lines: adjustmentLines, 
+          reference: reference || `CC-${Date.now()}`,
+          countDate,
+          notes
         },
-        data: {
-          quantity: Math.max(0, actualQuantity),
-          available: Math.max(0, actualQuantity - (inventoryItem.reserved || 0)),
-          locationId: lineLocationId || locationId || inventoryItem.locationId
+        warehouseId,
+        reason: 'Cycle Count',
+        adjustmentLines: adjustmentLines,
+        reference: reference || `CC-${Date.now()}`
+      },
+      include: {
+        requester: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true
+          }
         }
-      });
-
-      createdMovements.push(movement);
-    }
+      }
+    });
 
     return NextResponse.json({
       success: true,
-      message: 'Cycle count completed successfully',
-      data: {
-        reference: adjustmentReference,
-        movements: createdMovements,
-        warehouse: warehouse.name
-      }
+      message: 'Cycle count request created successfully and pending approval',
+      data: createdRequest
     }, { status: 201 });
 
   } catch (error) {

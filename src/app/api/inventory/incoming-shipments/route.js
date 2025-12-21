@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
+import { getAssignedWarehouseId } from '@/lib/warehouse-auth';
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
 export const dynamic = 'force-dynamic';
@@ -23,7 +24,13 @@ export async function GET(request) {
 
     // Check if user has permission to view incoming shipments
     const role = (currentUser.role || '').toUpperCase()
-    const canViewShipments = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.INVENTORY_MANAGER, ROLES.PURCHASE_MANAGER].includes(role);
+    const canViewShipments = [
+      ROLES.SUPER_ADMIN, 
+      ROLES.ADMIN, 
+      ROLES.INVENTORY_MANAGER, 
+      ROLES.PURCHASE_MANAGER,
+      ROLES.WAREHOUSE_OPERATOR
+    ].includes(role);
     if (!canViewShipments) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
@@ -39,7 +46,21 @@ export async function GET(request) {
       whereClause.status = status;
     }
     
-    if (warehouseId) {
+    // For warehouse operators, only show shipments for their assigned warehouse
+    if (role === ROLES.WAREHOUSE_OPERATOR) {
+      const assignedWarehouseId = await getAssignedWarehouseId(currentUser.id);
+      if (!assignedWarehouseId) {
+        // Warehouse operator not assigned to any warehouse
+        return NextResponse.json({
+          success: true,
+          data: [],
+          count: 0,
+          message: 'No warehouse assigned. Please contact administrator.'
+        });
+      }
+      whereClause.warehouseId = assignedWarehouseId;
+    } else if (warehouseId) {
+      // For other roles, allow filtering by warehouse if provided
       whereClause.warehouseId = warehouseId;
     }
 

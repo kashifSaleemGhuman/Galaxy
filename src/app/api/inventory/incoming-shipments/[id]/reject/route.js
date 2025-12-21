@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
+import { isAuthorizedForWarehouse } from '@/lib/warehouse-auth';
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
 export const dynamic = 'force-dynamic';
@@ -27,7 +28,7 @@ export async function POST(request, { params }) {
     }
 
     // Check permissions - warehouse operators and inventory managers can reject
-    const canReject = ['INVENTORY_USER', 'INVENTORY_MANAGER', 'SUPER_ADMIN', 'ADMIN'].includes(currentUser.role);
+    const canReject = ['INVENTORY_USER', 'INVENTORY_MANAGER', 'SUPER_ADMIN', 'ADMIN', 'WAREHOUSE_OPERATOR'].includes(currentUser.role);
     
     if (!canReject) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
@@ -38,7 +39,8 @@ export async function POST(request, { params }) {
       where: { id },
       include: {
         purchaseOrder: true,
-        lines: { include: { product: true } }
+        lines: { include: { product: true } },
+        warehouse: true
       }
     });
 
@@ -50,6 +52,17 @@ export async function POST(request, { params }) {
       return NextResponse.json({ 
         error: 'Shipment must be assigned to a warehouse before it can be rejected' 
       }, { status: 400 });
+    }
+
+    // Check if warehouse operator is authorized for this specific warehouse
+    if (shipment.warehouseId) {
+      const isAuthorized = await isAuthorizedForWarehouse(currentUser, shipment.warehouseId)
+      if (!isAuthorized) {
+        return NextResponse.json(
+          { error: 'You are not authorized to reject shipments for this warehouse. Only the assigned warehouse manager can process shipments for their warehouse.' },
+          { status: 403 }
+        )
+      }
     }
 
     // Update shipment status to rejected

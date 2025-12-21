@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, UserPlus, Eye, EyeOff, Copy, Check, Loader2 } from 'lucide-react'
 
 export default function ManagerCreator({ warehouseId, warehouseName, isOpen, onClose, onManagerCreated }) {
@@ -13,6 +13,33 @@ export default function ManagerCreator({ warehouseId, warehouseName, isOpen, onC
   const [credentials, setCredentials] = useState(null)
   const [showPassword, setShowPassword] = useState(false)
   const [copied, setCopied] = useState(false)
+
+  // Load credentials from localStorage on mount and when modal opens
+  useEffect(() => {
+    if (warehouseId && isOpen) {
+      // First try localStorage
+      const stored = localStorage.getItem(`manager_creds_${warehouseId}`)
+      if (stored) {
+        try {
+          setCredentials(JSON.parse(stored))
+        } catch (e) {
+          console.error('Error parsing stored credentials:', e)
+        }
+      } else {
+        // If not in localStorage, try to fetch from API
+        fetch(`/api/inventory/warehouses/${warehouseId}/create-manager`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.data?.credentials) {
+              const creds = data.data.credentials
+              setCredentials(creds)
+              localStorage.setItem(`manager_creds_${warehouseId}`, JSON.stringify(creds))
+            }
+          })
+          .catch(err => console.error('Error fetching credentials:', err))
+      }
+    }
+  }, [warehouseId, isOpen])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -43,7 +70,12 @@ export default function ManagerCreator({ warehouseId, warehouseName, isOpen, onC
 
       if (response.ok) {
         const data = await response.json()
-        setCredentials(data.data.credentials)
+        const creds = data.data.credentials
+        setCredentials(creds)
+        // Store in localStorage for persistence after page reload
+        if (creds) {
+          localStorage.setItem(`manager_creds_${warehouseId}`, JSON.stringify(creds))
+        }
         setFormData({ name: '', email: '' })
         setErrors({})
         if (onManagerCreated) {
@@ -69,7 +101,7 @@ export default function ManagerCreator({ warehouseId, warehouseName, isOpen, onC
   }
 
   const handleClose = () => {
-    setCredentials(null)
+    // Don't clear credentials from localStorage - keep them for persistence
     setFormData({ name: '', email: '' })
     setErrors({})
     setShowPassword(false)
@@ -83,7 +115,9 @@ export default function ManagerCreator({ warehouseId, warehouseName, isOpen, onC
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Create Warehouse Manager</h2>
+          <h2 className="text-xl font-semibold text-gray-900">
+            {credentials ? 'Manager Credentials' : 'Create Warehouse Manager'}
+          </h2>
           <button
             onClick={handleClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -187,7 +221,7 @@ export default function ManagerCreator({ warehouseId, warehouseName, isOpen, onC
                   </h3>
                 </div>
                 <p className="text-sm text-green-700">
-                  Please save these credentials. The password cannot be retrieved later.
+                  {credentials ? 'Manager credentials retrieved successfully. Please save these credentials securely.' : 'Please save these credentials. The password cannot be retrieved later.'}
                 </p>
               </div>
 

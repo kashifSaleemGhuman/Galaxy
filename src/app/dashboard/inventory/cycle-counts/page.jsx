@@ -170,6 +170,17 @@ export default function CycleCountsPage() {
 
   const handleSaveCycleCount = async (cycleCountData) => {
     try {
+      // Show loading message
+      const loadingEvent = new CustomEvent('show-toast', {
+        detail: { 
+          title: 'Creating Cycle Count Request...', 
+          message: 'Please wait while your cycle count request is being created.',
+          type: 'info',
+          duration: 3000
+        }
+      })
+      window.dispatchEvent(loadingEvent)
+
       // Prepare the payload for the API
       const payload = {
         warehouseId: cycleCountData.warehouseId,
@@ -196,15 +207,28 @@ export default function CycleCountsPage() {
       const result = await response.json()
 
       if (!response.ok) {
+        const errorEvent = new CustomEvent('show-toast', {
+          detail: { 
+            title: 'Error', 
+            message: result.error || 'Failed to create cycle count request',
+            type: 'error',
+            duration: 5000
+          }
+        })
+        window.dispatchEvent(errorEvent)
         throw new Error(result.error || 'Failed to create cycle count')
       }
 
-      // Check if a request was created (for WAREHOUSE_OPERATOR and INVENTORY_MANAGER)
-      if (result.message && result.message.includes('pending approval')) {
-        alert('Cycle count request created successfully! It is now pending approval from Super Admin.')
-      } else {
-        alert('Cycle count completed successfully!')
-      }
+      // Show success message
+      const successEvent = new CustomEvent('show-toast', {
+        detail: { 
+          title: 'Cycle Count Request Created', 
+          message: result.message || 'Your cycle count request has been created and is pending approval from Super Admin.',
+          type: 'success',
+          duration: 6000
+        }
+      })
+      window.dispatchEvent(successEvent)
 
       // Refresh the cycle counts list
       await fetchCycleCounts()
@@ -212,7 +236,15 @@ export default function CycleCountsPage() {
       return true
     } catch (error) {
       console.error('Error saving cycle count:', error)
-      alert(`Error: ${error.message || 'Failed to create cycle count'}`)
+      const errorEvent = new CustomEvent('show-toast', {
+        detail: { 
+          title: 'Error', 
+          message: error.message || 'Failed to create cycle count',
+          type: 'error',
+          duration: 5000
+        }
+      })
+      window.dispatchEvent(errorEvent)
       throw error
     }
   }

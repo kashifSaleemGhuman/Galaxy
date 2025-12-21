@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
+import { isAuthorizedForWarehouse } from '@/lib/warehouse-auth';
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
 export const dynamic = 'force-dynamic';
@@ -24,7 +25,13 @@ export async function GET(request, { params }) {
 
     // Only warehouse operators and super admins can access warehouse module
     const role = (currentUser.role || '').toUpperCase()
-    const canAccessWarehouse = [ROLES.INVENTORY_USER, ROLES.SUPER_ADMIN].includes(role);
+    const canAccessWarehouse = [
+      ROLES.INVENTORY_USER, 
+      ROLES.SUPER_ADMIN,
+      ROLES.ADMIN,
+      ROLES.INVENTORY_MANAGER,
+      ROLES.WAREHOUSE_OPERATOR
+    ].includes(role);
     
     if (!canAccessWarehouse) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
@@ -51,6 +58,17 @@ export async function GET(request, { params }) {
 
     if (!shipment) {
       return NextResponse.json({ error: 'Shipment not found' }, { status: 404 });
+    }
+
+    // Check if warehouse operator is authorized for this specific warehouse
+    if (shipment.warehouseId && role === ROLES.WAREHOUSE_OPERATOR) {
+      const isAuthorized = await isAuthorizedForWarehouse(currentUser, shipment.warehouseId)
+      if (!isAuthorized) {
+        return NextResponse.json(
+          { error: 'You are not authorized to view shipments for this warehouse. Only the assigned warehouse manager can view shipments for their warehouse.' },
+          { status: 403 }
+        )
+      }
     }
 
     const shapedShipment = {

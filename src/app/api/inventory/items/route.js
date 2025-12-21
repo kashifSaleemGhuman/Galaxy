@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
+import { getAssignedWarehouseId } from '@/lib/warehouse-auth';
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
 export const dynamic = 'force-dynamic';
@@ -24,17 +25,17 @@ export async function GET(request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check permissions - inventory managers and admins can view inventory
-    // WAREHOUSE_OPERATOR is explicitly excluded from inventory access
+    // Check permissions - inventory managers, admins, and warehouse operators can view inventory
     const role = (currentUser.role || '').toUpperCase()
     const canViewInventory = [
       ROLES.INVENTORY_MANAGER, 
       ROLES.INVENTORY_USER, 
       ROLES.SUPER_ADMIN, 
-      ROLES.ADMIN
+      ROLES.ADMIN,
+      ROLES.WAREHOUSE_OPERATOR
     ].includes(role);
     
-    if (!canViewInventory || role === ROLES.WAREHOUSE_OPERATOR) {
+    if (!canViewInventory) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
@@ -44,7 +45,22 @@ export async function GET(request) {
 
     // Build where clause
     const where = {};
-    if (warehouseId && warehouseId !== 'all') {
+    
+    // For warehouse operators, only show items for their assigned warehouse
+    if (role === ROLES.WAREHOUSE_OPERATOR) {
+      const assignedWarehouseId = await getAssignedWarehouseId(currentUser.id);
+      if (!assignedWarehouseId) {
+        // Warehouse operator not assigned to any warehouse
+        return NextResponse.json({
+          success: true,
+          data: [],
+          warehouses: [],
+          count: 0,
+          message: 'No warehouse assigned. Please contact administrator.'
+        });
+      }
+      where.warehouseId = assignedWarehouseId;
+    } else if (warehouseId && warehouseId !== 'all') {
       where.warehouseId = warehouseId;
     }
 

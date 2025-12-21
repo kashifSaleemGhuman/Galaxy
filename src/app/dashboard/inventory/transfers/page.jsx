@@ -144,18 +144,42 @@ export default function TransfersPage() {
         body: JSON.stringify(payload)
       })
 
+      // Show loading message
+      const loadingEvent = new CustomEvent('show-toast', {
+        detail: { 
+          title: 'Creating Transfer Request...', 
+          message: 'Please wait while your transfer request is being created.',
+          type: 'info',
+          duration: 3000
+        }
+      })
+      window.dispatchEvent(loadingEvent)
+
       const result = await response.json()
 
       if (!response.ok) {
+        const errorEvent = new CustomEvent('show-toast', {
+          detail: { 
+            title: 'Error', 
+            message: result.error || 'Failed to create transfer request',
+            type: 'error',
+            duration: 5000
+          }
+        })
+        window.dispatchEvent(errorEvent)
         throw new Error(result.error || 'Failed to create transfer')
       }
 
-      // Check if a request was created (for WAREHOUSE_OPERATOR and INVENTORY_MANAGER)
-      if (result.message && result.message.includes('pending approval')) {
-        alert('Transfer request created successfully! It is now pending approval from Super Admin.')
-      } else {
-        alert('Transfer created successfully!')
-      }
+      // Show success message
+      const successEvent = new CustomEvent('show-toast', {
+        detail: { 
+          title: 'Transfer Request Created', 
+          message: result.message || 'Your transfer request has been created and is pending approval from Super Admin.',
+          type: 'success',
+          duration: 6000
+        }
+      })
+      window.dispatchEvent(successEvent)
 
       // Refresh the transfers list
       await fetchTransfers()
@@ -163,7 +187,15 @@ export default function TransfersPage() {
       return true
     } catch (error) {
       console.error('Error saving transfer:', error)
-      alert(`Error: ${error.message || 'Failed to create transfer'}`)
+      const errorEvent = new CustomEvent('show-toast', {
+        detail: { 
+          title: 'Error', 
+          message: error.message || 'Failed to create transfer',
+          type: 'error',
+          duration: 5000
+        }
+      })
+      window.dispatchEvent(errorEvent)
       throw error
     }
   }
