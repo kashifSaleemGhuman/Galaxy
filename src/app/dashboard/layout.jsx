@@ -66,7 +66,7 @@ export default function DashboardLayout({ children }) {
         { name: 'Employees', href: '/dashboard/organization/employees', current: pathname.startsWith('/dashboard/organization/employees') },
         { name: 'Machines', href: '/dashboard/organization/machines', current: pathname.startsWith('/dashboard/organization/machines') },
         { name: 'Operating Permits', href: '/dashboard/organization/permits', current: pathname.startsWith('/dashboard/organization/permits') },
-        { name: 'Raw Purchases', href: '/dashboard/organization/raw-purchases', current: pathname.startsWith('/dashboard/organization/raw-purchases') }
+        { name: 'Purchases', href: '/dashboard/organization/raw-purchases', current: pathname.startsWith('/dashboard/organization/raw-purchases') }
       ]
     },
     { 
