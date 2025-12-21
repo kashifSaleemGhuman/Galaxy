@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 
-// Toast component for individual toast messages
-function Toast({ toast, onClose }) {
+// Internal Toast component for individual toast messages
+function ToastInternal({ toast, onClose }) {
   const { title, message, type } = toast
 
   const getIcon = () => {
@@ -67,6 +67,19 @@ function Toast({ toast, onClose }) {
   )
 }
 
+// Toast component wrapper for simpler usage (accepts type, message, onClose props)
+// This matches the API expected by purchase pages
+export function Toast({ type, message, title, onClose }) {
+  const toast = { type, message, title: title || message }
+  return (
+    <div className="fixed top-4 right-4 z-50 pointer-events-none">
+      <div className="pointer-events-auto">
+        <ToastInternal toast={toast} onClose={onClose} />
+      </div>
+    </div>
+  )
+}
+
 // ToastContainer component that listens to custom events
 export function ToastContainer() {
   const [toasts, setToasts] = useState([])
@@ -98,9 +111,41 @@ export function ToastContainer() {
     <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md pointer-events-none">
       {toasts.map(toast => (
         <div key={toast.id} className="pointer-events-auto">
-          <Toast toast={toast} onClose={() => removeToast(toast.id)} />
+          <ToastInternal toast={toast} onClose={() => removeToast(toast.id)} />
         </div>
       ))}
     </div>
   )
+}
+
+// useToast hook for convenience
+export function useToast() {
+  const showToast = (messageOrTitle, typeOrMessage = 'info', type = null, duration = 5000) => {
+    // Handle two different call patterns:
+    // 1. showToast(message, type) - most common
+    // 2. showToast(title, message, type, duration) - full signature
+    let title, message, toastType
+    
+    if (type !== null) {
+      // Full signature: (title, message, type, duration)
+      title = messageOrTitle
+      message = typeOrMessage
+      toastType = type
+    } else {
+      // Short signature: (message, type)
+      title = null
+      message = messageOrTitle
+      toastType = typeOrMessage || 'info'
+    }
+    
+    const event = new CustomEvent('show-toast', {
+      detail: { title, message, type: toastType, duration }
+    })
+    window.dispatchEvent(event)
+  }
+
+  return {
+    showToast,
+    ToastContainer
+  }
 }
