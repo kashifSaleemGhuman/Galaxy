@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/db'
-import { crmCache, rateLimit } from '@/lib/redis'
 import { ROLES } from '@/lib/constants/roles'
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
@@ -17,21 +16,6 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Rate limiting
-    const rateLimitKey = `ratelimit:${session.user.id}:products:get`
-    const rateLimitResult = await rateLimit.check(rateLimitKey, 100, 60) // 100 requests per minute
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded', 
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset
-        }, 
-        { status: 429 }
-      )
-    }
-
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page')) || 1
     const limit = parseInt(searchParams.get('limit')) || 10
@@ -41,16 +25,6 @@ export async function GET(request) {
     const trackQuantity = searchParams.get('trackQuantity')
     
     const skip = (page - 1) * limit
-    
-    // Build cache key based on filters
-    const cacheKey = { page, limit, search, category, status }
-    
-    // Try to get cached data first
-    const cachedData = await crmCache.getCustomerList('inventory-products', cacheKey)
-    if (cachedData) {
-      console.log('📦 Serving products from cache')
-      return NextResponse.json(cachedData)
-    }
     
     // Build where clause
     const where = {
@@ -103,10 +77,6 @@ export async function GET(request) {
       }
     }
     
-    // Cache the response for 30 minutes
-    await crmCache.setCustomerList('inventory-products', cacheKey, responseData, 1800)
-    console.log('💾 Cached products data')
-    
     return NextResponse.json(responseData)
     
   } catch (error) {
@@ -148,21 +118,6 @@ export async function POST(request) {
       return NextResponse.json({ 
         error: 'Insufficient permissions. Products can only be created by Purchase Managers or Admins.' 
       }, { status: 403 })
-    }
-    
-    // Rate limiting
-    const rateLimitKey = `ratelimit:${session.user.id}:products:post`
-    const rateLimitResult = await rateLimit.check(rateLimitKey, 50, 60) // 50 requests per minute
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded', 
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset
-        }, 
-        { status: 429 }
-      )
     }
     
     const body = await request.json()
@@ -207,7 +162,10 @@ export async function POST(request) {
     // Check for duplicate SKU if provided
     if (sku) {
       const existingSku = await prisma.product.findFirst({
-        where: { sku, tenantId: session.user.tenantId }
+        where: { 
+          sku, 
+          ...(session.user.tenantId && { tenantId: session.user.tenantId })
+        }
       })
       if (existingSku) {
         return NextResponse.json(
@@ -220,7 +178,10 @@ export async function POST(request) {
     // Check for duplicate barcode if provided
     if (barcode) {
       const existingBarcode = await prisma.product.findFirst({
-        where: { barcode, tenantId: session.user.tenantId }
+        where: { 
+          barcode, 
+          ...(session.user.tenantId && { tenantId: session.user.tenantId })
+        }
       })
       if (existingBarcode) {
         return NextResponse.json(
@@ -235,7 +196,7 @@ export async function POST(request) {
       const category = await prisma.productCategory.findFirst({
         where: { 
           id: categoryId, 
-          tenantId: session.user.tenantId 
+          ...(session.user.tenantId && { tenantId: session.user.tenantId })
         }
       })
       if (!category) {
@@ -247,7 +208,7 @@ export async function POST(request) {
     }
     
     console.log('🔍 Debug: About to create product with data:', {
-      tenantId: session.user.tenantId,
+      tenantId: session.user.tenantId || null,
       name,
       sku,
       barcode
@@ -256,7 +217,7 @@ export async function POST(request) {
     // Create product
     const product = await prisma.product.create({
       data: {
-        tenantId: session.user.tenantId,
+        ...(session.user.tenantId && { tenantId: session.user.tenantId }),
         name,
         sku,
         barcode,
@@ -289,7 +250,10 @@ export async function POST(request) {
     if (trackQuantity && warehouseId) {
       // Validate warehouse belongs to tenant
       const warehouse = await prisma.warehouse.findFirst({
-        where: { id: warehouseId, tenantId: session.user.tenantId }
+        where: { 
+          id: warehouseId, 
+          ...(session.user.tenantId && { tenantId: session.user.tenantId })
+        }
       })
       if (!warehouse) {
         return NextResponse.json(
@@ -308,7 +272,7 @@ export async function POST(request) {
         },
         update: {},
         create: {
-          tenantId: session.user.tenantId,
+          ...(session.user.tenantId && { tenantId: session.user.tenantId }),
           productId: product.id,
           warehouseId,
           quantityOnHand: 0,
@@ -320,10 +284,6 @@ export async function POST(request) {
         }
       })
     }
-    
-    // Invalidate product cache for this tenant
-    await crmCache.invalidateCustomer(session.user.tenantId)
-    console.log('🗑️ Invalidated product cache after creation')
     
     return NextResponse.json({ 
       message: 'Product created successfully',

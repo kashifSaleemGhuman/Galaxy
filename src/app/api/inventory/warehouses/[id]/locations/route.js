@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
-import { crmCache } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -133,10 +132,6 @@ export async function POST(request, { params }) {
         isActive
       }
     });
-
-    // Invalidate warehouse cache to refresh location count
-    await crmCache.invalidateCustomer('inventory-warehouses');
-    console.log('🗑️ Invalidated warehouse cache after location creation');
 
     return NextResponse.json({
       success: true,

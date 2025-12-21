@@ -7,6 +7,7 @@ import { StatusBadge } from '../_components/StatusBadge';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import { Button } from '@/components/ui/Button';
 import { Toast } from '@/components/ui/Toast';
+import LoadingBar from '@/components/ui/LoadingBar';
 
 export default function PurchaseOrdersPage() {
   const router = useRouter();
@@ -210,23 +211,15 @@ export default function PurchaseOrdersPage() {
     }
   ];
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <Breadcrumbs items={breadcrumbs} />
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading purchase orders...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <Breadcrumbs items={breadcrumbs} />
+      
+      {/* Loading Bar */}
+      {loading && <LoadingBar loading={loading} message="Loading purchase orders..." />}
+      
+      {!loading && (
+        <>
       
       <div className="flex items-center justify-between">
         <div>
@@ -343,6 +336,8 @@ export default function PurchaseOrdersPage() {
           message={toast.message}
           onClose={() => setToast(null)}
         />
+      )}
+        </>
       )}
     </div>
   );

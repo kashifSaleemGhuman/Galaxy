@@ -13,6 +13,7 @@ import {
   MapPin
 } from 'lucide-react'
 import DataTable from '@/components/ui/DataTable'
+import LoadingBar from '@/components/ui/LoadingBar'
 import useSWR, { mutate } from 'swr'
 import StockMovementModal from './_components/StockMovementModal'
 import TransferModal from '../transfers/_components/TransferModal'
@@ -332,16 +333,13 @@ export default function MovementsPage() {
     }
   ]
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
-
   return (
     <div className="p-6 space-y-6">
+      {/* Loading Bar */}
+      {isLoading && <LoadingBar loading={isLoading} message="Loading stock movements..." />}
+      
+      {!isLoading && (
+        <>
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -666,6 +664,8 @@ export default function MovementsPage() {
         onSave={handleSaveTransfer}
         warehouses={warehouses}
       />
+        </>
+      )}
     </div>
   )
 }

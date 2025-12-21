@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/db'
-import { crmCache, rateLimit } from '@/lib/redis'
 import { ROLES } from '@/lib/constants/roles'
 
 export const dynamic = 'force-dynamic'
@@ -82,21 +81,6 @@ export async function PUT(request, { params }) {
       )
     }
 
-    // Rate limiting
-    const rateLimitKey = `ratelimit:${session.user.id}:warehouses:put`
-    const rateLimitResult = await rateLimit.check(rateLimitKey, 50, 60)
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded', 
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset
-        }, 
-        { status: 429 }
-      )
-    }
-
     const { id } = params
     const body = await request.json()
     const { name, code, address, isActive, managerId } = body
@@ -148,10 +132,6 @@ export async function PUT(request, { params }) {
       }
     })
 
-    // Invalidate warehouse cache
-    await crmCache.invalidateCustomer('inventory-warehouses')
-    console.log('🗑️ Invalidated warehouse cache after update')
-
     return NextResponse.json({ 
       message: 'Warehouse updated successfully',
       warehouse: updatedWarehouse 
@@ -202,21 +182,6 @@ export async function DELETE(request, { params }) {
       )
     }
 
-    // Rate limiting
-    const rateLimitKey = `ratelimit:${session.user.id}:warehouses:delete`
-    const rateLimitResult = await rateLimit.check(rateLimitKey, 20, 60)
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded', 
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset
-        }, 
-        { status: 429 }
-      )
-    }
-
     const { id } = params
 
     // Verify warehouse exists
@@ -255,10 +220,6 @@ export async function DELETE(request, { params }) {
     await prisma.warehouse.delete({
       where: { id }
     })
-
-    // Invalidate warehouse cache
-    await crmCache.invalidateCustomer('inventory-warehouses')
-    console.log('🗑️ Invalidated warehouse cache after deletion')
 
     return NextResponse.json({ 
       message: 'Warehouse deleted successfully'

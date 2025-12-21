@@ -35,7 +35,7 @@ export async function POST(request, { params }) {
     const shipment = await prisma.incomingShipment.findFirst({
       where: {
         id: id,
-        tenantId: session.user.tenantId
+        ...(session.user.tenantId && { tenantId: session.user.tenantId })
       },
       include: {
         lines: {

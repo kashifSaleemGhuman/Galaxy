@@ -15,6 +15,7 @@ import {
   Calendar
 } from 'lucide-react'
 import DataTable from '@/components/ui/DataTable'
+import LoadingBar from '@/components/ui/LoadingBar'
 
 export default function ReceiptsPage() {
   const [receipts, setReceipts] = useState([])
@@ -416,6 +417,8 @@ export default function ReceiptsPage() {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   )

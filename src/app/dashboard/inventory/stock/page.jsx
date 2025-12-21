@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import useSWR from 'swr'
 import DataTable from '@/components/ui/DataTable'
+import LoadingBar from '@/components/ui/LoadingBar'
 
 const fetcher = (url) => fetch(url).then(res => res.json())
 
@@ -265,16 +266,13 @@ export default function StockPage() {
     }
   ]
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
-
   return (
     <div className="p-6 space-y-6">
+      {/* Loading Bar */}
+      {loading && <LoadingBar loading={loading} message="Loading stock levels..." />}
+      
+      {!loading && (
+        <>
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -586,6 +584,8 @@ export default function StockPage() {
               : 'No inventory items have been added yet.'}
           </p>
         </div>
+      )}
+        </>
       )}
     </div>
   )

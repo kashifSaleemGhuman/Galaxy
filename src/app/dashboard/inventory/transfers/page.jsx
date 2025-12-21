@@ -380,16 +380,13 @@ export default function TransfersPage() {
     }
   ]
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
-
   return (
     <div className="p-6 space-y-6">
+      {/* Loading Bar */}
+      {loading && <LoadingBar loading={loading} message="Loading transfers..." />}
+      
+      {!loading && (
+        <>
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -680,6 +677,7 @@ export default function TransfersPage() {
           onSave={handleSaveTransfer}
           warehouses={warehouses}
         />
+        </>
       )}
     </div>
   )

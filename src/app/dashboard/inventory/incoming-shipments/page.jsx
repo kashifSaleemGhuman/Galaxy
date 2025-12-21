@@ -17,6 +17,7 @@ import {
   ArrowRight
 } from 'lucide-react'
 import Link from 'next/link'
+import LoadingBar from '@/components/ui/LoadingBar'
 
 export default function GoodsReceipts() {
   const [receipts, setReceipts] = useState([])
@@ -152,16 +153,13 @@ export default function GoodsReceipts() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
+      {/* Loading Bar */}
+      {loading && <LoadingBar loading={loading} message="Loading incoming shipments..." />}
+      
+      {!loading && (
+        <>
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -430,6 +428,8 @@ export default function GoodsReceipts() {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   )

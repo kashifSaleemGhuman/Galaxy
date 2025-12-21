@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
-import { crmCache } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -76,10 +75,6 @@ export async function PUT(request, { params }) {
       }
     });
 
-    // Invalidate warehouse cache to refresh location count
-    await crmCache.invalidateCustomer('inventory-warehouses');
-    console.log('🗑️ Invalidated warehouse cache after location update');
-
     return NextResponse.json({
       success: true,
       message: 'Location updated successfully',
@@ -148,10 +143,6 @@ export async function DELETE(request, { params }) {
     await prisma.location.delete({
       where: { id: locationId }
     });
-
-    // Invalidate warehouse cache to refresh location count
-    await crmCache.invalidateCustomer('inventory-warehouses');
-    console.log('🗑️ Invalidated warehouse cache after location deletion');
 
     return NextResponse.json({
       success: true,

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/db'
-import { crmCache, rateLimit } from '@/lib/redis'
 import { ROLES } from '@/lib/constants/roles'
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
@@ -17,25 +16,10 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Rate limiting
-    const rateLimitKey = `ratelimit:${session.user.id}:products:get:${params.id}`
-    const rateLimitResult = await rateLimit.check(rateLimitKey, 100, 60)
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded', 
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset
-        }, 
-        { status: 429 }
-      )
-    }
-
     const product = await prisma.product.findFirst({
       where: {
         id: params.id,
-        tenantId: session.user.tenantId
+        ...(session.user.tenantId && { tenantId: session.user.tenantId })
       },
       include: {
         category: {
@@ -116,21 +100,6 @@ export async function PUT(request, { params }) {
       }, { status: 403 })
     }
     
-    // Rate limiting
-    const rateLimitKey = `ratelimit:${session.user.id}:products:put:${params.id}`
-    const rateLimitResult = await rateLimit.check(rateLimitKey, 50, 60)
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded', 
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset
-        }, 
-        { status: 429 }
-      )
-    }
-    
     const body = await request.json()
     console.log('🔍 Debug: Update request body:', body)
     
@@ -156,7 +125,7 @@ export async function PUT(request, { params }) {
     const existingProduct = await prisma.product.findFirst({
       where: {
         id: params.id,
-        tenantId: session.user.tenantId
+        ...(session.user.tenantId && { tenantId: session.user.tenantId })
       }
     })
 
@@ -172,7 +141,7 @@ export async function PUT(request, { params }) {
       const existingSku = await prisma.product.findFirst({
         where: { 
           sku, 
-          tenantId: session.user.tenantId,
+          ...(session.user.tenantId && { tenantId: session.user.tenantId }),
           id: { not: params.id }
         }
       })
@@ -189,7 +158,7 @@ export async function PUT(request, { params }) {
       const existingBarcode = await prisma.product.findFirst({
         where: { 
           barcode, 
-          tenantId: session.user.tenantId,
+          ...(session.user.tenantId && { tenantId: session.user.tenantId }),
           id: { not: params.id }
         }
       })
@@ -232,10 +201,6 @@ export async function PUT(request, { params }) {
     })
     
     console.log('✅ Product updated successfully:', updatedProduct.id)
-    
-    // Invalidate product cache for this tenant
-    await crmCache.invalidateCustomer(session.user.tenantId)
-    console.log('🗑️ Invalidated product cache after update')
     
     return NextResponse.json({ 
       message: 'Product updated successfully',
@@ -292,26 +257,11 @@ export async function DELETE(request, { params }) {
       }, { status: 403 })
     }
     
-    // Rate limiting
-    const rateLimitKey = `ratelimit:${session.user.id}:products:delete:${params.id}`
-    const rateLimitResult = await rateLimit.check(rateLimitKey, 20, 60)
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded', 
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset
-        }, 
-        { status: 429 }
-      )
-    }
-    
     // Check if product exists
     const existingProduct = await prisma.product.findFirst({
       where: {
         id: params.id,
-        tenantId: session.user.tenantId
+        ...(session.user.tenantId && { tenantId: session.user.tenantId })
       },
       include: {
         inventoryItems: true
@@ -339,10 +289,6 @@ export async function DELETE(request, { params }) {
     })
     
     console.log('✅ Product deleted successfully:', params.id)
-    
-    // Invalidate product cache for this tenant
-    await crmCache.invalidateCustomer(session.user.tenantId)
-    console.log('🗑️ Invalidated product cache after deletion')
     
     return NextResponse.json({ 
       message: 'Product deleted successfully'

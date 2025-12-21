@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/db'
-import { crmCache, rateLimit } from '@/lib/redis'
 import { ROLES } from '@/lib/constants/roles'
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
@@ -17,21 +16,6 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Rate limiting
-    const rateLimitKey = `ratelimit:${session.user.id}:warehouses:get`
-    const rateLimitResult = await rateLimit.check(rateLimitKey, 100, 60)
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded', 
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset
-        }, 
-        { status: 429 }
-      )
-    }
-
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page')) || 1
     const limit = parseInt(searchParams.get('limit')) || 10
@@ -39,16 +23,6 @@ export async function GET(request) {
     const status = searchParams.get('status') || ''
     
     const skip = (page - 1) * limit
-    
-    // Build cache key based on filters
-  const cacheKey = { page, limit, search, status }
-    
-    // Try to get cached data first
-  const cachedData = await crmCache.getCustomerList('inventory-warehouses', cacheKey)
-    if (cachedData) {
-      console.log('📦 Serving warehouses from cache')
-      return NextResponse.json(cachedData)
-    }
     
     // Build where clause
   const where = {
@@ -102,10 +76,6 @@ export async function GET(request) {
       }
     }
     
-    // Cache the response for 30 minutes
-  await crmCache.setCustomerList('inventory-warehouses', cacheKey, responseData, 1800)
-    console.log('💾 Cached warehouses data')
-    
     return NextResponse.json(responseData)
     
   } catch (error) {
@@ -145,21 +115,6 @@ export async function POST(request) {
       )
     }
     
-    // Rate limiting
-    const rateLimitKey = `ratelimit:${session.user.id}:warehouses:post`
-    const rateLimitResult = await rateLimit.check(rateLimitKey, 50, 60)
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded', 
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset
-        }, 
-        { status: 429 }
-      )
-    }
-    
     const body = await request.json()
     console.log('🔍 Debug: Request body:', body)
     
@@ -190,10 +145,6 @@ export async function POST(request) {
     })
     
     console.log('✅ Warehouse created successfully:', warehouse.id)
-    
-    // Invalidate warehouse cache for this tenant
-    await crmCache.invalidateCustomer('inventory-warehouses')
-    console.log('🗑️ Invalidated warehouse cache after creation')
     
     return NextResponse.json({ 
       message: 'Warehouse created successfully',

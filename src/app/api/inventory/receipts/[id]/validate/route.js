@@ -70,7 +70,7 @@ export async function POST(request, { params }) {
       for (const line of receipt.purchaseOrder.lines) {
         const receivedQty = receivedQuantities.find(rq => rq.productId === line.productId)?.quantity || line.quantityOrdered
         
-        await tx.pO_Line.update({
+        await tx.pOLine.update({
           where: { poLineId: line.poLineId },
           data: {
             quantityReceived: receivedQty
@@ -78,60 +78,53 @@ export async function POST(request, { params }) {
         })
         
         // Find or create inventory item
+        const warehouseId = receivedQuantities.find(rq => rq.productId === line.productId)?.warehouseId || 'default-warehouse'
+        const locationId = receivedQuantities.find(rq => rq.productId === line.productId)?.locationId || null
+        
         const inventoryItem = await tx.inventoryItem.upsert({
           where: {
-            productId_warehouseId_locationId: {
+            productId_warehouseId: {
               productId: line.productId,
-              warehouseId: receivedQuantities.find(rq => rq.productId === line.productId)?.warehouseId || 'default-warehouse',
-              locationId: receivedQuantities.find(rq => rq.productId === line.productId)?.locationId || null
+              warehouseId: warehouseId
             }
           },
           update: {
-            quantityOnHand: {
+            quantity: {
               increment: receivedQty
             },
-            quantityAvailable: {
+            available: {
               increment: receivedQty
-            },
-            lastMovementDate: new Date()
+            }
           },
           create: {
-            tenantId: session.user.tenantId,
             productId: line.productId,
-            warehouseId: receivedQuantities.find(rq => rq.productId === line.productId)?.warehouseId || 'default-warehouse',
-            locationId: receivedQuantities.find(rq => rq.productId === line.productId)?.locationId || null,
-            quantityOnHand: receivedQty,
-            quantityReserved: 0,
-            quantityAvailable: receivedQty,
-            reorderPoint: line.product.reorderPoint,
-            maxStock: line.product.maxStock,
-            minStock: line.product.minStock,
-            averageCost: line.price,
-            lastCost: line.price,
-            lastMovementDate: new Date()
+            warehouseId: warehouseId,
+            locationId: locationId,
+            quantity: receivedQty,
+            reserved: 0,
+            available: receivedQty,
+            minLevel: 0,
+            maxLevel: 0
           }
         })
         
         // Create stock movement record
         await tx.stockMovement.create({
           data: {
-            tenantId: session.user.tenantId,
-            inventoryItemId: inventoryItem.id,
-            movementType: 'in',
+            productId: line.productId,
+            warehouseId: warehouseId,
+            locationId: locationId,
+            type: 'in',
             quantity: receivedQty,
-            unitCost: line.price,
-            totalCost: receivedQty * line.price,
-            referenceType: 'purchase',
-            referenceId: receipt.poId,
-            notes: `Goods receipt ${receipt.receiptId}`,
-            movementDate: new Date(),
+            reason: `Goods receipt ${receipt.receiptId}`,
+            reference: receipt.poId,
             createdBy: session.user.id
           }
         })
       }
       
       // Update PO status if all items received
-      const allLinesReceived = await tx.pO_Line.findMany({
+      const allLinesReceived = await tx.pOLine.findMany({
         where: { poId: receipt.poId }
       })
       
