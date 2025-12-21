@@ -97,22 +97,25 @@ model AuditLog {
 
 // Vendor model
 model Vendor {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  phone     String?
-  address   String?
-  tenantId  String?  // Optional for backward compatibility
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(cuid())
+  name             String
+  email            String   @unique
+  phone            String?
+  address          String?
+  bankName         String?
+  bankAccountNumber String?
+  attributes       Json     @default("{}")
+  tenantId         String?  // Optional for backward compatibility
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Tenant relation
-  tenant     Tenant?  @relation(fields: [tenantId], references: [id])
+  tenant           Tenant?  @relation(fields: [tenantId], references: [id])
 
   // Relations
-  rfqs           RFQ[]
-  vendorProducts VendorProduct[]
+  rfqs             RFQ[]
+  vendorProducts   VendorProduct[]
 }
 
 // Vendor-Product relationship (many-to-many with additional fields)
@@ -228,9 +231,9 @@ model RFQApproval {
 
 // Supplier model (legacy table mapping)
 model Supplier {
-  supplierId  String  @id
+  supplierId  String  @id @map("supplier_id")
   name        String
-  contactInfo String?
+  contactInfo String? @map("contact_info")
   email       String
   phone       String?
 
@@ -262,18 +265,70 @@ model PurchaseOrder {
 
 // Purchase Order Line model
 model POLine {
-  poLineId         String  @id
-  poId             String
-  productId        String
-  quantityOrdered  Int
-  quantityReceived Int     @default(0)
+  poLineId         String  @id @map("po_line_id")
+  poId             String  @map("po_id")
+  productId        String  @map("product_id")
+  quantityOrdered  Int     @map("quantity_ordered")
+  quantityReceived Int     @default(0) @map("quantity_received")
   price            Decimal
 
   // Relations
-  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
-  product       Product       @relation(fields: [productId], references: [id])
+  purchaseOrder PurchaseOrder        @relation(fields: [poId], references: [poId])
+  product       Product              @relation(fields: [productId], references: [id])
+  traceability  ProductTraceability?
 
   @@map("POLine")
+}
+
+// Product Traceability model - tracks the supply chain for each product in a purchase
+model ProductTraceability {
+  id       String @id @default(cuid())
+  poLineId String @unique @map("po_line_id")
+
+  // Farm Section
+  farmId             String?
+  animalType         String?
+  farmLocation       String?
+  farmCertifications Json?   @default("[]")
+
+  // Slaughter House Section
+  supplier                String?
+  slaughterAnimalType     String?
+  origin                  String?
+  hideSkinType            String?
+  hideSkinId              String?
+  slaughterDate           DateTime?
+  slaughterLocation       String?
+  slaughterCertifications Json?     @default("[]")
+
+  // Tannery Section
+  tanneryName           String?
+  tanneryLocation       String?
+  tanningType           String?
+  article               String?
+  vehicleNumber         String?
+  processedLotNumber    String?
+  envParameters         Json?   @default("{}")
+  tanneryCertifications Json?   @default("[]")
+
+  // Factory Section
+  factoryName          String?
+  factoryLocation      String?
+  materialType         String?
+  product              String?
+  finishDate           DateTime?
+  hardLabourUsed       String?
+  care                 String?
+  brand                String?
+  factoryCertification String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  poLine POLine @relation(fields: [poLineId], references: [poLineId], onDelete: Cascade)
+
+  @@map("ProductTraceability")
 }
 
 // Goods Receipt model
@@ -325,6 +380,8 @@ model Warehouse {
   movementRequests  StockMovementRequest[] @relation("FromWarehouseTransfers")
   movementRequestsTo StockMovementRequest[] @relation("ToWarehouseTransfers")
   movementRequestsWarehouse StockMovementRequest[] @relation("WarehouseMovements")
+
+  @@map("warehouses")
 }
 
 // Location model (storage locations within a warehouse)
@@ -368,6 +425,8 @@ model IncomingShipment {
   warehouse      Warehouse?             @relation(fields: [warehouseId], references: [id])
   lines          IncomingShipmentLine[]
   stockMovements StockMovement[]
+
+  @@map("IncomingShipment")
 }
 
 // Incoming Shipment Line model
@@ -387,6 +446,8 @@ model IncomingShipmentLine {
   // Relations
   shipment IncomingShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
   product  Product          @relation(fields: [productId], references: [id])
+
+  @@map("IncomingShipmentLine")
 }
 
 // Inventory Item model
@@ -411,6 +472,7 @@ model InventoryItem {
   stockMovements StockMovement[]
 
   @@unique([productId, warehouseId])
+  @@map("inventory_items")
 }
 
 // Stock Movement model
@@ -435,6 +497,8 @@ model StockMovement {
   inventoryItem InventoryItem     @relation(fields: [productId, warehouseId], references: [productId, warehouseId])
   request       StockMovementRequest? @relation(fields: [requestId], references: [id])
   requestId     String?           @map("request_id")
+
+  @@map("stock_movements")
 }
 
 // Stock Movement Request model (for approval workflow)
@@ -492,24 +556,92 @@ model StockMovementRequest {
 
 // Organization model (company information)
 model Organization {
-  id                  String    @id @default(cuid())
-  companyName         String
-  companyLogo         String?   // Path to the logo file or Base64
-  shortName           String?
-  address             String?
-  factoryContactNo    String?
-  email               String?
-  fullAddress         String?
-  auditDate           DateTime?
-  internalAuditorName String?
-  dataFrom            DateTime?
-  tenantId            String?   // Optional for backward compatibility
-  
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  companyName          String
+  companyLogo          String?   // Path to the logo file or Base64
+  shortName            String?
+  address              String?
+  factoryContactNo     String?
+  email                String?
+  fullAddress          String?
+  auditDate            DateTime?
+  internalAuditorNames Json?     @default("[]") // Array of auditor names
+  dataFrom             DateTime?
+  tenantId             String?   // Optional for backward compatibility
+
+  // Section 1: General Facility Details
+  siteNameLocalLanguage    String?
+  siteURN                  String?
+  fullestScopeOfOperations String? // Category A-G
+  abbreviations            Json?   @default("[]") // Array of {abbreviation, fullTitle}
+
+  // Section 2: Company Registration
+  companyRegistrationNumber String?
+
+  // Section 3: Geographical Coordinates
+  latitude  String?
+  longitude String?
+
+  // Section 4: Location
+  country String?
+
+  // Section 5: Contact
+  telephoneNumber String?
+
+  // Section 6a: Principal Contact
+  principalContactName     String?
+  principalContactPosition String?
+  principalContactEmail    String?
+
+  // Section 6b: Environmental Responsible
+  environmentalResponsibleName     String?
+  environmentalResponsiblePosition String?
+  environmentalResponsibleEmail    String?
+
+  // Additional Information
+  lwgCommunicationsMembers Json?   @default("[]") // Array of {email, communicationRequired}
+  website                  String?
+  facilityDescription      String? // Description of facility, site setting, environmental receptors
+  totalSiteArea            String? // Total site area in m²
+  siteAreaBoundaries       String? // Single or multiple boundaries
+
+  // Workforce Information - Direct Labour
+  directLabourShiftAM    Int?
+  directLabourShiftPM    Int?
+  directLabourShiftNight Int?
+  directLabourCount      Int?
+
+  // Workforce Information - Indirect Labour
+  indirectLabourShiftAM    Int?
+  indirectLabourShiftPM    Int?
+  indirectLabourShiftNight Int?
+  indirectLabourCount      Int?
+
+  // Workforce Information - Shift Total
+  shiftTotalAM    Int?
+  shiftTotalPM    Int?
+  shiftTotalNight Int?
+  shiftTotal      Int?
+
+  // Operating Schedule - Worker
+  workerDaysPerWeek  Int?
+  workerWeeksPerYear Int?
+  workerDaysPerYear  Int?
+
+  // Operating Schedule - Manufacturing operations
+  manufacturingDaysPerWeek  Int?
+  manufacturingWeeksPerYear Int?
+  manufacturingDaysPerYear  Int?
+
+  // Environmental and Operations
+  environmentalImpacts            String? // Environmental impacts description
+  operationsForOtherOrganisations String? // Operations for other organisations
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Tenant relation
-  tenant              Tenant?   @relation(fields: [tenantId], references: [id])
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
 }
 
 // Document model (document management)
