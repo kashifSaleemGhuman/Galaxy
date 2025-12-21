@@ -17,13 +17,14 @@ services:
       interval: 10s
       timeout: 5s        # <-- FIXED
       retries: 5
+    network_mode: bridge
 
   # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: galaxy-redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -31,17 +32,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    network_mode: bridge
 
   # Redis Commander (Web UI for Redis)
   redis-commander:
     image: rediscommander/redis-commander:latest
     container_name: galaxy-redis-commander
     environment:
-      REDIS_HOSTS: local:localhost:6379
+      REDIS_HOSTS: local:localhost:6380
     ports:
       - "8081:8081"
     depends_on:
       - redis
+    network_mode: bridge
 
   # pgAdmin (Optional)
   pgadmin:
@@ -56,6 +59,7 @@ services:
       - postgres
     ports:
       - "5050:80"
+    network_mode: bridge
 
 volumes:
   postgres_data:

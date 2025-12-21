@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Toast } from '@/components/ui/Toast';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
-import { EyeIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, LinkIcon } from '@heroicons/react/24/outline';
 
 export default function RawPurchasesPage() {
   const router = useRouter();
@@ -17,7 +17,7 @@ export default function RawPurchasesPage() {
   const breadcrumbs = [
     { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
     { key: 'organization', label: 'Organization', href: '/dashboard/organization' },
-    { key: 'raw-purchases', label: 'Raw Purchases', href: '/dashboard/organization/raw-purchases' },
+    { key: 'raw-purchases', label: 'Purchases', href: '/dashboard/organization/raw-purchases' },
   ];
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export default function RawPurchasesPage() {
       const res = await fetch('/api/organization/raw-purchases');
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Failed to fetch raw purchases');
+        throw new Error(data.error || 'Failed to fetch purchases');
       }
       const result = await res.json();
       setRawPurchases(result.data || []);
@@ -73,9 +73,9 @@ export default function RawPurchasesPage() {
 
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-gray-900">Raw Purchases</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Purchases</h1>
           <p className="mt-1 text-sm text-gray-500">
-            ESF LEATHER CONSULTANCY RAW PURCHASES FOR THE YEAR 2021-2022
+            ESF LEATHER CONSULTANCY PURCHASES FOR THE YEAR 2021-2022
           </p>
         </div>
 
@@ -128,7 +128,7 @@ export default function RawPurchasesPage() {
               {rawPurchases.length === 0 ? (
                 <tr>
                   <td colSpan="11" className="px-6 py-8 text-center text-gray-500">
-                    No raw purchases found. Purchase orders will appear here once they are created.
+                    No purchases found. Purchase orders will appear here once they are created.
                   </td>
                 </tr>
               ) : (
@@ -165,15 +165,26 @@ export default function RawPurchasesPage() {
                       {purchase.sqFtApprox || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewDetails(purchase)}
-                        className="flex items-center gap-2"
-                      >
-                        <EyeIcon className="h-4 w-4" />
-                        View
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/dashboard/organization/raw-purchases/${purchase.id}/traceability`)}
+                          className="flex items-center gap-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-300"
+                        >
+                          <LinkIcon className="h-4 w-4" />
+                          Traceability
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(purchase)}
+                          className="flex items-center gap-2"
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                          View
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))

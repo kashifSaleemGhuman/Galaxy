@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Toast } from '@/components/ui/Toast';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, LinkIcon } from '@heroicons/react/24/outline';
 
 export default function RawPurchaseDetailPage() {
   const router = useRouter();
@@ -18,7 +18,7 @@ export default function RawPurchaseDetailPage() {
   const breadcrumbs = [
     { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
     { key: 'organization', label: 'Organization', href: '/dashboard/organization' },
-    { key: 'raw-purchases', label: 'Raw Purchases', href: '/dashboard/organization/raw-purchases' },
+    { key: 'raw-purchases', label: 'Purchases', href: '/dashboard/organization/raw-purchases' },
     { key: 'detail', label: 'Product Details', href: '#' },
   ];
 
@@ -72,7 +72,7 @@ export default function RawPurchaseDetailPage() {
         <div className="bg-white shadow rounded-lg p-6">
           <p className="text-gray-500">Purchase record not found.</p>
           <Button onClick={() => router.push('/dashboard/organization/raw-purchases')} className="mt-4">
-            Back to Raw Purchases
+            Back to Purchases
           </Button>
         </div>
       </div>
@@ -98,14 +98,23 @@ export default function RawPurchaseDetailPage() {
             Traceability information for {purchase.productName}
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => router.push('/dashboard/organization/raw-purchases')}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeftIcon className="h-4 w-4" />
-          Back
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            onClick={() => router.push(`/dashboard/organization/raw-purchases/${params.id}/traceability`)}
+            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            <LinkIcon className="h-4 w-4" />
+            View/Edit Traceability
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => router.push('/dashboard/organization/raw-purchases')}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
+            Back
+          </Button>
+        </div>
       </div>
 
       {/* Basic Information */}

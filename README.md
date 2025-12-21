@@ -160,6 +160,10 @@ npm run db:studio       # Open Prisma Studio
 npx prisma studio       # Open Prisma Studio directly
 npm run db:seed         # Seed database
 
+# Utilities
+npm run change-password <email> <new-password>  # Change user password
+# Example: npm run change-password admin@galaxy.com newpassword123
+
 # Testing
 npm run test            # Run tests
 npm run test:watch      # Run tests in watch mode

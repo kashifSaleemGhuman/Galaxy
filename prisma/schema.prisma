@@ -256,7 +256,7 @@ model Supplier {
 
   // Relations
   purchaseOrders PurchaseOrder[]
-  
+
   @@map("Supplier")
 }
 
@@ -701,9 +701,9 @@ model Employee {
   tenantId             String?   // Optional for backward compatibility
   
   // Certifications/Roles
-  isFirstAider         Boolean   @default(false)
-  isEmergencyResponder Boolean   @default(false)
-  isFirefighter        Boolean   @default(false)
+  isFirstAider         Boolean @default(false)
+  isEmergencyResponder Boolean @default(false)
+  isFirefighter        Boolean @default(false)
 
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
