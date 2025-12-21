@@ -43,6 +43,9 @@ export default function DashboardLayout({ children }) {
   const isPurchaseManager = session?.user?.role === 'purchase_manager'
   const isPurchaseUser = session?.user?.role === 'purchase_user'
   const isPurchaseRole = isPurchaseManager || isPurchaseUser
+  const isSalesManager = session?.user?.role === 'sales_manager'
+  const isSalesUser = session?.user?.role === 'sales_user'
+  const isSalesRole = isSalesManager || isSalesUser
 
   // Base navigation items
   const allNavigationItems = [
@@ -107,9 +110,10 @@ export default function DashboardLayout({ children }) {
       icon: ShoppingBagIcon,
       current: pathname.startsWith('/dashboard/sales'),
       children: [
-        { name: 'Orders', href: '/dashboard/sales/orders', current: pathname === '/dashboard/sales/orders' },
-        { name: 'Quotes', href: '/dashboard/sales/quotes', current: pathname === '/dashboard/sales/quotes' },
-        { name: 'Invoices', href: '/dashboard/sales/invoices', current: pathname === '/dashboard/sales/invoices' }
+        { name: 'Quotations', href: '/dashboard/sales/quotations', current: pathname.startsWith('/dashboard/sales/quotations') },
+        ...(isSalesManager ? [
+          { name: 'Approvals', href: '/dashboard/sales/approvals', current: pathname === '/dashboard/sales/approvals' }
+        ] : [])
       ]
     },
     { 
@@ -160,11 +164,20 @@ export default function DashboardLayout({ children }) {
   ]
 
   // Filter navigation based on role
-  // Purchase users and managers only see Purchase, Settings, and Analytics
+  // Purchase users and managers only see Dashboard, Purchase, Analytics, and Settings
+  // Sales users and managers only see Dashboard, Sales, Analytics, and Settings
   // Admin sees all items
   const navigation = isPurchaseRole
     ? allNavigationItems.filter(item => 
+        item.name === 'Dashboard' ||
         item.name === 'Purchase' || 
+        item.name === 'Analytics' || 
+        item.name === 'Settings'
+      )
+    : isSalesRole
+    ? allNavigationItems.filter(item => 
+        item.name === 'Dashboard' ||
+        item.name === 'Sales' || 
         item.name === 'Analytics' || 
         item.name === 'Settings'
       )

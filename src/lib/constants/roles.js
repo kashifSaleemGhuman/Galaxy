@@ -7,6 +7,8 @@ export const ROLES = {
   ACCOUNTS_USER: 'accounts_user',
   INVENTORY_MANAGER: 'inventory_manager',
   INVENTORY_USER: 'inventory_user',
+  SALES_MANAGER: 'sales_manager',
+  SALES_USER: 'sales_user',
   VENDOR: 'vendor',
   BASIC_USER: 'basic_user'
 };
@@ -42,6 +44,16 @@ export const PERMISSIONS = {
     MANAGE_SETTINGS: 'accounts.manage_settings'
   },
   
+  // Sales Module Permissions
+  SALES: {
+    VIEW_ALL: 'sales.view_all',
+    CREATE_QUOTATION: 'sales.create_quotation',
+    APPROVE_QUOTATION: 'sales.approve_quotation',
+    SEND_QUOTATION: 'sales.send_quotation',
+    VIEW_REPORTS: 'sales.view_reports',
+    MANAGE_SETTINGS: 'sales.manage_settings'
+  },
+  
   // Admin Permissions
   ADMIN: {
     MANAGE_USERS: 'admin.manage_users',
@@ -56,6 +68,7 @@ export const ROLE_PERMISSIONS = {
     ...Object.values(PERMISSIONS.PURCHASE),
     ...Object.values(PERMISSIONS.INVENTORY),
     ...Object.values(PERMISSIONS.ACCOUNTS),
+    ...Object.values(PERMISSIONS.SALES),
     ...Object.values(PERMISSIONS.ADMIN)
   ],
   
@@ -63,6 +76,7 @@ export const ROLE_PERMISSIONS = {
     ...Object.values(PERMISSIONS.PURCHASE),
     ...Object.values(PERMISSIONS.INVENTORY),
     ...Object.values(PERMISSIONS.ACCOUNTS),
+    ...Object.values(PERMISSIONS.SALES),
     PERMISSIONS.ADMIN.MANAGE_USERS,
     PERMISSIONS.ADMIN.VIEW_AUDIT_LOGS
   ],
@@ -97,5 +111,20 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.INVENTORY.APPROVE_TRANSFERS,
     PERMISSIONS.INVENTORY.VIEW_REPORTS,
     PERMISSIONS.INVENTORY.MANAGE_SETTINGS
+  ],
+  
+  [ROLES.SALES_MANAGER]: [
+    PERMISSIONS.SALES.VIEW_ALL,
+    PERMISSIONS.SALES.CREATE_QUOTATION,
+    PERMISSIONS.SALES.APPROVE_QUOTATION,
+    PERMISSIONS.SALES.SEND_QUOTATION,
+    PERMISSIONS.SALES.VIEW_REPORTS,
+    PERMISSIONS.SALES.MANAGE_SETTINGS
+  ],
+  
+  [ROLES.SALES_USER]: [
+    PERMISSIONS.SALES.VIEW_ALL,
+    PERMISSIONS.SALES.CREATE_QUOTATION,
+    PERMISSIONS.SALES.SEND_QUOTATION
   ]
 };

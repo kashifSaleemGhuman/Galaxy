@@ -1,0 +1,303 @@
+[
+  {
+    "id": "inv-001",
+    "name": "Premium Leather Jacket",
+    "description": "High-quality genuine leather jacket with inner lining",
+    "category": "Apparel",
+    "unit": "piece",
+    "exFactoryPrice": 125.50,
+    "availableQuantity": 150,
+    "isActive": true
+  },
+  {
+    "id": "inv-002",
+    "name": "Cotton T-Shirt",
+    "description": "100% organic cotton t-shirt, various sizes",
+    "category": "Apparel",
+    "unit": "piece",
+    "exFactoryPrice": 15.75,
+    "availableQuantity": 500,
+    "isActive": true
+  },
+  {
+    "id": "inv-003",
+    "name": "Denim Jeans",
+    "description": "Classic fit denim jeans, multiple washes available",
+    "category": "Apparel",
+    "unit": "piece",
+    "exFactoryPrice": 45.00,
+    "availableQuantity": 300,
+    "isActive": true
+  },
+  {
+    "id": "inv-004",
+    "name": "Running Shoes",
+    "description": "Athletic running shoes with cushioned sole",
+    "category": "Footwear",
+    "unit": "pair",
+    "exFactoryPrice": 65.00,
+    "availableQuantity": 200,
+    "isActive": true
+  },
+  {
+    "id": "inv-005",
+    "name": "Leather Boots",
+    "description": "Durable leather boots for outdoor use",
+    "category": "Footwear",
+    "unit": "pair",
+    "exFactoryPrice": 89.50,
+    "availableQuantity": 120,
+    "isActive": true
+  },
+  {
+    "id": "inv-006",
+    "name": "Canvas Backpack",
+    "description": "Water-resistant canvas backpack with multiple compartments",
+    "category": "Accessories",
+    "unit": "piece",
+    "exFactoryPrice": 35.25,
+    "availableQuantity": 180,
+    "isActive": true
+  },
+  {
+    "id": "inv-007",
+    "name": "Leather Wallet",
+    "description": "Genuine leather wallet with card slots",
+    "category": "Accessories",
+    "unit": "piece",
+    "exFactoryPrice": 22.00,
+    "availableQuantity": 250,
+    "isActive": true
+  },
+  {
+    "id": "inv-008",
+    "name": "Wool Sweater",
+    "description": "Warm wool sweater, perfect for winter",
+    "category": "Apparel",
+    "unit": "piece",
+    "exFactoryPrice": 55.75,
+    "availableQuantity": 100,
+    "isActive": true
+  },
+  {
+    "id": "inv-009",
+    "name": "Baseball Cap",
+    "description": "Adjustable baseball cap with logo",
+    "category": "Accessories",
+    "unit": "piece",
+    "exFactoryPrice": 12.50,
+    "availableQuantity": 400,
+    "isActive": true
+  },
+  {
+    "id": "inv-010",
+    "name": "Sunglasses",
+    "description": "UV protection sunglasses with case",
+    "category": "Accessories",
+    "unit": "piece",
+    "exFactoryPrice": 28.00,
+    "availableQuantity": 220,
+    "isActive": true
+  },
+  {
+    "id": "inv-011",
+    "name": "Hooded Sweatshirt",
+    "description": "Comfortable cotton blend hooded sweatshirt",
+    "category": "Apparel",
+    "unit": "piece",
+    "exFactoryPrice": 38.50,
+    "availableQuantity": 175,
+    "isActive": true
+  },
+  {
+    "id": "inv-012",
+    "name": "Cargo Pants",
+    "description": "Durable cargo pants with multiple pockets",
+    "category": "Apparel",
+    "unit": "piece",
+    "exFactoryPrice": 42.00,
+    "availableQuantity": 160,
+    "isActive": true
+  },
+  {
+    "id": "inv-013",
+    "name": "Leather Belt",
+    "description": "Genuine leather belt with metal buckle",
+    "category": "Accessories",
+    "unit": "piece",
+    "exFactoryPrice": 18.75,
+    "availableQuantity": 300,
+    "isActive": true
+  },
+  {
+    "id": "inv-014",
+    "name": "Canvas Sneakers",
+    "description": "Lightweight canvas sneakers, various colors",
+    "category": "Footwear",
+    "unit": "pair",
+    "exFactoryPrice": 32.00,
+    "availableQuantity": 280,
+    "isActive": true
+  },
+  {
+    "id": "inv-015",
+    "name": "Winter Gloves",
+    "description": "Insulated winter gloves with touchscreen compatibility",
+    "category": "Accessories",
+    "unit": "pair",
+    "exFactoryPrice": 24.50,
+    "availableQuantity": 190,
+    "isActive": true
+  },
+  {
+    "id": "inv-016",
+    "name": "Polo Shirt",
+    "description": "Classic polo shirt, 100% cotton",
+    "category": "Apparel",
+    "unit": "piece",
+    "exFactoryPrice": 28.75,
+    "availableQuantity": 240,
+    "isActive": true
+  },
+  {
+    "id": "inv-017",
+    "name": "Dress Shoes",
+    "description": "Formal dress shoes, leather upper",
+    "category": "Footwear",
+    "unit": "pair",
+    "exFactoryPrice": 95.00,
+    "availableQuantity": 90,
+    "isActive": true
+  },
+  {
+    "id": "inv-018",
+    "name": "Beanie Hat",
+    "description": "Warm beanie hat, acrylic blend",
+    "category": "Accessories",
+    "unit": "piece",
+    "exFactoryPrice": 14.25,
+    "availableQuantity": 320,
+    "isActive": true
+  },
+  {
+    "id": "inv-019",
+    "name": "Windbreaker Jacket",
+    "description": "Lightweight windbreaker jacket, water-resistant",
+    "category": "Apparel",
+    "unit": "piece",
+    "exFactoryPrice": 48.00,
+    "availableQuantity": 140,
+    "isActive": true
+  },
+  {
+    "id": "inv-020",
+    "name": "Sandals",
+    "description": "Comfortable sandals with adjustable straps",
+    "category": "Footwear",
+    "unit": "pair",
+    "exFactoryPrice": 26.50,
+    "availableQuantity": 210,
+    "isActive": true
+  },
+  {
+    "id": "inv-021",
+    "name": "Watch Strap",
+    "description": "Leather watch strap, universal fit",
+    "category": "Accessories",
+    "unit": "piece",
+    "exFactoryPrice": 19.00,
+    "availableQuantity": 180,
+    "isActive": true
+  },
+  {
+    "id": "inv-022",
+    "name": "Tank Top",
+    "description": "Cotton tank top, breathable fabric",
+    "category": "Apparel",
+    "unit": "piece",
+    "exFactoryPrice": 16.50,
+    "availableQuantity": 350,
+    "isActive": true
+  },
+  {
+    "id": "inv-023",
+    "name": "Hiking Boots",
+    "description": "Waterproof hiking boots with ankle support",
+    "category": "Footwear",
+    "unit": "pair",
+    "exFactoryPrice": 110.00,
+    "availableQuantity": 75,
+    "isActive": true
+  },
+  {
+    "id": "inv-024",
+    "name": "Scarf",
+    "description": "Soft wool scarf, various patterns",
+    "category": "Accessories",
+    "unit": "piece",
+    "exFactoryPrice": 21.75,
+    "availableQuantity": 200,
+    "isActive": true
+  },
+  {
+    "id": "inv-025",
+    "name": "Blazer",
+    "description": "Formal blazer, wool blend",
+    "category": "Apparel",
+    "unit": "piece",
+    "exFactoryPrice": 125.00,
+    "availableQuantity": 60,
+    "isActive": true
+  },
+  {
+    "id": "inv-026",
+    "name": "Flip Flops",
+    "description": "Comfortable flip flops, rubber sole",
+    "category": "Footwear",
+    "unit": "pair",
+    "exFactoryPrice": 8.50,
+    "availableQuantity": 450,
+    "isActive": true
+  },
+  {
+    "id": "inv-027",
+    "name": "Keychain",
+    "description": "Metal keychain with logo",
+    "category": "Accessories",
+    "unit": "piece",
+    "exFactoryPrice": 5.00,
+    "availableQuantity": 500,
+    "isActive": true
+  },
+  {
+    "id": "inv-028",
+    "name": "Shorts",
+    "description": "Cotton shorts, casual wear",
+    "category": "Apparel",
+    "unit": "piece",
+    "exFactoryPrice": 25.00,
+    "availableQuantity": 280,
+    "isActive": true
+  },
+  {
+    "id": "inv-029",
+    "name": "Slippers",
+    "description": "Comfortable indoor slippers",
+    "category": "Footwear",
+    "unit": "pair",
+    "exFactoryPrice": 18.00,
+    "availableQuantity": 160,
+    "isActive": true
+  },
+  {
+    "id": "inv-030",
+    "name": "Tie",
+    "description": "Silk tie, formal wear",
+    "category": "Accessories",
+    "unit": "piece",
+    "exFactoryPrice": 32.50,
+    "availableQuantity": 130,
+    "isActive": true
+  }
+]
+

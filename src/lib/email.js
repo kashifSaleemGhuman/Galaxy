@@ -737,6 +737,187 @@ class EmailService {
       html,
     });
   }
+
+  /**
+   * Generate Sales Quotation email template
+   * @param {Object} quotation - Sales Quotation data
+   * @returns {Object} Email content with subject, html, and text
+   */
+  generateSalesQuotationEmail(quotation) {
+    const customerName = quotation.customerName || 'Valued Customer';
+    const customerEmail = quotation.customerEmail || '';
+    const quotationNumber = quotation.quotationNumber || quotation.id;
+    const validityDate = quotation.validityDate
+      ? new Date(quotation.validityDate).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+      : 'N/A';
+
+    const items = quotation.items || [];
+    const totalAmount = parseFloat(quotation.totalAmount) || 0;
+    const taxAmount = parseFloat(quotation.taxAmount) || 0;
+    const discountAmount = parseFloat(quotation.discountAmount) || 0;
+    const freightCharges = parseFloat(quotation.freightCharges) || 0;
+    const finalNetPrice = parseFloat(quotation.finalNetPrice) || 0;
+
+    const subject = `Sales Quotation: ${quotationNumber}`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 700px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 24px;">Sales Quotation</h1>
+  </div>
+  
+  <div style="background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+    <p style="font-size: 16px; margin-bottom: 20px;">Dear ${customerName},</p>
+    
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      Thank you for your interest in our products. We are pleased to provide you with the following quotation.
+    </p>
+    
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb;">
+      <h2 style="color: #667eea; margin-top: 0; font-size: 20px;">Quotation Details</h2>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; width: 40%;">Quotation Number:</td>
+          <td style="padding: 8px 0;">${quotationNumber}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold;">Validity Date:</td>
+          <td style="padding: 8px 0;">${validityDate}</td>
+        </tr>
+        ${quotation.customerCompanyName ? `
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold;">Company:</td>
+          <td style="padding: 8px 0;">${quotation.customerCompanyName}</td>
+        </tr>
+        ` : ''}
+      </table>
+    </div>
+    
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb;">
+      <h2 style="color: #667eea; margin-top: 0; font-size: 20px;">Items</h2>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+        <thead>
+          <tr style="background: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
+            <th style="padding: 12px; text-align: left; font-size: 14px; font-weight: bold;">Product</th>
+            <th style="padding: 12px; text-align: right; font-size: 14px; font-weight: bold;">Qty</th>
+            <th style="padding: 12px; text-align: right; font-size: 14px; font-weight: bold;">Ex-Factory Price</th>
+            <th style="padding: 12px; text-align: right; font-size: 14px; font-weight: bold;">Tax</th>
+            <th style="padding: 12px; text-align: right; font-size: 14px; font-weight: bold;">Freight</th>
+            <th style="padding: 12px; text-align: right; font-size: 14px; font-weight: bold;">Discount</th>
+            <th style="padding: 12px; text-align: right; font-size: 14px; font-weight: bold;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map((item, index) => {
+            const qty = parseInt(item.quantity) || 0;
+            const exFactory = parseFloat(item.exFactoryPrice) || 0;
+            const tax = parseFloat(item.taxCharges) || 0;
+            const freight = parseFloat(item.freightCharges) || 0;
+            const discount = parseFloat(item.discountAmount) || 0;
+            const itemTotal = parseFloat(item.finalNetPrice) || 0;
+            
+            return `
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+              <td style="padding: 12px; font-size: 14px;">${item.productName || 'Product'}</td>
+              <td style="padding: 12px; text-align: right; font-size: 14px;">${qty}</td>
+              <td style="padding: 12px; text-align: right; font-size: 14px;">$${exFactory.toFixed(2)}</td>
+              <td style="padding: 12px; text-align: right; font-size: 14px;">$${tax.toFixed(2)}</td>
+              <td style="padding: 12px; text-align: right; font-size: 14px;">$${freight.toFixed(2)}</td>
+              <td style="padding: 12px; text-align: right; font-size: 14px;">$${discount.toFixed(2)}</td>
+              <td style="padding: 12px; text-align: right; font-size: 14px; font-weight: bold;">$${itemTotal.toFixed(2)}</td>
+            </tr>
+          `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+    
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb;">
+      <h2 style="color: #667eea; margin-top: 0; font-size: 20px;">Price Summary</h2>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; width: 70%;">Subtotal (Ex-Factory):</td>
+          <td style="padding: 8px 0; text-align: right;">$${totalAmount.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold;">Tax Charges:</td>
+          <td style="padding: 8px 0; text-align: right;">$${taxAmount.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold;">Freight Charges:</td>
+          <td style="padding: 8px 0; text-align: right;">$${freightCharges.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold;">Discount:</td>
+          <td style="padding: 8px 0; text-align: right;">-$${discountAmount.toFixed(2)}</td>
+        </tr>
+        <tr style="border-top: 2px solid #667eea; margin-top: 10px;">
+          <td style="padding: 12px 0; font-weight: bold; font-size: 18px;">Final Net Price:</td>
+          <td style="padding: 12px 0; text-align: right; font-weight: bold; font-size: 18px; color: #667eea;">$${finalNetPrice.toFixed(2)}</td>
+        </tr>
+      </table>
+    </div>
+    
+    ${quotation.termsAndConditions ? `
+    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+      <h3 style="margin-top: 0; font-size: 16px; color: #92400e;">Terms and Conditions</h3>
+      <p style="margin: 0; font-size: 14px; color: #92400e; white-space: pre-wrap;">${quotation.termsAndConditions}</p>
+    </div>
+    ` : ''}
+    
+    <p style="font-size: 16px; margin-top: 30px;">
+      This quotation is valid until ${validityDate}. If you have any questions or would like to proceed with this quotation, please contact us.
+    </p>
+    
+    <p style="font-size: 16px; margin-top: 20px;">
+      Best regards,<br>
+      <strong>Galaxy ERP Sales Team</strong>
+    </p>
+    
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
+      <p style="margin: 0;">This is an automated email from Galaxy ERP System.</p>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    return {
+      subject,
+      html,
+      text: this.stripHtml(html)
+    };
+  }
+
+  /**
+   * Send Sales Quotation email to customer
+   * @param {Object} quotation - Sales Quotation data
+   * @returns {Promise<Object>} Send result
+   */
+  async sendSalesQuotationEmail(quotation) {
+    const customerEmail = quotation.customerEmail;
+    if (!customerEmail) {
+      throw new Error('Customer email is required');
+    }
+
+    const { subject, html } = this.generateSalesQuotationEmail(quotation);
+    return await this.sendEmail({
+      to: customerEmail,
+      subject,
+      html,
+    });
+  }
 }
 
 // Export singleton instance

@@ -11,12 +11,21 @@ export default function Navigation() {
 
   const isAdmin = session?.user?.role === ROLES.SUPER_ADMIN || session?.user?.role === ROLES.ADMIN;
   const isPurchaseManager = session?.user?.role === ROLES.PURCHASE_MANAGER;
+  const isSalesManager = session?.user?.role === ROLES.SALES_MANAGER;
+  const isSalesUser = session?.user?.role === ROLES.SALES_USER;
+  const hasSalesAccess = isAdmin || isSalesManager || isSalesUser;
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard' },
     { name: 'Purchase', href: '/dashboard/purchase' },
     ...(isPurchaseManager ? [
       { name: 'Approvals', href: '/dashboard/purchase/approvals' }
+    ] : []),
+    ...(hasSalesAccess ? [
+      { name: 'Sales', href: '/dashboard/sales' }
+    ] : []),
+    ...(isSalesManager ? [
+      { name: 'Sales Approvals', href: '/dashboard/sales/approvals' }
     ] : []),
     ...(isAdmin ? [
       { name: 'Users', href: '/dashboard/users' }

@@ -8,7 +8,9 @@ const ROLES = {
   SUPER_ADMIN: 'super_admin',
   ADMIN: 'admin',
   PURCHASE_MANAGER: 'purchase_manager',
-  PURCHASE_USER: 'purchase_user'
+  PURCHASE_USER: 'purchase_user',
+  SALES_MANAGER: 'sales_manager',
+  SALES_USER: 'sales_user'
 } as const;
 
 async function main() {
@@ -69,6 +71,18 @@ async function main() {
         name: 'Purchase User',
         password: 'user123',
         role: ROLES.PURCHASE_USER
+      },
+      {
+        email: 'salesmanager@galaxy.com',
+        name: 'Sales Manager',
+        password: 'salesmanager123',
+        role: ROLES.SALES_MANAGER
+      },
+      {
+        email: 'salesuser@galaxy.com',
+        name: 'Sales User',
+        password: 'salesuser123',
+        role: ROLES.SALES_USER
       }
     ];
 

@@ -8,20 +8,23 @@ datasource db {
 }
 
 model User {
-  id              String            @id @default(cuid())
-  email           String            @unique
-  name            String?
-  password        String
-  role            String
-  isFirstLogin    Boolean           @default(true)
-  isActive        Boolean           @default(true)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  auditLogs       AuditLog[]
-  passwordHistory PasswordHistory[]
-  approvedRfqs    RFQ[]             @relation("RFQApprovals")
-  createdRfqs     RFQ[]
-  rfqApprovals    RFQApproval[]
+  id                    String                @id @default(cuid())
+  email                 String                @unique
+  name                  String?
+  password              String
+  role                  String
+  isFirstLogin          Boolean               @default(true)
+  isActive              Boolean               @default(true)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  auditLogs             AuditLog[]
+  passwordHistory       PasswordHistory[]
+  approvedRfqs          RFQ[]                 @relation("RFQApprovals")
+  createdRfqs           RFQ[]
+  rfqApprovals          RFQApproval[]
+  createdSalesQuotations SalesQuotation[]      @relation("SalesQuotationCreator")
+  approvedSalesQuotations SalesQuotation[]     @relation("SalesQuotationApprover")
+  salesQuotationApprovals SalesQuotationApproval[]
 }
 
 model PasswordHistory {
@@ -358,4 +361,61 @@ model Permit {
 
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+}
+
+model SalesQuotation {
+  id                  String                  @id @default(cuid())
+  quotationNumber     String                  @unique
+  validityDate        DateTime
+  status              String                  @default("draft") // draft, submitted, approved, rejected, sent
+  customerName        String
+  customerEmail        String
+  customerPhone        String?
+  customerCompanyName  String?
+  termsAndConditions   String?
+  totalAmount          Decimal                 @default(0)
+  taxAmount           Decimal                  @default(0)
+  discountAmount       Decimal                  @default(0)
+  freightCharges       Decimal                  @default(0)
+  finalNetPrice       Decimal                  @default(0)
+  createdById         String
+  approvedById         String?
+  sentAt              DateTime?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  
+  createdBy           User                    @relation("SalesQuotationCreator", fields: [createdById], references: [id])
+  approvedBy          User?                   @relation("SalesQuotationApprover", fields: [approvedById], references: [id])
+  items               SalesQuotationItem[]
+  approvals           SalesQuotationApproval[]
+}
+
+model SalesQuotationItem {
+  id              String          @id @default(cuid())
+  quotationId     String
+  productId        String?        // From inventory (can be null if product doesn't exist in system)
+  productName      String
+  quantity         Int
+  exFactoryPrice   Decimal
+  taxCharges       Decimal        @default(0)
+  freightCharges   Decimal        @default(0)
+  discountAmount   Decimal        @default(0)
+  finalNetPrice    Decimal
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  
+  quotation        SalesQuotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+}
+
+model SalesQuotationApproval {
+  id          String          @id @default(cuid())
+  quotationId String
+  approvedBy  String
+  status      String          // approved, rejected
+  comments    String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  
+  quotation   SalesQuotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  approver    User           @relation(fields: [approvedBy], references: [id])
 }
