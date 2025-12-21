@@ -667,6 +667,9 @@ export default function TransfersPage() {
         </div>
       )}
 
+        </>
+      )}
+
       {/* Transfer Modal */}
       {showModal && (
         <TransferModal
@@ -677,7 +680,6 @@ export default function TransfersPage() {
           onSave={handleSaveTransfer}
           warehouses={warehouses}
         />
-        </>
       )}
     </div>
   )

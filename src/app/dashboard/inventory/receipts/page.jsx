@@ -418,8 +418,6 @@ export default function ReceiptsPage() {
           </div>
         </div>
       )}
-        </>
-      )}
     </div>
   )
 }
