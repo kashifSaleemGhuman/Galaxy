@@ -35,9 +35,9 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url)
     const period = searchParams.get('period') || 'month' // week, month, quarter, year
     
-    // Try to get cached stats first
-    const cacheKey = `crm:stats:${session.user.tenantId}:${period}`
-    const cachedStats = await dashboardCache.getMetrics(session.user.tenantId, cacheKey)
+    // Try to get cached stats first (tenantId removed - single tenant mode)
+    const cacheKey = `crm:stats:default:${period}`
+    const cachedStats = await dashboardCache.getMetrics('default', cacheKey)
     
     if (cachedStats) {
       console.log('📦 Serving CRM stats from cache')

@@ -30,7 +30,8 @@ export async function POST(req) {
     }
 
     // Check if user has permission to create purchase orders
-    const canCreatePO = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER, ROLES.PURCHASE_USER].includes(currentUser.role);
+    const role = (currentUser.role || '').toUpperCase()
+    const canCreatePO = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER, ROLES.PURCHASE_USER].includes(role);
     if (!canCreatePO) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }

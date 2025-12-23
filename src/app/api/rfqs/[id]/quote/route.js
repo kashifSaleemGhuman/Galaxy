@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
+import { hasPermission, PERMISSIONS } from '@/lib/constants/roles';
 
 const normalizeTraceabilityAnswers = (input) => {
   if (!Array.isArray(input)) {
@@ -38,10 +39,6 @@ export const runtime = 'nodejs';
 
 export async function POST(req, { params }) {
   try {
-    // Await params if it's a Promise (Next.js 15+)
-    const resolvedParams = await params;
-    const rfqId = resolvedParams.id;
-
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -98,9 +95,12 @@ export async function POST(req, { params }) {
     }
 
     // Creator, manager, or admin can record quote
-    const canRecord = rfq.createdById === currentUser.id || ['super_admin', 'admin', 'purchase_manager'].includes(currentUser.role);
+    // Users can record quotes for their own RFQs, or if they have purchase permissions
+    const canRecord = rfq.createdById === currentUser.id || 
+                     hasPermission(currentUser.role, PERMISSIONS.PURCHASE.VIEW_ALL) ||
+                     hasPermission(currentUser.role, PERMISSIONS.PURCHASE.CREATE_RFQ);
     if (!canRecord) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      return NextResponse.json({ error: 'Access denied. You can only record quotes for RFQs you created, or if you have purchase permissions.' }, { status: 403 });
     }
 
     const rfqItemsByProduct = new Map(
@@ -211,73 +211,61 @@ export async function POST(req, { params }) {
       .sort();
     const earliestDeliveryDate = allDates[0];
 
-    // Optimize transaction by removing complex includes and fetching RFQ items first
-    const rfqItems = await prisma.rFQItem.findMany({
-      where: { rfqId: rfqId },
-      select: { id: true, productId: true }
-    });
-
-    const rfqItemsByProductId = new Map(
-      rfqItems.map(item => [item.productId, item])
-    );
-
-    // Use transaction with increased timeout and optimize queries
-    const updatedRfqId = await prisma.$transaction(async (tx) => {
-      // Update RFQ status (without complex includes to speed up transaction)
-      await tx.rFQ.update({
-        where: { id: rfqId },
-        data: {
-          vendorPrice: parseFloat(totalPrice),
-          expectedDelivery: new Date(earliestDeliveryDate),
-          vendorNotes: vendorNotes || null,
-          status: 'received'
-        }
-      });
-
-      // Update RFQ items with per-item pricing and delivery dates
-      await Promise.all(
-        enrichedItems.map(async (item) => {
-          const rfqItem = rfqItemsByProductId.get(item.productId);
-          
-          if (rfqItem) {
-            await tx.rFQItem.update({
-              where: { id: rfqItem.id },
-              data: {
-                unitPrice: parseFloat(item.unitPrice),
-                expectedDeliveryDate: new Date(item.expectedDeliveryDate),
-                traceabilityAnswers: item.traceabilityAnswers,
-                customFieldAnswers: item.customFieldAnswers || {}
-              }
-            });
-          } else {
-            console.warn(`RFQ item not found for productId: ${item.productId}`);
-          }
-        })
-      );
-
-      await tx.auditLog.create({
-        data: {
-          userId: currentUser.id,
-          action: 'RECORD_RFQ_QUOTE',
-          details: `Recorded vendor quote for RFQ ${rfq.rfqNumber}`
-        }
-      });
-
-      return rfqId;
-    }, {
-      maxWait: 10000, // Maximum time to wait for a transaction slot
-      timeout: 10000, // Maximum time the transaction can run (10 seconds)
-    });
-
-    // Fetch the updated RFQ with all relations after transaction completes
-    const updated = await prisma.rFQ.findUnique({
-      where: { id: updatedRfqId },
+    // Note: Using sequential operations instead of transaction because Prisma Accelerate doesn't support transactions
+    const updatedRfq = await prisma.rFQ.update({
+      where: { id: params.id },
+      data: {
+        vendorPrice: parseFloat(totalPrice),
+        expectedDelivery: new Date(earliestDeliveryDate),
+        vendorNotes: vendorNotes || null,
+        status: 'received'
+      },
       include: {
         vendor: true,
         createdBy: { select: { id: true, name: true, email: true } },
         items: { include: { product: true } }
       }
     });
+
+    // Update RFQ items with per-item pricing and delivery dates
+    await Promise.all(
+      enrichedItems.map(async (item) => {
+        // Find the RFQ item by productId
+        const rfqItem = updatedRfq.items.find(
+          rfqItem => rfqItem.productId === item.productId
+        );
+        
+        if (rfqItem) {
+          await prisma.rFQItem.update({
+            where: { id: rfqItem.id },
+            data: {
+              unitPrice: parseFloat(item.unitPrice),
+              expectedDeliveryDate: new Date(item.expectedDeliveryDate),
+              traceabilityAnswers: item.traceabilityAnswers,
+              customFieldAnswers: item.customFieldAnswers || {}
+            }
+          });
+        } else {
+          console.warn(`RFQ item not found for productId: ${item.productId}`);
+        }
+      })
+    );
+
+    // Create audit log (non-blocking)
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: currentUser.id,
+          action: 'RECORD_RFQ_QUOTE',
+          details: `Recorded vendor quote for RFQ ${rfq.rfqNumber}`
+        }
+      });
+    } catch (auditError) {
+      console.warn('Failed to create audit log for RFQ quote:', auditError);
+      // Continue - RFQ was successfully updated
+    }
+
+    const updated = updatedRfq;
 
     // For approvals screen, 'received' is considered pending manager approval
     return NextResponse.json({ success: true, rfq: updated });

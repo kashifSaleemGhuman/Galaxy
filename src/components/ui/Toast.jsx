@@ -1,100 +1,102 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { CheckCircle, XCircle, X, Info } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 
-const toastTypes = {
-  success: {
-    icon: CheckCircle,
-    bgColor: 'bg-green-50',
-    borderColor: 'border-green-200',
-    textColor: 'text-green-800',
-    iconColor: 'text-green-400'
-  },
-  error: {
-    icon: XCircle,
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
-    textColor: 'text-red-800',
-    iconColor: 'text-red-400'
-  },
-  info: {
-    icon: Info,
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
-    textColor: 'text-blue-800',
-    iconColor: 'text-blue-400'
-  }
-}
+// Internal Toast component for individual toast messages
+function ToastInternal({ toast, onClose }) {
+  const { title, message, type } = toast
 
-export function Toast({ message, type = 'info', duration = 5000, onClose, title, variant }) {
-  const [isVisible, setIsVisible] = useState(true)
-  
-  // Handle destructured variant prop if provided (for compatibility with shadcn/ui style calls)
-  const actualType = variant === 'destructive' ? 'error' : (type || 'info')
-  
-  const styles = toastTypes[actualType] || toastTypes.info
-  const IconComponent = styles.icon
-
-  useEffect(() => {
-    if (duration > 0) {
-      const timer = setTimeout(() => {
-        setIsVisible(false)
-        setTimeout(onClose, 300) // Wait for fade out animation
-      }, duration)
-
-      return () => clearTimeout(timer)
+  const getIcon = () => {
+    switch (type) {
+      case 'success':
+        return <CheckCircle className="h-5 w-5 text-green-600" />
+      case 'error':
+        return <AlertCircle className="h-5 w-5 text-red-600" />
+      case 'warning':
+        return <AlertTriangle className="h-5 w-5 text-yellow-600" />
+      default:
+        return <Info className="h-5 w-5 text-blue-600" />
     }
-  }, [duration, onClose])
+  }
 
-  if (!isVisible) return null
+  const getBgColor = () => {
+    switch (type) {
+      case 'success':
+        return 'bg-green-50 border-green-200'
+      case 'error':
+        return 'bg-red-50 border-red-200'
+      case 'warning':
+        return 'bg-yellow-50 border-yellow-200'
+      default:
+        return 'bg-blue-50 border-blue-200'
+    }
+  }
+
+  const getTextColor = () => {
+    switch (type) {
+      case 'success':
+        return 'text-green-800'
+      case 'error':
+        return 'text-red-800'
+      case 'warning':
+        return 'text-yellow-800'
+      default:
+        return 'text-blue-800'
+    }
+  }
 
   return (
-    <div className={`max-w-sm w-full ${styles.bgColor} border ${styles.borderColor} rounded-lg shadow-lg transform transition-all duration-300 ease-in-out pointer-events-auto`}>
-      <div className="flex items-start p-4">
-        <div className="flex-shrink-0">
-          <IconComponent className={`h-5 w-5 ${styles.iconColor}`} />
-        </div>
-        <div className="ml-3 flex-1">
-          {title && <p className={`text-sm font-medium ${styles.textColor}`}>{title}</p>}
-          <p className={`text-sm ${title ? 'mt-1' : ''} ${styles.textColor}`}>
-            {message || title} {/* Use title as message if message is missing */}
-          </p>
-        </div>
-        <div className="ml-4 flex-shrink-0">
-          <button
-            onClick={() => {
-              setIsVisible(false)
-              setTimeout(onClose, 300)
-            }}
-            className={`inline-flex ${styles.textColor} hover:${styles.textColor} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-green-50 focus:ring-green-500`}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <div
+      className={`${getBgColor()} ${getTextColor()} border rounded-lg shadow-lg p-4 flex items-start space-x-3 min-w-[300px] max-w-md`}
+    >
+      <div className="flex-shrink-0 mt-0.5">
+        {getIcon()}
+      </div>
+      <div className="flex-1">
+        {title && <p className="text-sm font-semibold mb-1">{title}</p>}
+        <p className="text-sm">{message || title}</p>
+      </div>
+      <button
+        onClick={onClose}
+        className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
+
+// Toast component wrapper for simpler usage (accepts type, message, onClose props)
+// This matches the API expected by purchase pages
+export function Toast({ type, message, title, onClose }) {
+  const toast = { type, message, title: title || message }
+  return (
+    <div className="fixed top-4 right-4 z-50 pointer-events-none">
+      <div className="pointer-events-auto">
+        <ToastInternal toast={toast} onClose={onClose} />
       </div>
     </div>
   )
 }
 
-// Create a singleton for managing toasts outside of React tree if needed,
-// but preferably use a Context provider. For now, let's export a helper
-// that dispatches a custom event which the ToastContainer listens to.
-export const toast = ({ title, description, variant = 'default' }) => {
-  const event = new CustomEvent('show-toast', {
-    detail: { title, message: description, type: variant === 'destructive' ? 'error' : 'success' }
-  })
-  window.dispatchEvent(event)
-}
-
+// ToastContainer component that listens to custom events
 export function ToastContainer() {
   const [toasts, setToasts] = useState([])
 
   useEffect(() => {
     const handleShowToast = (event) => {
-      const { title, message, type, duration = 5000 } = event.detail
-      const id = Date.now()
-      setToasts(prev => [...prev, { id, title, message, type, duration }])
+      const { title, message, type = 'info', duration = 5000 } = event.detail
+      const id = Date.now() + Math.random()
+      const toast = { id, title, message, type, duration }
+      
+      setToasts(prev => [...prev, toast])
+      
+      if (duration > 0) {
+        setTimeout(() => {
+          setToasts(prev => prev.filter(t => t.id !== id))
+        }, duration)
+      }
     }
 
     window.addEventListener('show-toast', handleShowToast)
@@ -106,28 +108,44 @@ export function ToastContainer() {
   }
 
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2 pointer-events-none">
-      {toasts.map(t => (
-        <Toast
-          key={t.id}
-          title={t.title}
-          message={t.message}
-          type={t.type}
-          duration={t.duration}
-          onClose={() => removeToast(t.id)}
-        />
+    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md pointer-events-none">
+      {toasts.map(toast => (
+        <div key={toast.id} className="pointer-events-auto">
+          <ToastInternal toast={toast} onClose={() => removeToast(toast.id)} />
+        </div>
       ))}
     </div>
   )
 }
 
-// Keep existing hook for compatibility if any components use it
+// useToast hook for convenience
 export function useToast() {
-  // This hook implementation is now just a wrapper around the event dispatcher
-  // or could return the container. 
-  // For now, components should just import { toast } and call it.
+  const showToast = (messageOrTitle, typeOrMessage = 'info', type = null, duration = 5000) => {
+    // Handle two different call patterns:
+    // 1. showToast(message, type) - most common
+    // 2. showToast(title, message, type, duration) - full signature
+    let title, message, toastType
+    
+    if (type !== null) {
+      // Full signature: (title, message, type, duration)
+      title = messageOrTitle
+      message = typeOrMessage
+      toastType = type
+    } else {
+      // Short signature: (message, type)
+      title = null
+      message = messageOrTitle
+      toastType = typeOrMessage || 'info'
+    }
+    
+    const event = new CustomEvent('show-toast', {
+      detail: { title, message, type: toastType, duration }
+    })
+    window.dispatchEvent(event)
+  }
+
   return {
-    showToast: (message, type) => toast({ title: message, variant: type === 'error' ? 'destructive' : 'default' }),
+    showToast,
     ToastContainer
   }
 }

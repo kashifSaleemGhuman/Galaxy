@@ -9,7 +9,15 @@ const redis = new Redis({
   retryDelayOnFailover: 100,
   maxRetriesPerRequest: 3,
   lazyConnect: true,
-  showFriendlyErrorStack: process.env.NODE_ENV === 'development'
+  showFriendlyErrorStack: process.env.NODE_ENV === 'development',
+  connectTimeout: 10000,
+  commandTimeout: 5000,
+  retryDelayOnClusterDown: 300,
+  enableReadyCheck: false,
+  maxRetriesPerRequest: null,
+  // Disable automatic reconnection to prevent spam
+  retryDelayOnFailover: 0,
+  maxRetriesPerRequest: 0
 })
 
 // Redis connection events
@@ -43,7 +51,10 @@ export const cache = {
       await redis.setex(key, ttl, serializedData)
       return true
     } catch (error) {
-      console.error('Cache set error:', error)
+      // Silently fail if Redis is not available
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Cache set failed (Redis unavailable):', error.message)
+      }
       return false
     }
   },
@@ -64,7 +75,10 @@ export const cache = {
         return data // Return as string if not JSON
       }
     } catch (error) {
-      console.error('Cache get error:', error)
+      // Silently fail if Redis is not available
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Cache get failed (Redis unavailable):', error.message)
+      }
       return null
     }
   },

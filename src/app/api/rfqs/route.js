@@ -200,21 +200,22 @@ export async function POST(req) {
     });
 
     // Create RFQ with items
-    const rfq = await prisma.$transaction(async (tx) => {
-      const rfqNumber = generateRFQNumber();
-      
-      const newRfq = await tx.rFQ.create({
-        data: {
-          rfqNumber,
-          vendorId,
-          createdById: currentUser.id,
-          orderDeadline: new Date(orderDeadline),
-          status: 'draft'
-        }
-      });
+    // Note: Using sequential operations instead of transaction because Prisma Accelerate doesn't support transactions
+    const rfqNumber = generateRFQNumber();
+    
+    const newRfq = await prisma.rFQ.create({
+      data: {
+        rfqNumber,
+        vendorId,
+        createdById: currentUser.id,
+        orderDeadline: new Date(orderDeadline),
+        status: 'draft'
+      }
+    });
 
-      // Create RFQ items
-      await tx.rFQItem.createMany({
+    // Create RFQ items
+    try {
+      await prisma.rFQItem.createMany({
         data: validatedItems.map(item => ({
           rfqId: newRfq.id,
           productId: item.productId,
@@ -222,18 +223,32 @@ export async function POST(req) {
           unit: item.unit
         }))
       });
+    } catch (itemsError) {
+      // If items fail, try to clean up the RFQ
+      console.error('Failed to create RFQ items, cleaning up RFQ:', itemsError);
+      try {
+        await prisma.rFQ.delete({ where: { id: newRfq.id } });
+      } catch (cleanupError) {
+        console.error('Failed to cleanup RFQ after items creation failure:', cleanupError);
+      }
+      throw new Error('Failed to create RFQ items');
+    }
 
-      // Create audit log
-      await tx.auditLog.create({
+    // Create audit log (non-blocking)
+    try {
+      await prisma.auditLog.create({
         data: {
           userId: currentUser.id,
           action: 'CREATE_RFQ',
           details: `Created RFQ ${rfqNumber} for vendor ${vendor.name}`
         }
       });
+    } catch (auditError) {
+      console.warn('Failed to create audit log for RFQ creation:', auditError);
+      // Continue - RFQ was successfully created
+    }
 
-      return newRfq;
-    });
+    const rfq = newRfq;
 
     // Fetch the complete RFQ with relations
     const completeRfq = await prisma.rFQ.findUnique({

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
+import { ROLES } from '@/lib/constants/roles';
 import emailService from '@/lib/email';
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
@@ -41,7 +42,8 @@ export async function POST(req, { params }) {
     }
 
     // Only creator, manager, or admin can send
-    const canSend = rfq.createdById === currentUser.id || ['super_admin', 'admin', 'purchase_manager'].includes(currentUser.role);
+    const role = (currentUser.role || '').toUpperCase()
+    const canSend = rfq.createdById === currentUser.id || [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER].includes(role);
     if (!canSend) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
@@ -59,38 +61,35 @@ export async function POST(req, { params }) {
       }, { status: 400 });
     }
     // Update status to sent
-    const updated = await prisma.$transaction(async (tx) => {
-      const updatedRfq = await tx.rFQ.update({
-        where: { id: rfqId },
-        data: {
-          status: 'sent',
-          sentDate: new Date()
-        }
-      });
-
-      await tx.auditLog.create({
-        data: {
-          userId: currentUser.id,
-          action: 'SEND_RFQ',
-          details: `RFQ ${rfq.rfqNumber} sent to vendor ${rfq.vendor?.name || rfq.vendorId}`
-        }
-      });
-
-      return rfqId;
-    }, {
-      maxWait: 10000, // Maximum time to wait for a transaction slot
-      timeout: 10000, // Maximum time the transaction can run (10 seconds)
-    });
-
-    // Fetch the updated RFQ with all relations after transaction completes
-    const updatedRfq = await prisma.rFQ.findUnique({
-      where: { id: updated },
+    // Note: Using sequential operations instead of transaction because Prisma Accelerate doesn't support transactions
+    const updatedRfq = await prisma.rFQ.update({
+      where: { id: params.id },
+      data: {
+        status: 'sent',
+        sentDate: new Date()
+      },
       include: {
         vendor: true,
         createdBy: { select: { id: true, name: true, email: true } },
         items: { include: { product: true } }
       }
     });
+
+    // Create audit log (non-blocking - if this fails, RFQ is still sent)
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: currentUser.id,
+          action: 'SEND_RFQ',
+          details: `RFQ ${rfq.rfqNumber} sent to vendor ${rfq.vendor?.name || rfq.vendorId}`
+        }
+      });
+    } catch (auditError) {
+      console.warn('Failed to create audit log for RFQ send:', auditError);
+      // Continue - RFQ was successfully sent
+    }
+
+    const updated = updatedRfq;
 
     // Send email to vendor
     let emailResult = null;

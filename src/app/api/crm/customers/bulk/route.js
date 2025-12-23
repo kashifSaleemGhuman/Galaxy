@@ -4,6 +4,9 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { crmCache, rateLimit } from '@/lib/redis'
 
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic'
+
 // POST /api/crm/customers/bulk - Bulk operations
 export async function POST(request) {
   try {

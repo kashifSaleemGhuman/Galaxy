@@ -30,61 +30,21 @@ export async function POST(request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    // Create tenant and user in a transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Create tenant
-      const tenant = await tx.tenant.create({
-        data: {
-          name: companyName,
-          domain: companyDomain || null,
-          settings: {
-            theme: 'light',
-            timezone: 'UTC'
-          }
-        }
-      })
-
-      // Create default admin role
-      const adminRole = await tx.role.create({
-        data: {
-          name: 'Administrator',
-          description: 'Full system access',
-          permissions: ['*:*:*'] // All permissions
-        }
-      })
-
-      // Create user
-      const user = await tx.user.create({
-        data: {
-          email,
-          passwordHash: hashedPassword,
-          firstName,
-          lastName,
-          tenantId: tenant.id,
-          roleId: adminRole.id,
-          isActive: true
-        }
-      })
-
-      // Create employee record
-      await tx.employee.create({
-        data: {
-          userId: user.id,
-          tenantId: tenant.id,
-          employeeId: `EMP${Date.now()}`,
-          position: 'System Administrator',
-          hireDate: new Date(),
-          isActive: true
-        }
-      })
-
-      return { tenant, user }
+    // Create user with default admin role
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        name: `${firstName} ${lastName}`,
+        role: 'SUPER_ADMIN',
+        isFirstLogin: true,
+        isActive: true
+      }
     })
 
     return NextResponse.json({
       message: 'Registration successful',
-      tenantId: result.tenant.id,
-      userId: result.user.id
+      userId: user.id
     })
 
   } catch (error) {

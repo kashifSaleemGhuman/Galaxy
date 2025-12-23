@@ -5,6 +5,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Table } from '../_components/Table';
 import { useToast } from '@/components/ui/Toast';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PERMISSIONS } from '@/lib/constants/roles';
 
 const generateTempId = () => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -65,6 +67,7 @@ const renderAttributeBadges = (attributes) => {
 export default function VendorsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { hasPermission } = usePermissions();
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -85,10 +88,8 @@ export default function VendorsPage() {
   const [submitting, setSubmitting] = useState(false);
   const { showToast, ToastContainer } = useToast();
 
-  // Check if user is purchase_manager or above
-  const isAuthorized = session?.user?.role === 'purchase_manager' || 
-                       session?.user?.role === 'admin' || 
-                       session?.user?.role === 'super_admin';
+  // Check if user has permission to manage vendors using unified permission system
+  const isAuthorized = hasPermission(PERMISSIONS.PURCHASE.MANAGE_VENDORS);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -499,7 +500,7 @@ export default function VendorsPage() {
       {!isAuthorized && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
           <p className="text-yellow-800 text-sm">
-            You don't have permission to add vendors. Only purchase managers can add vendors.
+            You don't have permission to manage vendors. Please contact your administrator if you need this access.
           </p>
         </div>
       )}

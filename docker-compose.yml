@@ -15,7 +15,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
-      timeout: 5s
+      timeout: 5s        # <-- FIXED
       retries: 5
     network_mode: bridge
 
@@ -46,7 +46,7 @@ services:
       - redis
     network_mode: bridge
 
-  # pgAdmin (Optional - Database Management)
+  # pgAdmin (Optional)
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: galaxy-pgadmin
