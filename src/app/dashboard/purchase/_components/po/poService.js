@@ -20,17 +20,23 @@ export const poService = {
           vendorId: rfq.vendorId,
           orderDate: new Date().toISOString(),
           expectedDeliveryDate: rfq.vendorQuote.expectedDeliveryDate,
-          items: rfq.products.map(product => {
-            const unitPrice = parseFloat(rfq.vendorQuote.vendorPrice) || 0;
+          items: (rfq.items || rfq.products || []).map(item => {
+            const unitPrice = item.unitPrice 
+              ? parseFloat(item.unitPrice) 
+              : (rfq.vendorPrice ? parseFloat(rfq.vendorPrice) / (rfq.items?.length || rfq.products?.length || 1) : 0);
+            const quantity = parseInt(item.quantity || 0);
             return {
-              ...product,
+              ...item,
+              name: item.product?.name || item.productName || item.name,
               unitPrice,
-              total: unitPrice * parseInt(product.quantity)
+              total: unitPrice * quantity
             };
           }),
-          totalAmount: rfq.products.reduce((sum, product) => {
-            const unitPrice = parseFloat(rfq.vendorQuote.vendorPrice) || 0;
-            return sum + (unitPrice * parseInt(product.quantity));
+          totalAmount: (rfq.items || rfq.products || []).reduce((sum, item) => {
+            const unitPrice = item.unitPrice 
+              ? parseFloat(item.unitPrice) 
+              : (rfq.vendorPrice ? parseFloat(rfq.vendorPrice) / (rfq.items?.length || rfq.products?.length || 1) : 0);
+            return sum + (unitPrice * parseInt(item.quantity || 0));
           }, 0),
           terms: rfq.vendorQuote.vendorNotes || 'Standard terms and conditions apply',
           status: 'draft'

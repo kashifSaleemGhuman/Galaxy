@@ -22,8 +22,9 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    const role = (currentUser.role || '').toUpperCase()
     // Check permissions
-    const canViewPO = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER, ROLES.PURCHASE_USER].includes(currentUser.role);
+    const canViewPO = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER, ROLES.PURCHASE_USER].includes(role);
     if (!canViewPO) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
@@ -100,8 +101,9 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    const role = (currentUser.role || '').toUpperCase()
     // Check permissions
-    const canUpdatePO = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER, ROLES.PURCHASE_USER].includes(currentUser.role);
+    const canUpdatePO = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER, ROLES.PURCHASE_USER].includes(role);
     if (!canUpdatePO) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
@@ -198,8 +200,9 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    const role = (currentUser.role || '').toUpperCase()
     // Check permissions - only admins and purchase managers can delete
-    const canDeletePO = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER].includes(currentUser.role);
+    const canDeletePO = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER].includes(role);
     if (!canDeletePO) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }

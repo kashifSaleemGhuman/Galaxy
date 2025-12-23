@@ -14,8 +14,12 @@ import {
   UsersIcon,
   CalculatorIcon,
   ChartBarIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  TruckIcon,
+  ClipboardDocumentListIcon,
+  BuildingOfficeIcon
 } from '@heroicons/react/24/outline'
+import { ROLES, PERMISSIONS } from '@/lib/constants/roles'
 
 export default function DashboardLayout({ children }) {
   const { data: session, status } = useSession()
@@ -38,124 +42,217 @@ export default function DashboardLayout({ children }) {
     return null
   }
 
-  // Check if user is admin
-  const isAdmin = session?.user?.role === 'super_admin' || session?.user?.role === 'admin'
-  const isPurchaseManager = session?.user?.role === 'purchase_manager'
+  // Get user role from session (normalize to uppercase for consistency)
+  const userRole = (session?.user?.role || ROLES.PURCHASE_MANAGER).toUpperCase()
+  const isAdmin = userRole === ROLES.SUPER_ADMIN || userRole === ROLES.ADMIN
+  
+  // Debug logging for warehouse operators
+  if (userRole === ROLES.WAREHOUSE_OPERATOR && process.env.NODE_ENV === 'development') {
+    console.log('🏭 Warehouse Operator Navigation Check:', {
+      role: userRole,
+      permissions: session?.user?.permissions?.slice(0, 5),
+      permissionsCount: session?.user?.permissions?.length || 0
+    });
+  }
 
-  const navigation = [
-    { 
-      name: 'Dashboard', 
-      href: '/dashboard', 
-      icon: HomeIcon,
-      current: pathname === '/dashboard'
-    },
-    ...(isAdmin ? [{
-      name: 'Users',
-      href: '/dashboard/users',
-      icon: UsersIcon,
-      current: pathname.startsWith('/dashboard/users')
-    }] : []),
-    {
-      name: 'Organization',
-      href: '/dashboard/organization',
-      icon: HomeIcon, // You can import a BuildingIcon or similar if available
-      current: pathname.startsWith('/dashboard/organization'),
-      children: [
-        { name: 'Overview', href: '/dashboard/organization/details', current: pathname === '/dashboard/organization/details' || pathname === '/dashboard/organization' },
-        { name: 'Document Details', href: '/dashboard/organization/documents', current: pathname === '/dashboard/organization/documents' },
-        { name: 'Employees', href: '/dashboard/organization/employees', current: pathname.startsWith('/dashboard/organization/employees') },
-        { name: 'Machines', href: '/dashboard/organization/machines', current: pathname.startsWith('/dashboard/organization/machines') },
-        { name: 'Operating Permits', href: '/dashboard/organization/permits', current: pathname.startsWith('/dashboard/organization/permits') },
-        { name: 'Purchases', href: '/dashboard/organization/raw-purchases', current: pathname.startsWith('/dashboard/organization/raw-purchases') },
-        { name: 'Incoming Traceability', href: '/dashboard/organization/traceability', current: pathname.startsWith('/dashboard/organization/traceability') }
-      ]
-    },
-    { 
-      name: 'Purchase', 
-      href: '/dashboard/purchase', 
-      icon: ShoppingBagIcon,
-      current: pathname.startsWith('/dashboard/purchase'),
-      children: [
-        { name: 'Overview', href: '/dashboard/purchase', current: pathname === '/dashboard/purchase' },
-        { name: 'Suppliers', href: '/dashboard/purchase/suppliers', current: pathname === '/dashboard/purchase/suppliers' },
-        { name: 'Vendors', href: '/dashboard/purchase/vendors', current: pathname === '/dashboard/purchase/vendors' },
-        { name: 'Products', href: '/dashboard/purchase/products', current: pathname === '/dashboard/purchase/products' },
-        { name: 'RFQs', href: '/dashboard/purchase/rfqs', current: pathname.startsWith('/dashboard/purchase/rfqs') },
-        { name: 'Purchase Orders', href: '/dashboard/purchase/purchase-orders', current: pathname === '/dashboard/purchase/purchase-orders' },
-        { name: 'Receipts', href: '/dashboard/purchase/receipts', current: pathname === '/dashboard/purchase/receipts' },
-        { name: 'Vendor Bills', href: '/dashboard/purchase/bills', current: pathname === '/dashboard/purchase/bills' }
-      ]
-    },
-    { 
-      name: 'CRM', 
-      href: '/dashboard/crm', 
-      icon: UserGroupIcon,
-      current: pathname.startsWith('/dashboard/crm'),
-      children: [
-        { name: 'Overview', href: '/dashboard/crm', current: pathname === '/dashboard/crm' },
-        { name: 'Customers', href: '/dashboard/crm/customers', current: pathname === '/dashboard/crm/customers' },
-        { name: 'Leads', href: '/dashboard/crm/leads', current: pathname === '/dashboard/crm/leads' },
-        { name: 'Opportunities', href: '/dashboard/crm/opportunities', current: pathname === '/dashboard/crm/opportunities' },
-        { name: 'Contacts', href: '/dashboard/crm/contacts', current: pathname === '/dashboard/crm/contacts' }
-      ]
-    },
-    { 
-      name: 'Sales', 
-      href: '/dashboard/sales', 
-      icon: ShoppingBagIcon,
-      current: pathname.startsWith('/dashboard/sales'),
-      children: [
-        { name: 'Orders', href: '/dashboard/sales/orders', current: pathname === '/dashboard/sales/orders' },
-        { name: 'Quotes', href: '/dashboard/sales/quotes', current: pathname === '/dashboard/sales/quotes' },
-        { name: 'Invoices', href: '/dashboard/sales/invoices', current: pathname === '/dashboard/sales/invoices' }
-      ]
-    },
-    { 
-      name: 'Inventory', 
-      href: '/dashboard/inventory', 
-      icon: CubeIcon,
-      current: pathname.startsWith('/dashboard/inventory'),
-      children: [
-        { name: 'Products', href: '/dashboard/inventory/products', current: pathname === '/dashboard/inventory/products' },
-        { name: 'Stock', href: '/dashboard/inventory/stock', current: pathname === '/dashboard/inventory/stock' },
-        { name: 'Movements', href: '/dashboard/inventory/movements', current: pathname === '/dashboard/inventory/movements' }
-      ]
-    },
-    { 
-      name: 'HRM', 
-      href: '/dashboard/hrm', 
-      icon: UsersIcon,
-      current: pathname.startsWith('/dashboard/hrm'),
-      children: [
-        { name: 'Employees', href: '/dashboard/hrm/employees', current: pathname === '/dashboard/hrm/employees' },
-        { name: 'Departments', href: '/dashboard/hrm/departments', current: pathname === '/dashboard/hrm/departments' },
-        { name: 'Payroll', href: '/dashboard/hrm/payroll', current: pathname === '/dashboard/hrm/payroll' }
-      ]
-    },
-    { 
-      name: 'Accounting', 
-      href: '/dashboard/accounting', 
-      icon: CalculatorIcon,
-      current: pathname.startsWith('/dashboard/accounting'),
-      children: [
-        { name: 'Chart of Accounts', href: '/dashboard/accounting/accounts', current: pathname === '/dashboard/accounting/accounts' },
-        { name: 'Journal Entries', href: '/dashboard/accounting/journal', current: pathname === '/dashboard/accounting/journal' },
-        { name: 'Reports', href: '/dashboard/accounting/reports', current: pathname === '/dashboard/accounting/reports' }
-      ]
-    },
-    { 
-      name: 'Analytics', 
-      href: '/dashboard/analytics', 
-      icon: ChartBarIcon,
-      current: pathname === '/dashboard/analytics'
-    },
-    { 
-      name: 'Settings', 
-      href: '/dashboard/settings', 
-      icon: Cog6ToothIcon,
-      current: pathname === '/dashboard/settings'
-    },
-  ]
+  // Build navigation based on user permissions
+  const getNavigation = () => {
+    const baseNavigation = [
+      { 
+        name: 'Dashboard', 
+        href: '/dashboard', 
+        icon: HomeIcon,
+        current: pathname === '/dashboard'
+      }
+    ]
+
+    // Add Users section for admin users
+    if (userRole === ROLES.SUPER_ADMIN || userRole === ROLES.ADMIN) {
+      baseNavigation.push({
+        name: 'Users',
+        href: '/dashboard/users',
+        icon: UsersIcon,
+        current: pathname.startsWith('/dashboard/users'),
+        children: [
+          { name: 'Overview', href: '/dashboard/users', current: pathname === '/dashboard/users' },
+          { name: 'Roles', href: '/dashboard/users/roles', current: pathname === '/dashboard/users/roles' }
+        ]
+      })
+      
+      // Add Requests section for Super Admin only
+      if (userRole === ROLES.SUPER_ADMIN) {
+        baseNavigation.push({
+          name: 'Requests',
+          href: '/dashboard/requests',
+          icon: ClipboardDocumentListIcon,
+          current: pathname.startsWith('/dashboard/requests')
+        })
+      }
+    }
+
+    // Organization module - available to Super Admin and Admin
+    if (userRole === ROLES.SUPER_ADMIN || userRole === ROLES.ADMIN) {
+      baseNavigation.push({
+        name: 'Organization',
+        href: '/dashboard/organization',
+        icon: BuildingOfficeIcon,
+        current: pathname.startsWith('/dashboard/organization'),
+        children: [
+          { name: 'Overview', href: '/dashboard/organization/details', current: pathname === '/dashboard/organization/details' || pathname === '/dashboard/organization' },
+          { name: 'Document Details', href: '/dashboard/organization/documents', current: pathname === '/dashboard/organization/documents' },
+          { name: 'Employees', href: '/dashboard/organization/employees', current: pathname.startsWith('/dashboard/organization/employees') },
+          { name: 'Machines', href: '/dashboard/organization/machines', current: pathname.startsWith('/dashboard/organization/machines') },
+          { name: 'Operating Permits', href: '/dashboard/organization/permits', current: pathname.startsWith('/dashboard/organization/permits') },
+          { name: 'Purchases', href: '/dashboard/organization/raw-purchases', current: pathname.startsWith('/dashboard/organization/raw-purchases') },
+          { name: 'Incoming Traceability', href: '/dashboard/organization/traceability', current: pathname.startsWith('/dashboard/organization/traceability') }
+        ]
+      })
+    }
+
+    // Purchase module - available to all purchase-related roles
+    if (userRole === ROLES.SUPER_ADMIN || userRole === ROLES.ADMIN || userRole === ROLES.PURCHASE_MANAGER || userRole === ROLES.PURCHASE_USER) {
+      baseNavigation.push({
+        name: 'Purchase', 
+        href: '/dashboard/purchase', 
+        icon: ShoppingBagIcon,
+        current: pathname.startsWith('/dashboard/purchase'),
+        children: [
+          { name: 'Overview', href: '/dashboard/purchase', current: pathname === '/dashboard/purchase' },
+          { name: 'Suppliers', href: '/dashboard/purchase/suppliers', current: pathname === '/dashboard/purchase/suppliers' },
+          { name: 'Vendors', href: '/dashboard/purchase/vendors', current: pathname === '/dashboard/purchase/vendors' },
+          { name: 'Products', href: '/dashboard/purchase/products', current: pathname === '/dashboard/purchase/products' },
+          { name: 'RFQs', href: '/dashboard/purchase/rfqs', current: pathname.startsWith('/dashboard/purchase/rfqs') },
+          { name: 'Purchase Orders', href: '/dashboard/purchase/purchase-orders', current: pathname === '/dashboard/purchase/purchase-orders' },
+          { name: 'Receipts', href: '/dashboard/purchase/receipts', current: pathname === '/dashboard/purchase/receipts' },
+          { name: 'Vendor Bills', href: '/dashboard/purchase/bills', current: pathname === '/dashboard/purchase/bills' }
+        ]
+      })
+    }
+
+    // Super Admin and Admin get access to all other modules
+    if (userRole === ROLES.SUPER_ADMIN || userRole === ROLES.ADMIN) {
+      baseNavigation.push(
+        { 
+          name: 'CRM', 
+          href: '/dashboard/crm', 
+          icon: UserGroupIcon,
+          current: pathname.startsWith('/dashboard/crm'),
+          children: [
+            { name: 'Overview', href: '/dashboard/crm', current: pathname === '/dashboard/crm' },
+            { name: 'Customers', href: '/dashboard/crm/customers', current: pathname === '/dashboard/crm/customers' },
+            { name: 'Leads', href: '/dashboard/crm/leads', current: pathname === '/dashboard/crm/leads' },
+            { name: 'Opportunities', href: '/dashboard/crm/opportunities', current: pathname === '/dashboard/crm/opportunities' },
+            { name: 'Contacts', href: '/dashboard/crm/contacts', current: pathname === '/dashboard/crm/contacts' }
+          ]
+        },
+        { 
+          name: 'Sales', 
+          href: '/dashboard/sales', 
+          icon: ShoppingBagIcon,
+          current: pathname.startsWith('/dashboard/sales'),
+          children: [
+            { name: 'Orders', href: '/dashboard/sales/orders', current: pathname === '/dashboard/sales/orders' },
+            { name: 'Quotes', href: '/dashboard/sales/quotes', current: pathname === '/dashboard/sales/quotes' },
+            { name: 'Invoices', href: '/dashboard/sales/invoices', current: pathname === '/dashboard/sales/invoices' }
+          ]
+        },
+        { 
+          name: 'HRM', 
+          href: '/dashboard/hrm', 
+          icon: UsersIcon,
+          current: pathname.startsWith('/dashboard/hrm'),
+          children: [
+            { name: 'Employees', href: '/dashboard/hrm/employees', current: pathname === '/dashboard/hrm/employees' },
+            { name: 'Departments', href: '/dashboard/hrm/departments', current: pathname === '/dashboard/hrm/departments' },
+            { name: 'Payroll', href: '/dashboard/hrm/payroll', current: pathname === '/dashboard/hrm/payroll' }
+          ]
+        },
+        { 
+          name: 'Accounting', 
+          href: '/dashboard/accounting', 
+          icon: CalculatorIcon,
+          current: pathname.startsWith('/dashboard/accounting'),
+          children: [
+            { name: 'Chart of Accounts', href: '/dashboard/accounting/accounts', current: pathname === '/dashboard/accounting/accounts' },
+            { name: 'Journal Entries', href: '/dashboard/accounting/journal', current: pathname === '/dashboard/accounting/journal' },
+            { name: 'Reports', href: '/dashboard/accounting/reports', current: pathname === '/dashboard/accounting/reports' }
+          ]
+        },
+        { 
+          name: 'Analytics', 
+          href: '/dashboard/analytics', 
+          icon: ChartBarIcon,
+          current: pathname === '/dashboard/analytics'
+        },
+        { 
+          name: 'Settings', 
+          href: '/dashboard/settings', 
+          icon: Cog6ToothIcon,
+          current: pathname === '/dashboard/settings'
+        }
+      )
+    }
+
+    // Get user permissions for permission-based checks
+    const userPermissions = session?.user?.permissions || [];
+
+    // Warehouse module - for warehouse operators, inventory users, and admins
+    // NOTE: INVENTORY_USER should also have warehouse access
+    const hasWarehouseAccess = userRole === ROLES.SUPER_ADMIN || 
+                               userRole === ROLES.ADMIN || 
+                               userRole === ROLES.WAREHOUSE_OPERATOR || 
+                               userRole === ROLES.INVENTORY_USER ||
+                               userRole === ROLES.INVENTORY_MANAGER ||
+                               userPermissions.includes(PERMISSIONS.WAREHOUSE.VIEW_ALL) ||
+                               userPermissions.includes(PERMISSIONS.WAREHOUSE.SHIPMENT_READ);
+    
+    if (hasWarehouseAccess) {
+      baseNavigation.push({
+        name: 'Warehouse', 
+        href: '/dashboard/warehouse', 
+        icon: BuildingOfficeIcon,
+        current: pathname.startsWith('/dashboard/warehouse'),
+        children: [
+          { name: 'Dashboard', href: '/dashboard/warehouse', current: pathname === '/dashboard/warehouse' },
+          { name: 'Incoming Shipments', href: '/dashboard/warehouse/shipments', current: pathname === '/dashboard/warehouse/shipments' },
+          { name: 'Process Goods', href: '/dashboard/warehouse/process', current: pathname === '/dashboard/warehouse/process' },
+          { name: 'Completed Tasks', href: '/dashboard/warehouse/completed', current: pathname === '/dashboard/warehouse/completed' }
+        ]
+      })
+    }
+    
+    // Inventory module - for inventory managers and admins only (NOT warehouse operators)
+    // Explicitly exclude WAREHOUSE_OPERATOR even if they have inventory permissions
+    const hasInventoryAccess = userRole !== ROLES.WAREHOUSE_OPERATOR && (
+                                userRole === ROLES.SUPER_ADMIN || 
+                                userRole === 'ADMIN' || 
+                                userRole === 'INVENTORY_MANAGER' ||
+                                userRole === 'INVENTORY_USER' ||
+                                userPermissions.includes(PERMISSIONS.INVENTORY.VIEW_ALL) ||
+                                userPermissions.includes(PERMISSIONS.INVENTORY.PRODUCT_READ) ||
+                                userPermissions.includes(PERMISSIONS.INVENTORY.STOCK_READ)
+                              );
+    
+    if (hasInventoryAccess) {
+      baseNavigation.push({
+        name: 'Inventory', 
+        href: '/dashboard/inventory', 
+        icon: CubeIcon,
+        current: pathname.startsWith('/dashboard/inventory'),
+        children: [
+          { name: 'Overview', href: '/dashboard/inventory', current: pathname === '/dashboard/inventory' },
+          { name: 'Products', href: '/dashboard/inventory/products', current: pathname === '/dashboard/inventory/products' },
+          { name: 'Stock', href: '/dashboard/inventory/stock', current: pathname === '/dashboard/inventory/stock' },
+          { name: 'Movements', href: '/dashboard/inventory/movements', current: pathname === '/dashboard/inventory/movements' },
+          { name: 'Goods Receipts', href: '/dashboard/inventory/incoming-shipments', current: pathname === '/dashboard/inventory/incoming-shipments' }
+        ]
+      })
+    }
+
+    return baseNavigation
+  }
+
+  const navigation = getNavigation()
 
   const toggleMenu = (menuName) => {
     const newExpanded = new Set(expandedMenus)
@@ -236,8 +333,8 @@ export default function DashboardLayout({ children }) {
       {/* Sidebar */}
       <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-blue-900 via-slate-900 to-black shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        <div className="flex items-center justify-between h-16 px-6 border-b border-slate-600 bg-gradient-to-r from-slate-800 to-slate-900">
+      } flex flex-col`}>
+        <div className="flex items-center justify-between h-16 px-6 border-b border-slate-600 bg-gradient-to-r from-slate-800 to-slate-900 flex-none">
           <div className="flex items-center">
             <div className="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center backdrop-blur-sm">
               <span className="text-white text-lg">🚀</span>
@@ -254,14 +351,16 @@ export default function DashboardLayout({ children }) {
           </button>
         </div>
 
-        <nav className="mt-8 px-4">
-          <div className="space-y-2">
-            {navigation.map(renderNavItem)}
-          </div>
-        </nav>
+        <div className="flex-1 overflow-y-auto pb-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900">
+          <nav className="mt-8 px-4">
+            <div className="space-y-2">
+              {navigation.map(renderNavItem)}
+            </div>
+          </nav>
+        </div>
 
         {/* User section */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-600 bg-gradient-to-r from-slate-800 to-black">
+        <div className="p-4 border-t border-slate-600 bg-gradient-to-r from-slate-800 to-black flex-none">
           <div className="flex items-center">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
               <span className="text-white text-sm font-medium">

@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
-import { ROLES } from '@/lib/constants/roles';
+import { hasPermission, PERMISSIONS } from '@/lib/constants/roles';
 import {
   normalizeAttributes,
   normalizeTraceabilityQuestions,
@@ -34,7 +34,20 @@ export async function GET(req) {
       orderBy: { name: 'asc' }
     });
 
-    return NextResponse.json({ success: true, data });
+    // Shape to ERD-like keys for backward compatibility
+    const shaped = data.map(p => ({
+      product_id: p.id,
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      category: p.category,
+      unit: p.unit,
+      isActive: p.isActive,
+      attributes: p.attributes || {},
+      traceabilityQuestions: p.traceabilityQuestions || [],
+    }));
+
+    return NextResponse.json({ success: true, data: shaped });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -47,10 +60,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is purchase_manager or above
-    const allowedRoles = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER];
-    if (!allowedRoles.includes(session.user.role)) {
-      return NextResponse.json({ error: 'Forbidden: Only purchase managers can add products' }, { status: 403 });
+    // Check permissions using unified permission system
+    if (!hasPermission(session.user.role, PERMISSIONS.PURCHASE.MANAGE_PRODUCTS)) {
+      return NextResponse.json({ error: 'Forbidden: You do not have permission to manage products' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -91,7 +103,22 @@ export async function POST(request) {
       }
     });
 
-    return NextResponse.json({ success: true, product: created }, { status: 201 });
+    // Return in both formats for backward compatibility
+    return NextResponse.json({ 
+      success: true, 
+      product: created,
+      data: { 
+        product_id: created.id, 
+        id: created.id,
+        name: created.name, 
+        description: created.description, 
+        category: created.category, 
+        unit: created.unit,
+        isActive: created.isActive,
+        attributes: created.attributes || {},
+        traceabilityQuestions: created.traceabilityQuestions || []
+      } 
+    }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

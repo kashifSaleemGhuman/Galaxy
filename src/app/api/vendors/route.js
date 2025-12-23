@@ -7,7 +7,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import prismaImported from '@/lib/db';
 import { PrismaClient } from '@prisma/client';
-import { ROLES } from '@/lib/constants/roles';
+import { hasPermission, PERMISSIONS } from '@/lib/constants/roles';
 
 export async function GET(req) {
   try {
@@ -58,19 +58,22 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is purchase_manager or above
-    const allowedRoles = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER];
-    if (!allowedRoles.includes(session.user.role)) {
-      return NextResponse.json({ error: 'Forbidden: Only purchase managers can add vendors' }, { status: 403 });
+    // Check if user has permission to manage vendors using unified permission system
+    if (!hasPermission(session.user.role, PERMISSIONS.PURCHASE.MANAGE_VENDORS)) {
+      return NextResponse.json({ error: 'Forbidden: You do not have permission to manage vendors' }, { status: 403 });
     }
 
     const prisma = prismaImported ?? new PrismaClient();
     const body = await req.json();
-    const { name, email, phone, address } = body;
+    const { name, email, phone, address, bankName, bankAccountNumber, attributes } = body;
 
     // Validation
     if (!name || !email) {
       return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
+    }
+
+    if (!bankName || !bankAccountNumber) {
+      return NextResponse.json({ error: 'Bank name and account number are required' }, { status: 400 });
     }
 
     // Check if vendor with this email already exists
@@ -89,6 +92,9 @@ export async function POST(req) {
         email,
         phone: phone || null,
         address: address || null,
+        bankName: bankName.trim(),
+        bankAccountNumber: bankAccountNumber.trim(),
+        attributes: normalizeAttributes(attributes),
         isActive: true
       }
     });

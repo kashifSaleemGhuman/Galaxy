@@ -1,36 +1,39 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/db'
 
-export async function GET() {
-  try {
-    const data = await prisma.supplier.findMany()
-    return NextResponse.json({ success: true, data })
-  } catch (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
-  }
-}
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic'
 
-export async function POST(request) {
+export async function GET(request) {
   try {
-    const body = await request.json()
-    const { supplier_id, name, contact_info, email, phone } = body
+    const session = await getServerSession(authOptions)
 
-    if (!supplier_id || !name || !email) {
-      return NextResponse.json({ success: false, error: 'supplier_id, name and email are required' }, { status: 400 })
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const created = await prisma.supplier.create({
-      data: {
-        supplierId: supplier_id,
-        name,
-        contactInfo: contact_info ?? null,
-        email,
-        phone: phone ?? null,
+    const suppliers = await prisma.supplier.findMany({
+      select: {
+        supplierId: true,
+        name: true,
+        contactInfo: true,
+        email: true,
+        phone: true
       },
+      orderBy: {
+        name: 'asc'
+      }
     })
 
-    return NextResponse.json({ success: true, data: created }, { status: 201 })
+    return NextResponse.json(suppliers)
+
   } catch (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    console.error('Error fetching suppliers:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }

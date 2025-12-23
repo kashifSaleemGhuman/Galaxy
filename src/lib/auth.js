@@ -68,12 +68,27 @@ export const authOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        // Add user role and permissions to the token
-        token.role = user.role;
+        token.id = user.id
+        token.role = user.role
         token.permissions = ROLE_PERMISSIONS[user.role] || [];
         token.userId = user.id;
         token.isFirstLogin = user.isFirstLogin;
         token.email = user.email;
+        
+        // Debug logging (remove in production)
+        if (process.env.NODE_ENV === 'development') {
+          const hasWarehouseViewAll = token.permissions?.includes('warehouse.view_all');
+          const hasWarehouseShipmentRead = token.permissions?.includes('warehouse.shipment.read');
+          console.log('🔐 Auth JWT Callback:', {
+            userId: user.id,
+            email: user.email,
+            role: user.role,
+            permissionsCount: token.permissions?.length || 0,
+            hasWarehouseViewAll,
+            hasWarehouseShipmentRead,
+            firstFewPermissions: token.permissions?.slice(0, 5)
+          });
+        }
       }
       return token;
     },
@@ -81,7 +96,7 @@ export const authOptions = {
       if (session?.user) {
         session.user.role = token.role;
         session.user.permissions = token.permissions;
-        session.user.id = token.userId;
+        session.user.id = token.userId || token.id;
         session.user.isFirstLogin = token.isFirstLogin;
         session.user.email = token.email;
       }

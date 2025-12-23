@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
+import { hasPermission, PERMISSIONS } from '@/lib/constants/roles';
 
 // Force dynamic rendering - this route uses getServerSession which requires headers()
 export const dynamic = 'force-dynamic';
@@ -8,7 +10,7 @@ export const runtime = 'nodejs';
 
 export async function GET(req) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -21,10 +23,9 @@ export async function GET(req) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check if user has permission to view approvals
-    const canViewApprovals = ['super_admin', 'admin', 'purchase_manager'].includes(currentUser.role);
-    if (!canViewApprovals) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    // Check permissions using unified permission system
+    if (!hasPermission(currentUser.role, PERMISSIONS.PURCHASE.APPROVE_RFQ)) {
+      return NextResponse.json({ error: 'Insufficient permissions. You need approval permissions to view RFQ approvals.' }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
