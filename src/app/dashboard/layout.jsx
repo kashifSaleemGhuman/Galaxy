@@ -90,6 +90,25 @@ export default function DashboardLayout({ children }) {
       }
     }
 
+    // Organization module - available to Super Admin and Admin
+    if (userRole === ROLES.SUPER_ADMIN || userRole === ROLES.ADMIN) {
+      baseNavigation.push({
+        name: 'Organization',
+        href: '/dashboard/organization',
+        icon: BuildingOfficeIcon,
+        current: pathname.startsWith('/dashboard/organization'),
+        children: [
+          { name: 'Overview', href: '/dashboard/organization/details', current: pathname === '/dashboard/organization/details' || pathname === '/dashboard/organization' },
+          { name: 'Document Details', href: '/dashboard/organization/documents', current: pathname === '/dashboard/organization/documents' },
+          { name: 'Employees', href: '/dashboard/organization/employees', current: pathname.startsWith('/dashboard/organization/employees') },
+          { name: 'Machines', href: '/dashboard/organization/machines', current: pathname.startsWith('/dashboard/organization/machines') },
+          { name: 'Operating Permits', href: '/dashboard/organization/permits', current: pathname.startsWith('/dashboard/organization/permits') },
+          { name: 'Purchases', href: '/dashboard/organization/raw-purchases', current: pathname.startsWith('/dashboard/organization/raw-purchases') },
+          { name: 'Incoming Traceability', href: '/dashboard/organization/traceability', current: pathname.startsWith('/dashboard/organization/traceability') }
+        ]
+      })
+    }
+
     // Purchase module - available to all purchase-related roles
     if (userRole === ROLES.SUPER_ADMIN || userRole === ROLES.ADMIN || userRole === ROLES.PURCHASE_MANAGER || userRole === ROLES.PURCHASE_USER) {
       baseNavigation.push({

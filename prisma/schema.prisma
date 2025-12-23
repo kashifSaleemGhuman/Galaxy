@@ -763,3 +763,269 @@ model Permit {
   // Tenant relation
   tenant                 Tenant?   @relation(fields: [tenantId], references: [id])
 }
+
+// Incoming Traceability Models
+
+// Supplier Leather Warehouse - tracks warehouses where suppliers store leather
+model SupplierLeatherWarehouse {
+  id              String   @id @default(cuid())
+  warehouseName   String   @unique // Warehouse name/identifier
+  supplierId      String?  // Reference to Supplier (optional)
+  supplierName    String?  // Supplier name (denormalized, optional)
+  location        String?  // Warehouse location/address
+  region          String?  // Region
+  lwgCertified    Boolean  @default(false) // Whether warehouse is LWG certified
+  capacity        Decimal? // Storage capacity
+  capacityUnit    String?  // Unit for capacity (e.g., kg, m²)
+  contactPerson   String?  // Contact person at warehouse
+  contactPhone    String?  // Contact phone
+  contactEmail    String?  // Contact email
+  notes           String?
+  status          String   @default("active") // active, inactive
+  
+  // Relations
+  igps            InwardGatePass[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([supplierId])
+  @@index([warehouseName])
+  @@index([status])
+}
+
+// Inward Gate Pass (IGP) - tracks incoming material from suppliers
+model InwardGatePass {
+  id              String   @id @default(cuid())
+  igpNumber       String   @unique // IGP number
+  supplierId      String   // Reference to Supplier
+  supplierName    String   // Supplier name (denormalized for quick access)
+  warehouseId     String?  // Reference to Supplier Leather Warehouse
+  warehouseName   String?  // Warehouse name (denormalized)
+  region          String?  // Region of origin
+  deliveryDate    DateTime // Date when material arrived at tannery
+  truckLoadNumber String?  // Truck load identifier
+  batchNumber     String?  // Batch number from supplier
+  lwgCertified    Boolean  @default(false) // Whether supplier is LWG certified
+  notes           String?
+  status          String   @default("pending") // pending, received, processed
+  
+  // Relations
+  warehouse       SupplierLeatherWarehouse? @relation(fields: [warehouseId], references: [id])
+  rawBatches      RawBatch[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([supplierId])
+  @@index([warehouseId])
+  @@index([igpNumber])
+}
+
+// Raw Batch - tracks raw leather batches
+model RawBatch {
+  id              String   @id @default(cuid())
+  batchCode       String   @unique // Format: 0001, 0002, etc.
+  igpId           String   // Reference to IGP
+  supplierId      String   // Supplier reference
+  supplierName    String   // Supplier name
+  region          String?  // Region
+  receivedDate    DateTime // Date received at tannery
+  quantity        Decimal? // Quantity (weight or pieces)
+  unit            String?  // Unit of measurement
+  status          String   @default("pending") // pending, tanned, in_process
+  
+  // Relations
+  igp             InwardGatePass      @relation(fields: [igpId], references: [id])
+  wetBlueBatches  WetBlueBatch[]
+  jobCards        JobCard[]
+  batchCards      BatchCard[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([batchCode])
+  @@index([igpId])
+}
+
+// Wet Blue Batch - tracks wet blue batches
+model WetBlueBatch {
+  id              String   @id @default(cuid())
+  wbCode          String   @unique // Format: 10000, 10001, etc. (W/B Code)
+  rawBatchId      String   // Reference to raw batch
+  rawBatchCode    String   // Raw batch code (denormalized)
+  receivedDate    DateTime // Date when wet blue was created
+  quantity        Decimal? // Quantity
+  unit            String?  // Unit of measurement
+  status          String   @default("pending") // pending, sorted, measured, graded
+  
+  // Relations
+  rawBatch        RawBatch           @relation(fields: [rawBatchId], references: [id])
+  reTanningBatches ReTanningBatch[]
+  gradeAssortments GradeAssortment[]
+  jobCards        JobCard[]
+  batchCards      BatchCard[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([wbCode])
+  @@index([rawBatchId])
+}
+
+// Grade Assortment - tracks grading of wet blue
+model GradeAssortment {
+  id            String   @id @default(cuid())
+  wbBatchId     String   // Reference to wet blue batch
+  wbCode        String   // W/B Code (denormalized)
+  grade         String   // Grade: 1,2,3,4,5 (A Grade), 6,7 (B Grade), 8,9 (C Grade)
+  gradeCategory String?  // A, B, or C Grade
+  quantity      Decimal? // Quantity for this grade
+  unit          String?  // Unit of measurement
+  notes         String?
+  
+  // Relations
+  wbBatch       WetBlueBatch @relation(fields: [wbBatchId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([wbBatchId])
+  @@index([grade])
+}
+
+// Re-tanning Batch - tracks re-tanning process
+model ReTanningBatch {
+  id              String   @id @default(cuid())
+  rtCode          String   @unique // Format: RKRCRT00102 (Re-tannage - batch code - month)
+  wbBatchId       String   // Reference to wet blue batch
+  wbCode          String   // W/B Code (denormalized)
+  rawBatchId      String?  // Reference to original raw batch (for traceability)
+  rawBatchCode    String?  // Raw batch code (denormalized)
+  receivedDate    DateTime // Date when re-tanning started
+  quantity        Decimal? // Quantity
+  unit            String?  // Unit of measurement
+  recipe          String?  // Recipe used
+  technicianId    String?  // Technician in charge
+  technicianName  String?  // Technician name (denormalized)
+  status          String   @default("pending") // pending, in_process, completed
+  
+  // Relations
+  wbBatch         WetBlueBatch        @relation(fields: [wbBatchId], references: [id])
+  finishedBatches FinishedLeatherBatch[]
+  jobCards        JobCard[]
+  batchCards      BatchCard[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([rtCode])
+  @@index([wbBatchId])
+}
+
+// Finished Leather Batch - tracks finished leather
+model FinishedLeatherBatch {
+  id              String   @id @default(cuid())
+  batchNumber      String   @unique // Batch number for finished leather
+  rtBatchId        String   // Reference to re-tanning batch
+  rtCode           String   // Re-tanning code (denormalized)
+  wbBatchId        String?  // Reference to wet blue batch (for traceability)
+  wbCode           String?  // W/B Code (denormalized)
+  rawBatchId       String?  // Reference to original raw batch (for traceability)
+  rawBatchCode     String?  // Raw batch code (denormalized)
+  completionDate   DateTime // Date when finished
+  quantity         Decimal? // Quantity
+  unit             String?  // Unit of measurement
+  thickness        Decimal? // Thickness
+  color            String?  // Color
+  weight           Decimal? // Weight
+  pieces           Int?     // Number of pieces
+  areaM2           Decimal? // Area in square meters
+  customerOrderNumber String? // Customer order number
+  vendorCode       String?   // Vendor code
+  status           String   @default("pending") // pending, completed, dispatched
+  
+  // Relations
+  rtBatch          ReTanningBatch @relation(fields: [rtBatchId], references: [id])
+  jobCards         JobCard[]
+  batchCards       BatchCard[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([batchNumber])
+  @@index([rtBatchId])
+}
+
+// Job Card - tracks job cards linked to batches
+model JobCard {
+  id              String   @id @default(cuid())
+  jobCardNumber   String   @unique // Job card number
+  rawBatchId      String?  // Reference to raw batch
+  wbBatchId       String?  // Reference to wet blue batch
+  rtBatchId       String?  // Reference to re-tanning batch
+  finishedBatchId String?  // Reference to finished leather batch
+  
+  // Job card details
+  recipe          String?  // Recipe
+  technicianId    String?  // Technician in charge
+  technicianName  String?  // Technician name
+  date            DateTime // Date
+  month           Int?     // Month
+  year            Int?     // Year
+  notes           String?
+  
+  // Relations
+  rawBatch        RawBatch?          @relation(fields: [rawBatchId], references: [id])
+  wbBatch         WetBlueBatch?      @relation(fields: [wbBatchId], references: [id])
+  rtBatch         ReTanningBatch?    @relation(fields: [rtBatchId], references: [id])
+  finishedBatch   FinishedLeatherBatch? @relation(fields: [finishedBatchId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([jobCardNumber])
+}
+
+// Batch Card - tracks batch cards at different production stages
+model BatchCard {
+  id              String   @id @default(cuid())
+  cardNumber      String   @unique // Batch card number
+  stage           String   // Stage: raw, wet_blue, re_tanning, finished
+  rawBatchId      String?  // Reference to raw batch
+  wbBatchId       String?  // Reference to wet blue batch
+  rtBatchId       String?  // Reference to re-tanning batch
+  finishedBatchId String?  // Reference to finished leather batch
+  
+  // Batch card details
+  location        String?  // Current location
+  status          String   @default("active") // active, transferred, completed
+  notes           String?
+  
+  // Relations
+  rawBatch        RawBatch?          @relation(fields: [rawBatchId], references: [id])
+  wbBatch         WetBlueBatch?      @relation(fields: [wbBatchId], references: [id])
+  rtBatch         ReTanningBatch?    @relation(fields: [rtBatchId], references: [id])
+  finishedBatch   FinishedLeatherBatch? @relation(fields: [finishedBatchId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([cardNumber])
+  @@index([stage])
+}
+
+// Production Stage - tracks production stages and movements
+model ProductionStage {
+  id              String   @id @default(cuid())
+  stageName       String   // Stage name: RAW, WB_MEASUREMENT, GRADE, RETANNING, CRUST, FINISHED, etc.
+  stageType       String   // Type: input, process, output
+  description     String?  // Description of the stage
+  order           Int      // Order in the production flow
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([stageName])
+  @@index([order])
+}
