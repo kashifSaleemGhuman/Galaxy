@@ -25,6 +25,9 @@ model Tenant {
   products  Product[]
   warehouses Warehouse[]
   employees Employee[]
+  organizationSuppliers OrganizationSupplier[]
+  organizationCustomers OrganizationCustomer[]
+  organizationMaterials OrganizationMaterial[]
   organizations Organization[]
   documents Document[]
   machines  Machine[]
@@ -710,6 +713,77 @@ model Employee {
 
   // Tenant relation
   tenant               Tenant?   @relation(fields: [tenantId], references: [id])
+}
+
+// Organization Supplier model
+model OrganizationSupplier {
+  id              String   @id @default(cuid())
+  name            String
+  address         String?
+  phone           String?  // no.
+  email           String?
+  registrationNo  String?  // registration no.
+  taxId           String?  // tax ID
+  taxNo           String?  // tax no.
+  bankDetails     String?  // bank details
+  bankName        String?  // bank name
+  bankAddress     String?  // bank address
+  ibanNo          String?  // IBAN no
+  swiftCode       String?  // swift code
+  accountTitle    String?  // account title
+  tenantId        String?  // Optional for backward compatibility
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Tenant relation
+  tenant          Tenant?  @relation(fields: [tenantId], references: [id])
+}
+
+// Organization Customer model
+model OrganizationCustomer {
+  id              String   @id @default(cuid())
+  name            String
+  address         String?
+  phone           String?  // no.
+  email           String?
+  registrationNo  String?  // registration no.
+  taxId           String?  // tax ID
+  tenantId        String?  // Optional for backward compatibility
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Tenant relation
+  tenant          Tenant?  @relation(fields: [tenantId], references: [id])
+}
+
+// Organization Material model
+model OrganizationMaterial {
+  id                  String   @id @default(cuid())
+  description         String?  // desc.
+  size                String?
+  unitOfMeasurement   String?  // unit of measurement
+  thickness           String?
+  weight              String?
+  customField         String?  // add custom field
+  packaging           String?
+  ghsSymbolImage      String?  // GHS symbol image upload (URL)
+  hsCode              String?  // HS code
+  hazardClassification String?
+  materialOrigin      String?  // material origin google map selection option (coordinates or address)
+  oem                 String?  // OEM (Original Equipment manufacturer)
+  usage               String?
+  process             String?  // process dropdown
+  department          String?  // department dropdown
+  materialType        String?  // material type dropdown (incoming/outgoing)
+  tenantId            String?  // Optional for backward compatibility
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Tenant relation
+  tenant              Tenant?  @relation(fields: [tenantId], references: [id])
 }
 
 // Machine model (equipment management)

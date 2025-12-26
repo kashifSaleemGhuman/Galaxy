@@ -118,6 +118,29 @@ export function ToastContainer() {
   )
 }
 
+// toast helper function for convenience (matches the API used in employees pages)
+export function toast({ title, description, variant, duration = 5000 }) {
+  // Map variant to type (variant: 'destructive' -> type: 'error', etc.)
+  // If no variant is provided, default to 'success' for positive messages, 'info' otherwise
+  const typeMap = {
+    'destructive': 'error',
+    'default': 'info',
+    'success': 'success',
+    'warning': 'warning'
+  }
+  
+  // If variant is not provided, default to 'success' if title is 'Success', otherwise 'info'
+  const defaultVariant = title === 'Success' ? 'success' : 'info'
+  const variantToUse = variant || defaultVariant
+  const type = typeMap[variantToUse] || variantToUse || 'info'
+  const message = description || title
+  
+  const event = new CustomEvent('show-toast', {
+    detail: { title, message, type, duration }
+  })
+  window.dispatchEvent(event)
+}
+
 // useToast hook for convenience
 export function useToast() {
   const showToast = (messageOrTitle, typeOrMessage = 'info', type = null, duration = 5000) => {
