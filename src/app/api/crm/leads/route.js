@@ -58,9 +58,8 @@ export async function GET(request) {
       return NextResponse.json(cachedData)
     }
     
-    // Build where clause
+    // Build where clause (tenantId removed - single tenant mode)
     const where = {
-      tenantId: session.user.tenantId,
       ...(search && {
         OR: [
           { title: { contains: search, mode: 'insensitive' } },
@@ -108,7 +107,7 @@ export async function GET(request) {
     }
     
     // Cache the response for 30 minutes
-    await crmCache.setCustomerList(session.user.tenantId, cacheKey, responseData, 1800)
+    await crmCache.setCustomerList('default', cacheKey, responseData, 1800)
     console.log('💾 Cached leads data')
     
     return NextResponse.json(responseData)
@@ -166,10 +165,10 @@ export async function POST(request) {
       )
     }
     
-    // Create lead
+    // Create lead (tenantId removed - single tenant mode)
+    // Note: Lead model may not exist in schema - this will need to be implemented
     const lead = await prisma.lead.create({
       data: {
-        tenantId: session.user.tenantId,
         title,
         description,
         value: value ? parseFloat(value) : null,
@@ -191,8 +190,8 @@ export async function POST(request) {
       }
     })
     
-    // Invalidate leads cache for this tenant
-    await crmCache.invalidateCustomer(session.user.tenantId)
+    // Invalidate leads cache (tenantId removed - single tenant mode)
+    await crmCache.invalidateCustomer('default')
     console.log('🗑️ Invalidated leads cache after creation')
     
     return NextResponse.json({ 

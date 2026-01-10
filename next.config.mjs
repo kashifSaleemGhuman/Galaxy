@@ -8,6 +8,20 @@ const nextConfig = {
   // Optimize for production
   swcMinify: true,
   
+  // Webpack configuration to handle chunk loading issues
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Fix for app-pages-internals.js 404 errors
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+    return config;
+  },
+  
   // Handle environment variables
   env: {
     DATABASE_URL: process.env.DATABASE_URL,

@@ -4,7 +4,7 @@ import prisma from '@/lib/db'
 export async function GET(request, { params }) {
   try {
     const { id } = params
-    const line = await prisma.rFQ_Line.findUnique({ where: { rfqLineId: id } })
+    const line = await prisma.rFQItem.findUnique({ where: { id: id } })
     if (!line) {
       return NextResponse.json({ success: false, error: 'RFQ Line not found' }, { status: 404 })
     }
@@ -20,8 +20,8 @@ export async function PUT(request, { params }) {
     const body = await request.json()
     const { rfq_id, product_id, quantity, price } = body
 
-    const updated = await prisma.rFQ_Line.update({
-      where: { rfqLineId: id },
+    const updated = await prisma.rFQItem.update({
+      where: { id: id },
       data: {
         rfqId: rfq_id ?? undefined,
         productId: product_id ?? undefined,
@@ -41,7 +41,7 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const { id } = params
-    await prisma.rFQ_Line.delete({ where: { rfqLineId: id } })
+    await prisma.rFQItem.delete({ where: { id: id } })
     return NextResponse.json({ success: true, message: 'RFQ Line deleted successfully' })
   } catch (error) {
     if (error.code === 'P2025') {

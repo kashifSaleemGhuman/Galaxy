@@ -3,28 +3,60 @@ import { Button } from '@/components/ui/Button';
 
 export default function PurchaseOrder({ rfq, onBack }) {
   const calculatePODetails = () => {
-    // Calculate item prices and totals
-    const items = rfq.products.map(product => {
-      const unitPrice = parseFloat(rfq.vendorQuote.vendorPrice) || 0;
-      const quantity = parseInt(product.quantity);
+    // Handle both old format (products) and new format (items)
+    const rfqItems = rfq?.items || rfq?.products || [];
+    
+    // Safety check - if no items, return empty structure
+    if (!rfqItems || rfqItems.length === 0) {
       return {
-        ...product,
+        poNumber: `PO-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
+        vendor: rfq?.vendor?.name || rfq?.vendorName || 'Unknown Vendor',
+        orderDate: new Date().toISOString(),
+        expectedDeliveryDate: rfq?.expectedDelivery || new Date().toISOString(),
+        items: [],
+        totalAmount: 0,
+        terms: rfq?.vendorNotes || 'Standard terms and conditions apply'
+      };
+    }
+    
+    // Calculate item prices and totals
+    const items = rfqItems.map(item => {
+      // Use per-item unitPrice if available, otherwise use RFQ-level vendorPrice divided by items
+      const unitPrice = item.unitPrice 
+        ? parseFloat(item.unitPrice) 
+        : (rfq.vendorPrice ? parseFloat(rfq.vendorPrice) / rfqItems.length : 0);
+      
+      const quantity = parseInt(item.quantity || 0);
+      const productName = item.product?.name || item.productName || item.name || 'Unknown Product';
+      
+      return {
+        id: item.id,
+        productId: item.productId || item.product_id,
+        name: productName,
+        quantity,
+        unit: item.unit || 'pcs',
         unitPrice,
-        total: unitPrice * quantity
+        total: unitPrice * quantity,
+        expectedDeliveryDate: item.expectedDeliveryDate || rfq.expectedDelivery
       };
     });
 
     // Calculate total amount
     const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
 
+    // Get vendor info - handle both formats
+    const vendorName = rfq.vendor?.name || rfq.vendorName || rfq.vendor || 'Unknown Vendor';
+    const expectedDelivery = rfq.expectedDelivery || rfq.vendorQuote?.expectedDeliveryDate || new Date().toISOString();
+    const vendorNotes = rfq.vendorNotes || rfq.vendorQuote?.vendorNotes || 'Standard terms and conditions apply';
+
     return {
       poNumber: `PO-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
-      vendor: rfq.vendor,
+      vendor: vendorName,
       orderDate: new Date().toISOString(),
-      expectedDeliveryDate: rfq.vendorQuote.expectedDeliveryDate,
+      expectedDeliveryDate: expectedDelivery,
       items,
       totalAmount,
-      terms: rfq.vendorQuote.vendorNotes || 'Standard terms and conditions apply'
+      terms: vendorNotes
     };
   };
 

@@ -1,0 +1,517 @@
+{
+  "info": {
+    "name": "Organization Module API",
+    "description": "Complete Postman collection for Organization module with full body data examples",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Organization",
+      "item": [
+        {
+          "name": "GET Organization",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization"]
+            },
+            "description": "Get organization details. Requires authentication."
+          }
+        },
+        {
+          "name": "POST Organization (Create/Update)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"ABC Leather Manufacturing Co.\",\n  \"companyLogo\": \"https://example.com/logo.png\",\n  \"shortName\": \"ABC Leather\",\n  \"address\": \"123 Industrial Street\",\n  \"factoryContactNo\": \"+1234567890\",\n  \"email\": \"info@abcleather.com\",\n  \"fullAddress\": \"123 Industrial Street, Manufacturing District, City, State, ZIP\",\n  \"auditDate\": \"2024-01-15T00:00:00.000Z\",\n  \"internalAuditorNames\": [\"John Doe\", \"Jane Smith\", \"Bob Johnson\"],\n  \"dataFrom\": \"2024-01-01T00:00:00.000Z\",\n  \"siteNameLocalLanguage\": \"ABC चमड़ा निर्माण\",\n  \"siteURN\": \"URN-ABC-2024-001\",\n  \"fullestScopeOfOperations\": \"Category A\",\n  \"abbreviations\": [\n    {\"abbreviation\": \"LWG\", \"fullTitle\": \"Leather Working Group\"},\n    {\"abbreviation\": \"EMS\", \"fullTitle\": \"Environmental Management System\"}\n  ],\n  \"companyRegistrationNumber\": \"REG-12345-2024\",\n  \"latitude\": \"28.7041\",\n  \"longitude\": \"77.1025\",\n  \"country\": \"India\",\n  \"telephoneNumber\": \"+1234567890\",\n  \"principalContactName\": \"John Manager\",\n  \"principalContactPosition\": \"General Manager\",\n  \"principalContactEmail\": \"manager@abcleather.com\",\n  \"environmentalResponsibleName\": \"Sarah Green\",\n  \"environmentalResponsiblePosition\": \"Environmental Officer\",\n  \"environmentalResponsibleEmail\": \"environment@abcleather.com\",\n  \"lwgCommunicationsMembers\": [\n    {\"email\": \"member1@lwg.com\", \"communicationRequired\": true},\n    {\"email\": \"member2@lwg.com\", \"communicationRequired\": false}\n  ],\n  \"website\": \"https://www.abcleather.com\",\n  \"facilityDescription\": \"Large-scale leather manufacturing facility with tanning operations\",\n  \"totalSiteArea\": \"50000\",\n  \"siteAreaBoundaries\": \"North: River, South: Highway, East: Industrial Zone, West: Residential Area\",\n  \"directLabourShiftAM\": 150,\n  \"directLabourShiftPM\": 150,\n  \"directLabourShiftNight\": 100,\n  \"directLabourCount\": 400,\n  \"indirectLabourShiftAM\": 50,\n  \"indirectLabourShiftPM\": 50,\n  \"indirectLabourShiftNight\": 30,\n  \"indirectLabourCount\": 130,\n  \"shiftTotalAM\": 200,\n  \"shiftTotalPM\": 200,\n  \"shiftTotalNight\": 130,\n  \"shiftTotal\": 530,\n  \"workerDaysPerWeek\": 6,\n  \"workerWeeksPerYear\": 52,\n  \"workerDaysPerYear\": 312,\n  \"manufacturingDaysPerWeek\": 6,\n  \"manufacturingWeeksPerYear\": 52,\n  \"manufacturingDaysPerYear\": 312,\n  \"environmentalImpacts\": \"Water consumption, wastewater discharge, air emissions from boilers\",\n  \"operationsForOtherOrganisations\": \"No\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organization",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization"]
+            },
+            "description": "Create or update organization details. Requires admin role. If organization exists, it will be updated; otherwise, a new one will be created."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employees",
+      "item": [
+        {
+          "name": "GET All Employees",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization/employees",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "employees"]
+            },
+            "description": "Get all employees. Requires authentication."
+          }
+        },
+        {
+          "name": "POST Create Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"EMP-001\",\n  \"idCardNumber\": \"ID-123456\",\n  \"name\": \"Rajesh Kumar\",\n  \"photo\": \"https://example.com/photos/rajesh.jpg\",\n  \"parentName\": \"Ramesh Kumar\",\n  \"dob\": \"1990-05-15T00:00:00.000Z\",\n  \"address\": \"123 Worker Street, City, State\",\n  \"gender\": \"Male\",\n  \"contactNumber\": \"+919876543210\",\n  \"emergencyContact\": \"+919876543211\",\n  \"dateOfJoining\": \"2020-01-15T00:00:00.000Z\",\n  \"department\": \"Production\",\n  \"lastEmployment\": \"XYZ Manufacturing\",\n  \"process\": \"Tanning\",\n  \"designation\": \"Machine Operator\",\n  \"salary\": 35000.00,\n  \"dateOfLeaving\": null,\n  \"shift\": \"Morning\",\n  \"secondaryJob\": \"Quality Checker\",\n  \"isFirstAider\": true,\n  \"isEmergencyResponder\": false,\n  \"isFirefighter\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organization/employees",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "employees"]
+            },
+            "description": "Create a new employee. Requires authentication. employeeId and name are required fields."
+          }
+        },
+        {
+          "name": "GET Employee by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization/employees/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "employees", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "employee-id-here",
+                  "description": "Employee ID"
+                }
+              ]
+            },
+            "description": "Get a specific employee by ID. Requires authentication."
+          }
+        },
+        {
+          "name": "PUT Update Employee",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"EMP-001\",\n  \"idCardNumber\": \"ID-123456\",\n  \"name\": \"Rajesh Kumar Updated\",\n  \"photo\": \"https://example.com/photos/rajesh-updated.jpg\",\n  \"parentName\": \"Ramesh Kumar\",\n  \"dob\": \"1990-05-15T00:00:00.000Z\",\n  \"address\": \"123 Worker Street, City, State, Updated Address\",\n  \"gender\": \"Male\",\n  \"contactNumber\": \"+919876543210\",\n  \"emergencyContact\": \"+919876543211\",\n  \"dateOfJoining\": \"2020-01-15T00:00:00.000Z\",\n  \"department\": \"Production\",\n  \"lastEmployment\": \"XYZ Manufacturing\",\n  \"process\": \"Tanning\",\n  \"designation\": \"Senior Machine Operator\",\n  \"salary\": 40000.00,\n  \"dateOfLeaving\": null,\n  \"shift\": \"Morning\",\n  \"secondaryJob\": \"Quality Checker\",\n  \"isFirstAider\": true,\n  \"isEmergencyResponder\": true,\n  \"isFirefighter\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organization/employees/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "employees", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "employee-id-here",
+                  "description": "Employee ID"
+                }
+              ]
+            },
+            "description": "Update an existing employee. Requires authentication. employeeId and name are required fields."
+          }
+        },
+        {
+          "name": "DELETE Employee",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization/employees/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "employees", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "employee-id-here",
+                  "description": "Employee ID"
+                }
+              ]
+            },
+            "description": "Delete an employee. Requires authentication."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Machines",
+      "item": [
+        {
+          "name": "GET All Machines",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization/machines",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "machines"]
+            },
+            "description": "Get all machines. Requires authentication."
+          }
+        },
+        {
+          "name": "POST Create Machine",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serialNumber\": \"SN-2024-001\",\n  \"machineId\": \"MACH-001\",\n  \"name\": \"Tanning Drum Machine\",\n  \"quantity\": 2,\n  \"motorDetails\": \"3-phase, 50 HP, 415V AC\",\n  \"powerRating\": \"50 HP\",\n  \"airPressure\": \"6 bar\",\n  \"modelNumber\": \"TD-5000\",\n  \"manufacturingYear\": \"2020\",\n  \"length\": \"5.5 meters\",\n  \"width\": \"3.2 meters\",\n  \"height\": \"4.0 meters\",\n  \"steamTemp\": \"120°C\",\n  \"steamConsumption\": \"500 kg/hr\",\n  \"electricityRating\": \"37.5 kW\",\n  \"operationType\": \"Continuous\",\n  \"department\": \"Tanning\",\n  \"status\": \"in_use\",\n  \"remarks\": \"Regular maintenance required every 3 months\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organization/machines",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "machines"]
+            },
+            "description": "Create a new machine. Requires authentication. machineId and name are required fields."
+          }
+        },
+        {
+          "name": "GET Machine by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization/machines/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "machines", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "machine-id-here",
+                  "description": "Machine ID"
+                }
+              ]
+            },
+            "description": "Get a specific machine by ID. Requires authentication."
+          }
+        },
+        {
+          "name": "PUT Update Machine",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serialNumber\": \"SN-2024-001\",\n  \"machineId\": \"MACH-001\",\n  \"name\": \"Tanning Drum Machine (Updated)\",\n  \"quantity\": 2,\n  \"motorDetails\": \"3-phase, 50 HP, 415V AC\",\n  \"powerRating\": \"50 HP\",\n  \"airPressure\": \"6 bar\",\n  \"modelNumber\": \"TD-5000\",\n  \"manufacturingYear\": \"2020\",\n  \"length\": \"5.5 meters\",\n  \"width\": \"3.2 meters\",\n  \"height\": \"4.0 meters\",\n  \"steamTemp\": \"120°C\",\n  \"steamConsumption\": \"500 kg/hr\",\n  \"electricityRating\": \"37.5 kW\",\n  \"operationType\": \"Continuous\",\n  \"department\": \"Tanning\",\n  \"status\": \"under_maintenance\",\n  \"remarks\": \"Under maintenance - scheduled service on 2024-02-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organization/machines/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "machines", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "machine-id-here",
+                  "description": "Machine ID"
+                }
+              ]
+            },
+            "description": "Update an existing machine. Requires authentication. machineId and name are required fields."
+          }
+        },
+        {
+          "name": "DELETE Machine",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization/machines/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "machines", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "machine-id-here",
+                  "description": "Machine ID"
+                }
+              ]
+            },
+            "description": "Delete a machine. Requires authentication."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "GET All Documents",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization/documents",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "documents"]
+            },
+            "description": "Get all documents. If no documents exist, default documents will be seeded. Requires authentication."
+          }
+        },
+        {
+          "name": "PUT Update Document",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"document-id-here\",\n  \"docNo\": \"DOC-2024-001\",\n  \"revDate\": \"2024-01-15\",\n  \"description\": \"Operating Permit Register - Contains all operating permits and their validity periods\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organization/documents",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "documents"]
+            },
+            "description": "Update document details (docNo, revDate, description). Requires authentication. id is required."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Permits",
+      "item": [
+        {
+          "name": "GET All Permits",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization/permits",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "permits"]
+            },
+            "description": "Get all permits. If no permits exist, default permits will be seeded. Requires authentication."
+          }
+        },
+        {
+          "name": "PUT Update Permit",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"permit-id-here\",\n  \"authorizedNumber\": \"PERMIT-2024-001\",\n  \"issuingAuthority\": \"State Environmental Protection Agency\",\n  \"dateOfIssue\": \"2024-01-01T00:00:00.000Z\",\n  \"dateOfExpiry\": \"2025-01-01T00:00:00.000Z\",\n  \"renewalSubmissionDate\": \"2024-12-01T00:00:00.000Z\",\n  \"reportingFrequency\": \"Monthly\",\n  \"lastReportDate\": \"2024-01-31T00:00:00.000Z\",\n  \"responsiblePerson\": \"Sarah Green\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organization/permits",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "permits"]
+            },
+            "description": "Update permit details. Requires authentication. id is required."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Raw Purchases",
+      "item": [
+        {
+          "name": "GET All Raw Purchases",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization/raw-purchases",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "raw-purchases"]
+            },
+            "description": "Get all raw purchases with traceability information. Returns purchase orders with RFQ data, traceability answers, and custom fields. Requires authentication."
+          }
+        },
+        {
+          "name": "GET Traceability by PO Line ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organization/raw-purchases/:id/traceability",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "raw-purchases", ":id", "traceability"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "po-line-id-here",
+                  "description": "Purchase Order Line ID"
+                }
+              ]
+            },
+            "description": "Get traceability data for a specific purchase order line. Returns traceability information including farm, slaughter house, tannery, and factory details. Requires authentication."
+          }
+        },
+        {
+          "name": "POST Create/Update Traceability",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"farm\": {\n    \"farmId\": \"FARM-001\",\n    \"animalType\": \"Cattle\",\n    \"location\": \"Rural District, State, Country\",\n    \"certifications\": [\"Organic Certified\", \"Animal Welfare Approved\"]\n  },\n  \"slaughterHouse\": {\n    \"supplier\": \"ABC Slaughter House\",\n    \"animalType\": \"Cattle\",\n    \"origin\": \"India\",\n    \"hideSkinType\": \"Cattle Hide\",\n    \"hideSkinId\": \"HS-2024-001\",\n    \"slaughterDate\": \"2024-01-10T00:00:00.000Z\",\n    \"location\": \"Slaughter House Address, City, State\",\n    \"certifications\": [\"HACCP Certified\", \"ISO 22000\"]\n  },\n  \"tannery\": {\n    \"tanneryName\": \"XYZ Tannery Ltd\",\n    \"tanneryLocation\": \"Tannery District, City, State\",\n    \"tanningType\": \"Chrome Tanning\",\n    \"article\": \"Wet Blue\",\n    \"vehicleNumber\": \"VEH-1234\",\n    \"processedLotNumber\": \"LOT-2024-001\",\n    \"envParameters\": {\n      \"waterConsumption\": \"5000 L/day\",\n      \"wastewaterTreatment\": \"CETP\",\n      \"chemicalUsage\": \"Chrome-based\"\n    },\n    \"certifications\": [\"LWG Certified\", \"ISO 14001\"]\n  },\n  \"factory\": {\n    \"factoryName\": \"ABC Leather Manufacturing Co.\",\n    \"factoryLocation\": \"123 Industrial Street, City, State\",\n    \"materialType\": \"Leather\",\n    \"product\": \"Finished Leather\",\n    \"finishDate\": \"2024-02-15T00:00:00.000Z\",\n    \"hardLabourUsed\": \"No\",\n    \"care\": \"Standard Care Instructions\",\n    \"brand\": \"ABC Brand\",\n    \"certification\": \"LWG Gold Rated\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organization/raw-purchases/:id/traceability",
+              "host": ["{{baseUrl}}"],
+              "path": ["organization", "raw-purchases", ":id", "traceability"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "po-line-id-here",
+                  "description": "Purchase Order Line ID"
+                }
+              ]
+            },
+            "description": "Create or update traceability data for a specific purchase order line. Uses upsert - creates if doesn't exist, updates if exists. Requires authentication."
+          }
+        }
+      ]
+    }
+  ]
+}
+
