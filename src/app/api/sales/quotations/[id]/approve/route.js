@@ -36,8 +36,11 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Normalize role to uppercase for comparison
+    const userRole = (currentUser.role || '').toUpperCase();
+
     // Check if user has permission to approve/reject
-    const canApprove = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SALES_MANAGER].includes(currentUser.role);
+    const canApprove = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SALES_MANAGER].includes(userRole);
     if (!canApprove) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }

@@ -23,8 +23,11 @@ export async function GET(req) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Normalize role to uppercase for comparison
+    const userRole = (currentUser.role || '').toUpperCase();
+
     // Check if user has permission to view approvals
-    const canViewApprovals = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SALES_MANAGER].includes(currentUser.role);
+    const canViewApprovals = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SALES_MANAGER].includes(userRole);
     if (!canViewApprovals) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }

@@ -14,16 +14,21 @@ export default function SalesPollingPage() {
   const [lastCheck, setLastCheck] = useState(new Date());
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [redirectMessage, setRedirectMessage] = useState('');
+  const [lastCheckTime, setLastCheckTime] = useState(null); // null means first check
   const router = useRouter();
   const { data: session } = useSession();
 
+  // Normalize role to uppercase for comparison
+  const userRole = session?.user?.role ? (session.user.role).toUpperCase() : '';
+  
   // Check if user is a manager
-  const isManager = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SALES_MANAGER].includes(session?.user?.role);
-  const isSalesUser = [ROLES.SALES_USER].includes(session?.user?.role);
+  const isManager = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SALES_MANAGER].includes(userRole);
+  const isSalesUser = [ROLES.SALES_USER].includes(userRole);
 
   const checkForUpdates = async () => {
     try {
-      setLastCheck(new Date());
+      const currentCheckTime = new Date();
+      setLastCheck(currentCheckTime);
       
       if (isManager) {
         // Check for pending approvals (managers only)
@@ -39,21 +44,57 @@ export default function SalesPollingPage() {
           }, 2000);
         }
       } else if (isSalesUser) {
-        // Check for approved/rejected quotations (sales users only)
+        // Check for approved/rejected quotations that were updated after last check
         const myQuotationsData = await api.get('/api/sales/quotations/my-quotations', { 
           status: 'approved,rejected', 
-          limit: 10 
+          limit: 50 
         });
-        const pendingQuotationsList = myQuotationsData.quotations || [];
-        setPendingQuotations(pendingQuotationsList.length);
+        const allQuotations = myQuotationsData.quotations || [];
         
-        if (pendingQuotationsList.length > 0 && !isRedirecting) {
+        // On first check, just set baseline - don't notify about old quotations
+        if (lastCheckTime === null) {
+          setPendingQuotations(0);
+          setLastCheckTime(currentCheckTime);
+          return;
+        }
+        
+        // Filter to only include quotations that were recently approved/rejected
+        // Check if they have approval records created after the last check time
+        const recentUpdates = allQuotations.filter(quotation => {
+          if (!quotation.approvals || quotation.approvals.length === 0) {
+            return false;
+          }
+          // Get the most recent approval
+          const latestApproval = quotation.approvals[0];
+          const approvalTime = new Date(latestApproval.createdAt);
+          // Only include if approved/rejected after last check (with 2 second buffer for timing)
+          return approvalTime > new Date(lastCheckTime.getTime() - 2000);
+        });
+        
+        setPendingQuotations(recentUpdates.length);
+        
+        if (recentUpdates.length > 0 && !isRedirecting) {
           setIsRedirecting(true);
-          setRedirectMessage('Quotation status updates available! Redirecting...');
+          const hasApproved = recentUpdates.some(q => q.status === 'approved');
+          const hasRejected = recentUpdates.some(q => q.status === 'rejected');
+          let statusText = 'updated';
+          if (hasApproved && hasRejected) {
+            statusText = 'approved or rejected';
+          } else if (hasApproved) {
+            statusText = 'approved';
+          } else if (hasRejected) {
+            statusText = 'rejected';
+          }
+          setRedirectMessage(`Your quotation has been ${statusText}! Redirecting...`);
           setTimeout(() => {
             router.push('/dashboard/sales/quotations');
           }, 2000);
         }
+      }
+      
+      // Update last check time after processing (only if not first check for sales users)
+      if (!(isSalesUser && lastCheckTime === null)) {
+        setLastCheckTime(currentCheckTime);
       }
     } catch (error) {
       console.error('Error checking for updates:', error);

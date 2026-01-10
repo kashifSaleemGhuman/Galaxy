@@ -29,12 +29,18 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
   // Load quotation data if editing - ONLY ONCE
   useEffect(() => {
     if (quotation && !isInitialized) {
-      // Recalculate tax for existing items to ensure it's 16% of ex-factory price
-      const itemsWithRecalculatedTax = (quotation.items || []).map(item => {
+      // Calculate tax percentage from existing tax charges if available
+      const itemsWithTaxPercentage = (quotation.items || []).map(item => {
         const exFactory = parseFloat(item.exFactoryPrice) || 0;
-        const taxCharges = exFactory * 0.16; // Recalculate to ensure 16%
+        const taxCharges = parseFloat(item.taxCharges) || 0;
         const freight = parseFloat(item.freightCharges) || 0;
         const qty = parseInt(item.quantity) || 1;
+        
+        // Calculate tax percentage from existing tax charges
+        // If exFactory is 0, default to 0%, otherwise calculate percentage
+        const taxPercentage = exFactory > 0 ? (taxCharges / exFactory) * 100 : 0;
+        // Round to 2 decimal places to avoid floating point issues
+        const roundedTaxPercentage = Math.round(taxPercentage * 100) / 100;
         const finalNetPrice = (exFactory + taxCharges + freight) * qty;
         
         return {
@@ -43,6 +49,7 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
           quantity: qty,
           freightCharges: freight,
           taxCharges: taxCharges,
+          taxPercentage: roundedTaxPercentage,
           finalNetPrice: finalNetPrice
         };
       });
@@ -54,7 +61,7 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
         customerPhone: quotation.customerPhone || '',
         customerCompanyName: quotation.customerCompanyName || '',
         termsAndConditions: quotation.termsAndConditions || '',
-        items: itemsWithRecalculatedTax
+        items: itemsWithTaxPercentage
       });
       setIsInitialized(true);
     }
@@ -96,7 +103,8 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
   // Add product to items
   const handleAddProduct = (product) => {
     const exFactoryPrice = product.exFactoryPrice || 0;
-    const taxCharges = exFactoryPrice * 0.16; // Auto-calculate 16% tax
+    const taxPercentage = 0; // User will enter tax percentage
+    const taxCharges = 0; // Will be calculated based on tax percentage
     const freightCharges = 0; // User will enter manually
     const discountAmount = 0;
     const quantity = 1;
@@ -107,6 +115,7 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
       productName: product.name,
       quantity: quantity,
       exFactoryPrice: exFactoryPrice,
+      taxPercentage: taxPercentage,
       taxCharges: taxCharges,
       freightCharges: freightCharges,
       discountAmount: discountAmount,
@@ -143,11 +152,21 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
       };
     } else if (field === 'exFactoryPrice') {
       const exFactory = value === '' ? '' : (parseFloat(value) || 0);
-      const taxCharges = (exFactory === '' ? 0 : exFactory) * 0.16; // Auto-calculate 16% tax
+      const taxPercentage = item.taxPercentage === '' ? 0 : (parseFloat(item.taxPercentage) || 0);
+      const taxCharges = (exFactory === '' ? 0 : exFactory) * (taxPercentage / 100);
       items[index] = {
         ...item,
         exFactoryPrice: exFactory,
-        taxCharges: taxCharges // Auto-update tax when price changes
+        taxCharges: taxCharges // Recalculate tax when price changes
+      };
+    } else if (field === 'taxPercentage') {
+      const taxPercentage = value === '' ? '' : (parseFloat(value) || 0);
+      const exFactory = item.exFactoryPrice === '' ? 0 : (parseFloat(item.exFactoryPrice) || 0);
+      const taxCharges = exFactory * (taxPercentage === '' ? 0 : taxPercentage / 100);
+      items[index] = {
+        ...item,
+        taxPercentage: taxPercentage,
+        taxCharges: taxCharges // Recalculate tax charges when percentage changes
       };
     } else if (field === 'freightCharges') {
       const freight = value === '' ? '' : (parseFloat(value) || 0);
@@ -211,12 +230,20 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
       // Ensure all values are properly set before submission
       const submissionData = {
         ...formData,
-        items: formData.items.map(item => ({
-          ...item,
-          quantity: item.quantity === '' ? 1 : parseInt(item.quantity),
-          exFactoryPrice: item.exFactoryPrice === '' ? 0 : parseFloat(item.exFactoryPrice),
-          freightCharges: item.freightCharges === '' ? 0 : parseFloat(item.freightCharges)
-        }))
+        items: formData.items.map(item => {
+          const exFactory = item.exFactoryPrice === '' ? 0 : parseFloat(item.exFactoryPrice);
+          const taxPercentage = item.taxPercentage === '' ? 0 : parseFloat(item.taxPercentage);
+          const taxCharges = exFactory * (taxPercentage / 100);
+          
+          return {
+            ...item,
+            quantity: item.quantity === '' ? 1 : parseInt(item.quantity),
+            exFactoryPrice: exFactory,
+            taxPercentage: taxPercentage,
+            taxCharges: taxCharges,
+            freightCharges: item.freightCharges === '' ? 0 : parseFloat(item.freightCharges)
+          };
+        })
       };
 
       if (quotation) {
@@ -321,9 +348,9 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ex-Factory</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tax (16%)</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tax %</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tax Amount</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Freight</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">-</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
                 </tr>
@@ -361,10 +388,21 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
                       <input
                         type="number"
                         step="0.01"
+                        min="0"
+                        value={item.taxPercentage === '' ? '' : item.taxPercentage}
+                        onChange={(e) => handleItemChange(index, 'taxPercentage', e.target.value)}
+                        className="w-20 px-2 py-1 border rounded"
+                        placeholder="0"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="number"
+                        step="0.01"
                         value={item.taxCharges ? item.taxCharges.toFixed(2) : '0.00'}
                         readOnly
                         className="w-24 px-2 py-1 border rounded bg-gray-100 cursor-not-allowed"
-                        title="Tax is auto-calculated at 16% of Ex-Factory Price"
+                        title="Tax amount is calculated based on Tax %"
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -377,9 +415,6 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
                         className="w-24 px-2 py-1 border rounded"
                         placeholder="0.00"
                       />
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-gray-500">-</span>
                     </td>
                     <td className="px-4 py-3 text-sm font-medium">
                       ${item.finalNetPrice.toFixed(2)}
@@ -422,7 +457,7 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
             <span>${totals.finalNetPrice.toFixed(2)}</span>
           </div>
           <div className="text-xs text-gray-500 mt-2">
-            * Tax is automatically calculated at 16% of Ex-Factory Price
+            * Tax amount is calculated based on the Tax % entered for each item
           </div>
         </div>
       </div>

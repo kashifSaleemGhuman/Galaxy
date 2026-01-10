@@ -19,7 +19,7 @@ export default function QuotationDetails({ quotation }) {
     try {
       setLoading(true);
       await quotationService.submitForApproval(quotation.id);
-      router.refresh();
+      router.push('/dashboard/sales/quotations');
     } catch (err) {
       setError(err.message || 'Failed to submit');
     } finally {

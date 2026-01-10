@@ -40,9 +40,12 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: 'Quotation not found' }, { status: 404 });
     }
 
+    // Normalize role to uppercase for comparison
+    const userRole = (currentUser.role || '').toUpperCase();
+
     // Check permissions - creator or managers can send
     const canSend = quotation.createdById === currentUser.id ||
-                    [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SALES_MANAGER].includes(currentUser.role);
+                    [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SALES_MANAGER].includes(userRole);
     
     if (!canSend) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
