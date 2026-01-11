@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import quotationService from './quotationService';
 import { ROLES } from '@/lib/constants/roles';
+import CreateSalesOrderModal from './CreateSalesOrderModal';
 
 export default function QuotationDetails({ quotation }) {
   const router = useRouter();
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
 
   const isManager = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SALES_MANAGER].includes(session?.user?.role);
   const isCreator = quotation?.createdById === session?.user?.id;
@@ -30,8 +32,12 @@ export default function QuotationDetails({ quotation }) {
   const handleApprove = async (action, comments) => {
     try {
       setLoading(true);
-      await quotationService.approveQuotation(quotation.id, action, comments);
-      router.refresh();
+      const response = await quotationService.approveQuotation(quotation.id, action, comments);
+      // Update the quotation state instead of refreshing the whole page
+      if (response.quotation) {
+        // Force a page reload to show updated status
+        window.location.reload();
+      }
     } catch (err) {
       setError(err.message || 'Failed to process approval');
     } finally {
@@ -112,6 +118,15 @@ export default function QuotationDetails({ quotation }) {
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               >
                 Send to Customer
+              </button>
+            )}
+            {quotation.status === 'sent' && (isCreator || isManager) && (
+              <button
+                onClick={() => setShowCreateOrderModal(true)}
+                disabled={loading}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              >
+                Create Sales Order
               </button>
             )}
           </div>
@@ -241,6 +256,16 @@ export default function QuotationDetails({ quotation }) {
           </div>
         </div>
       )}
+
+      {/* Create Sales Order Modal */}
+      <CreateSalesOrderModal
+        quotation={quotation}
+        isOpen={showCreateOrderModal}
+        onClose={() => setShowCreateOrderModal(false)}
+        onSuccess={() => {
+          router.push('/dashboard/sales/orders');
+        }}
+      />
     </div>
   );
 }

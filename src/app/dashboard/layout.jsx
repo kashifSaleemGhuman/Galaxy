@@ -148,6 +148,7 @@ export default function DashboardLayout({ children }) {
         current: pathname.startsWith('/dashboard/sales'),
         children: [
           { name: 'Quotations', href: '/dashboard/sales/quotations', current: pathname.startsWith('/dashboard/sales/quotations') },
+          { name: 'Orders', href: '/dashboard/sales/orders', current: pathname.startsWith('/dashboard/sales/orders') },
           ...(isSalesManager || userRole === ROLES.SUPER_ADMIN || userRole === ROLES.ADMIN ? [
             { name: 'Approvals', href: '/dashboard/sales/approvals', current: pathname === '/dashboard/sales/approvals' }
           ] : [])

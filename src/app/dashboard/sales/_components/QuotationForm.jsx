@@ -29,41 +29,60 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
   // Load quotation data if editing - ONLY ONCE
   useEffect(() => {
     if (quotation && !isInitialized) {
-      // Calculate tax percentage from existing tax charges if available
-      const itemsWithTaxPercentage = (quotation.items || []).map(item => {
-        const exFactory = parseFloat(item.exFactoryPrice) || 0;
-        const taxCharges = parseFloat(item.taxCharges) || 0;
-        const freight = parseFloat(item.freightCharges) || 0;
-        const qty = parseInt(item.quantity) || 1;
+      const loadQuotationData = async () => {
+        // Calculate tax percentage from existing tax charges if available
+        const itemsWithTaxPercentage = await Promise.all(
+          (quotation.items || []).map(async (item) => {
+            const exFactory = parseFloat(item.exFactoryPrice) || 0;
+            const taxCharges = parseFloat(item.taxCharges) || 0;
+            const freight = parseFloat(item.freightCharges) || 0;
+            const qty = parseInt(item.quantity) || 1;
+            
+            // Calculate tax percentage from existing tax charges
+            // If exFactory is 0, default to 0%, otherwise calculate percentage
+            const taxPercentage = exFactory > 0 ? (taxCharges / exFactory) * 100 : 0;
+            // Round to 2 decimal places to avoid floating point issues
+            const roundedTaxPercentage = Math.round(taxPercentage * 100) / 100;
+            const finalNetPrice = (exFactory + taxCharges + freight) * qty;
+            
+            // Fetch stock availability if productId exists
+            let availableStock = null;
+            if (item.productId) {
+              try {
+                const stockData = await api.get(`/api/inventory/products/${item.productId}/stock-availability`);
+                availableStock = stockData.totalAvailable || 0;
+              } catch (err) {
+                console.error('Error fetching stock availability:', err);
+                availableStock = null;
+              }
+            }
+            
+            return {
+              ...item,
+              exFactoryPrice: exFactory,
+              quantity: qty,
+              freightCharges: freight,
+              taxCharges: taxCharges,
+              taxPercentage: roundedTaxPercentage,
+              finalNetPrice: finalNetPrice,
+              availableStock: availableStock
+            };
+          })
+        );
         
-        // Calculate tax percentage from existing tax charges
-        // If exFactory is 0, default to 0%, otherwise calculate percentage
-        const taxPercentage = exFactory > 0 ? (taxCharges / exFactory) * 100 : 0;
-        // Round to 2 decimal places to avoid floating point issues
-        const roundedTaxPercentage = Math.round(taxPercentage * 100) / 100;
-        const finalNetPrice = (exFactory + taxCharges + freight) * qty;
-        
-        return {
-          ...item,
-          exFactoryPrice: exFactory,
-          quantity: qty,
-          freightCharges: freight,
-          taxCharges: taxCharges,
-          taxPercentage: roundedTaxPercentage,
-          finalNetPrice: finalNetPrice
-        };
-      });
+        setFormData({
+          validityDate: quotation.validityDate ? new Date(quotation.validityDate).toISOString().split('T')[0] : '',
+          customerName: quotation.customerName || '',
+          customerEmail: quotation.customerEmail || '',
+          customerPhone: quotation.customerPhone || '',
+          customerCompanyName: quotation.customerCompanyName || '',
+          termsAndConditions: quotation.termsAndConditions || '',
+          items: itemsWithTaxPercentage
+        });
+        setIsInitialized(true);
+      };
       
-      setFormData({
-        validityDate: quotation.validityDate ? new Date(quotation.validityDate).toISOString().split('T')[0] : '',
-        customerName: quotation.customerName || '',
-        customerEmail: quotation.customerEmail || '',
-        customerPhone: quotation.customerPhone || '',
-        customerCompanyName: quotation.customerCompanyName || '',
-        termsAndConditions: quotation.termsAndConditions || '',
-        items: itemsWithTaxPercentage
-      });
-      setIsInitialized(true);
+      loadQuotationData();
     }
   }, [quotation, isInitialized]);
 
@@ -101,7 +120,7 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
   };
 
   // Add product to items
-  const handleAddProduct = (product) => {
+  const handleAddProduct = async (product) => {
     const exFactoryPrice = product.exFactoryPrice || 0;
     const taxPercentage = 0; // User will enter tax percentage
     const taxCharges = 0; // Will be calculated based on tax percentage
@@ -109,6 +128,18 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
     const discountAmount = 0;
     const quantity = 1;
     const finalNetPrice = (exFactoryPrice + taxCharges + freightCharges) * quantity;
+    
+    // Fetch stock availability
+    let availableStock = null;
+    if (product.id) {
+      try {
+        const stockData = await api.get(`/api/inventory/products/${product.id}/stock-availability`);
+        availableStock = stockData.totalAvailable || 0;
+      } catch (err) {
+        console.error('Error fetching stock availability:', err);
+        availableStock = null;
+      }
+    }
     
     const newItem = {
       productId: product.id,
@@ -119,7 +150,8 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
       taxCharges: taxCharges,
       freightCharges: freightCharges,
       discountAmount: discountAmount,
-      finalNetPrice: finalNetPrice
+      finalNetPrice: finalNetPrice,
+      availableStock: availableStock
     };
     
     setFormData({
@@ -145,7 +177,15 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
     
     // Update the field - parse values properly
     if (field === 'quantity') {
-      const qty = value === '' ? '' : (parseInt(value) || 1);
+      let qty = value === '' ? '' : (parseInt(value) || 1);
+      const maxQty = item.availableStock !== null ? item.availableStock : Infinity;
+      
+      // Validate against available stock
+      if (qty !== '' && qty > maxQty) {
+        setError(`Quantity cannot exceed available stock (${maxQty} units)`);
+        qty = maxQty; // Cap at max available
+      }
+      
       items[index] = {
         ...item,
         quantity: qty
@@ -347,6 +387,7 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Available Stock</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ex-Factory</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tax %</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tax Amount</th>
@@ -356,13 +397,25 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {formData.items.map((item, index) => (
+                {formData.items.map((item, index) => {
+                  const availableStock = item.availableStock !== null ? item.availableStock : null;
+                  const qty = item.quantity === '' ? 1 : (parseInt(item.quantity) || 1);
+                  const stockStatus = availableStock === null 
+                    ? 'unknown' 
+                    : availableStock === 0 
+                    ? 'out' 
+                    : availableStock >= qty 
+                    ? 'available' 
+                    : 'low';
+                  
+                  return (
                   <tr key={`item-${index}-${item.productId || item.productName}`}>
                     <td className="px-4 py-3 text-sm">{item.productName}</td>
                     <td className="px-4 py-3">
                       <input
                         type="number"
                         min="1"
+                        max={availableStock !== null ? availableStock : undefined}
                         value={item.quantity === '' ? '' : item.quantity}
                         onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                         onBlur={(e) => {
@@ -371,8 +424,25 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
                             handleItemChange(index, 'quantity', '1');
                           }
                         }}
-                        className="w-20 px-2 py-1 border rounded"
+                        disabled={availableStock === 0}
+                        className={`w-20 px-2 py-1 border rounded ${
+                          availableStock === 0 ? 'bg-gray-100 cursor-not-allowed' : ''
+                        }`}
                       />
+                    </td>
+                    <td className="px-4 py-3">
+                      {availableStock !== null ? (
+                        <span className={`text-sm font-medium ${
+                          stockStatus === 'out' ? 'text-red-600' :
+                          stockStatus === 'low' ? 'text-yellow-600' :
+                          'text-green-600'
+                        }`}>
+                          {availableStock} {stockStatus === 'out' && '(Out of Stock)'}
+                          {stockStatus === 'low' && '(Low Stock)'}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-500">N/A</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <input
@@ -429,7 +499,8 @@ export default function QuotationForm({ quotation, onSubmit, onCancel }) {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

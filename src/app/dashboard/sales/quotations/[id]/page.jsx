@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import quotationService from '../../_components/quotationService';
 import QuotationDetails from '../../_components/QuotationDetails';
@@ -11,22 +11,48 @@ export default function QuotationDetailPage() {
   const [quotation, setQuotation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const fetchedIdRef = useRef(null);
+
+  // Extract ID from params - handle both Promise and object cases
+  const [quotationId, setQuotationId] = useState(null);
+  
+  useEffect(() => {
+    const resolveParams = async () => {
+      if (params instanceof Promise) {
+        const resolved = await params;
+        setQuotationId(resolved?.id);
+      } else {
+        setQuotationId(params?.id);
+      }
+    };
+    resolveParams();
+  }, [params]);
 
   useEffect(() => {
+    if (!quotationId) return;
+    
+    // Prevent re-fetching if we already have this quotation loaded
+    if (fetchedIdRef.current === quotationId && quotation) {
+      return;
+    }
+    
     const fetchQuotation = async () => {
       try {
-        const resolvedParams = await params;
-        const data = await quotationService.getQuotation(resolvedParams.id);
+        fetchedIdRef.current = quotationId;
+        setLoading(true);
+        setError(null);
+        const data = await quotationService.getQuotation(quotationId);
         setQuotation(data.quotation);
       } catch (err) {
         setError(err.message || 'Failed to load quotation');
+        setQuotation(null);
       } finally {
         setLoading(false);
       }
     };
 
     fetchQuotation();
-  }, [params]);
+  }, [quotationId]);
 
   if (loading) {
     return (
