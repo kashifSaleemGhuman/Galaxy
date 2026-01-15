@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/db'
-import { crmCache, rateLimit } from '@/lib/redis'
+import prisma from '@/lib/db'
+import { ROLES } from '@/lib/constants/roles'
+
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic'
 
 // GET /api/inventory/products - Get all products
 export async function GET(request) {
@@ -11,21 +14,6 @@ export async function GET(request) {
     
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Rate limiting
-    const rateLimitKey = `ratelimit:${session.user.id}:products:get`
-    const rateLimitResult = await rateLimit.check(rateLimitKey, 100, 60) // 100 requests per minute
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded', 
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset
-        }, 
-        { status: 429 }
-      )
     }
 
     const { searchParams } = new URL(request.url)
@@ -38,38 +26,16 @@ export async function GET(request) {
     
     const skip = (page - 1) * limit
     
-    // Build cache key based on filters
-    const cacheKey = {
-      tenantId: session.user.tenantId,
-      page,
-      limit,
-      search,
-      category,
-      status,
-      trackQuantity
-    }
-    
-    // Try to get cached data first
-    const cachedData = await crmCache.getCustomerList(session.user.tenantId, cacheKey)
-    if (cachedData) {
-      console.log('📦 Serving products from cache')
-      return NextResponse.json(cachedData)
-    }
-    
     // Build where clause
     const where = {
-      tenantId: session.user.tenantId,
       ...(search && {
         OR: [
           { name: { contains: search, mode: 'insensitive' } },
-          { sku: { contains: search, mode: 'insensitive' } },
-          { barcode: { contains: search, mode: 'insensitive' } },
           { description: { contains: search, mode: 'insensitive' } }
         ]
       }),
-      ...(category && category !== 'all' && { categoryId: category }),
-      ...(status && status !== 'all' && { isActive: status === 'active' }),
-      ...(trackQuantity !== undefined && { trackQuantity: trackQuantity === 'true' })
+      ...(category && category !== 'all' && { category }),
+      ...(status && status !== 'all' && { isActive: status === 'active' })
     }
     
     // Get products with pagination
@@ -80,12 +46,6 @@ export async function GET(request) {
         take: limit,
         orderBy: { name: 'asc' },
         include: {
-          category: {
-            select: {
-              id: true,
-              name: true
-            }
-          },
           inventoryItems: {
             include: {
               warehouse: {
@@ -95,13 +55,7 @@ export async function GET(request) {
                   code: true
                 }
               },
-              location: {
-                select: {
-                  id: true,
-                  name: true,
-                  code: true
-                }
-              }
+              // location is a scalar string in current schema; no relation include
             }
           }
         }
@@ -123,10 +77,6 @@ export async function GET(request) {
       }
     }
     
-    // Cache the response for 30 minutes
-    await crmCache.setCustomerList(session.user.tenantId, cacheKey, responseData, 1800)
-    console.log('💾 Cached products data')
-    
     return NextResponse.json(responseData)
     
   } catch (error) {
@@ -146,20 +96,28 @@ export async function POST(request) {
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    
-    // Rate limiting
-    const rateLimitKey = `ratelimit:${session.user.id}:products:post`
-    const rateLimitResult = await rateLimit.check(rateLimitKey, 50, 60) // 50 requests per minute
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded', 
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset
-        }, 
-        { status: 429 }
-      )
+
+    // Check if user has permission to create products
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    const userRole = (currentUser.role || '').toUpperCase()
+    const canCreateProducts = [
+      ROLES.SUPER_ADMIN,
+      ROLES.ADMIN,
+      ROLES.PURCHASE_MANAGER,
+      ROLES.PURCHASE_USER
+    ].includes(userRole)
+
+    if (!canCreateProducts) {
+      return NextResponse.json({ 
+        error: 'Insufficient permissions. Products can only be created by Purchase Managers or Admins.' 
+      }, { status: 403 })
     }
     
     const body = await request.json()
@@ -204,7 +162,10 @@ export async function POST(request) {
     // Check for duplicate SKU if provided
     if (sku) {
       const existingSku = await prisma.product.findFirst({
-        where: { sku, tenantId: session.user.tenantId }
+        where: { 
+          sku, 
+          ...(session.user.tenantId && { tenantId: session.user.tenantId })
+        }
       })
       if (existingSku) {
         return NextResponse.json(
@@ -217,7 +178,10 @@ export async function POST(request) {
     // Check for duplicate barcode if provided
     if (barcode) {
       const existingBarcode = await prisma.product.findFirst({
-        where: { barcode, tenantId: session.user.tenantId }
+        where: { 
+          barcode, 
+          ...(session.user.tenantId && { tenantId: session.user.tenantId })
+        }
       })
       if (existingBarcode) {
         return NextResponse.json(
@@ -232,7 +196,7 @@ export async function POST(request) {
       const category = await prisma.productCategory.findFirst({
         where: { 
           id: categoryId, 
-          tenantId: session.user.tenantId 
+          ...(session.user.tenantId && { tenantId: session.user.tenantId })
         }
       })
       if (!category) {
@@ -244,7 +208,7 @@ export async function POST(request) {
     }
     
     console.log('🔍 Debug: About to create product with data:', {
-      tenantId: session.user.tenantId,
+      tenantId: session.user.tenantId || null,
       name,
       sku,
       barcode
@@ -253,7 +217,7 @@ export async function POST(request) {
     // Create product
     const product = await prisma.product.create({
       data: {
-        tenantId: session.user.tenantId,
+        ...(session.user.tenantId && { tenantId: session.user.tenantId }),
         name,
         sku,
         barcode,
@@ -286,7 +250,10 @@ export async function POST(request) {
     if (trackQuantity && warehouseId) {
       // Validate warehouse belongs to tenant
       const warehouse = await prisma.warehouse.findFirst({
-        where: { id: warehouseId, tenantId: session.user.tenantId }
+        where: { 
+          id: warehouseId, 
+          ...(session.user.tenantId && { tenantId: session.user.tenantId })
+        }
       })
       if (!warehouse) {
         return NextResponse.json(
@@ -305,7 +272,7 @@ export async function POST(request) {
         },
         update: {},
         create: {
-          tenantId: session.user.tenantId,
+          ...(session.user.tenantId && { tenantId: session.user.tenantId }),
           productId: product.id,
           warehouseId,
           quantityOnHand: 0,
@@ -317,10 +284,6 @@ export async function POST(request) {
         }
       })
     }
-    
-    // Invalidate product cache for this tenant
-    await crmCache.invalidateCustomer(session.user.tenantId)
-    console.log('🗑️ Invalidated product cache after creation')
     
     return NextResponse.json({ 
       message: 'Product created successfully',

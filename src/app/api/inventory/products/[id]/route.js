@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/db'
-import { crmCache, rateLimit } from '@/lib/redis'
+import prisma from '@/lib/db'
+import { ROLES } from '@/lib/constants/roles'
+
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic'
 
 // GET /api/inventory/products/[id] - Get product by ID
 export async function GET(request, { params }) {
@@ -13,25 +16,10 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Rate limiting
-    const rateLimitKey = `ratelimit:${session.user.id}:products:get:${params.id}`
-    const rateLimitResult = await rateLimit.check(rateLimitKey, 100, 60)
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded', 
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset
-        }, 
-        { status: 429 }
-      )
-    }
-
     const product = await prisma.product.findFirst({
       where: {
         id: params.id,
-        tenantId: session.user.tenantId
+        ...(session.user.tenantId && { tenantId: session.user.tenantId })
       },
       include: {
         category: {
@@ -88,20 +76,28 @@ export async function PUT(request, { params }) {
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    
-    // Rate limiting
-    const rateLimitKey = `ratelimit:${session.user.id}:products:put:${params.id}`
-    const rateLimitResult = await rateLimit.check(rateLimitKey, 50, 60)
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded', 
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset
-        }, 
-        { status: 429 }
-      )
+
+    // Check if user has permission to update products
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    const userRole = (currentUser.role || '').toUpperCase()
+    const canManageProducts = [
+      ROLES.SUPER_ADMIN,
+      ROLES.ADMIN,
+      ROLES.PURCHASE_MANAGER,
+      ROLES.PURCHASE_USER
+    ].includes(userRole)
+
+    if (!canManageProducts) {
+      return NextResponse.json({ 
+        error: 'Insufficient permissions. Products can only be updated by Purchase Managers or Admins.' 
+      }, { status: 403 })
     }
     
     const body = await request.json()
@@ -129,7 +125,7 @@ export async function PUT(request, { params }) {
     const existingProduct = await prisma.product.findFirst({
       where: {
         id: params.id,
-        tenantId: session.user.tenantId
+        ...(session.user.tenantId && { tenantId: session.user.tenantId })
       }
     })
 
@@ -145,7 +141,7 @@ export async function PUT(request, { params }) {
       const existingSku = await prisma.product.findFirst({
         where: { 
           sku, 
-          tenantId: session.user.tenantId,
+          ...(session.user.tenantId && { tenantId: session.user.tenantId }),
           id: { not: params.id }
         }
       })
@@ -162,7 +158,7 @@ export async function PUT(request, { params }) {
       const existingBarcode = await prisma.product.findFirst({
         where: { 
           barcode, 
-          tenantId: session.user.tenantId,
+          ...(session.user.tenantId && { tenantId: session.user.tenantId }),
           id: { not: params.id }
         }
       })
@@ -206,10 +202,6 @@ export async function PUT(request, { params }) {
     
     console.log('✅ Product updated successfully:', updatedProduct.id)
     
-    // Invalidate product cache for this tenant
-    await crmCache.invalidateCustomer(session.user.tenantId)
-    console.log('🗑️ Invalidated product cache after update')
-    
     return NextResponse.json({ 
       message: 'Product updated successfully',
       product: updatedProduct 
@@ -241,27 +233,35 @@ export async function DELETE(request, { params }) {
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    
-    // Rate limiting
-    const rateLimitKey = `ratelimit:${session.user.id}:products:delete:${params.id}`
-    const rateLimitResult = await rateLimit.check(rateLimitKey, 20, 60)
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded', 
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset
-        }, 
-        { status: 429 }
-      )
+
+    // Check if user has permission to delete products
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    const userRole = (currentUser.role || '').toUpperCase()
+    const canManageProducts = [
+      ROLES.SUPER_ADMIN,
+      ROLES.ADMIN,
+      ROLES.PURCHASE_MANAGER,
+      ROLES.PURCHASE_USER
+    ].includes(userRole)
+
+    if (!canManageProducts) {
+      return NextResponse.json({ 
+        error: 'Insufficient permissions. Products can only be deleted by Purchase Managers or Admins.' 
+      }, { status: 403 })
     }
     
     // Check if product exists
     const existingProduct = await prisma.product.findFirst({
       where: {
         id: params.id,
-        tenantId: session.user.tenantId
+        ...(session.user.tenantId && { tenantId: session.user.tenantId })
       },
       include: {
         inventoryItems: true
@@ -289,10 +289,6 @@ export async function DELETE(request, { params }) {
     })
     
     console.log('✅ Product deleted successfully:', params.id)
-    
-    // Invalidate product cache for this tenant
-    await crmCache.invalidateCustomer(session.user.tenantId)
-    console.log('🗑️ Invalidated product cache after deletion')
     
     return NextResponse.json({ 
       message: 'Product deleted successfully'

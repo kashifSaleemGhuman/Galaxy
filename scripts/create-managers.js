@@ -106,22 +106,15 @@ const MANAGERS = [
   }
 ]
 
+// Create or find default tenant
 async function createTenant() {
-  console.log('🏢 Creating tenant...')
-  
-  const existingTenant = await prisma.tenant.findFirst({
-    where: { name: TENANT_NAME }
-  })
-  
-  if (existingTenant) {
-    console.log(`✅ Tenant already exists: ${existingTenant.id}`)
-    return existingTenant
-  }
-  
-  const tenant = await prisma.tenant.create({
-    data: {
+  console.log('🏢 Ensuring default tenant exists...')
+  const tenant = await prisma.tenant.upsert({
+    where: { domain: 'default' },
+    update: {},
+    create: {
       name: TENANT_NAME,
-      domain: 'galaxy.local',
+      domain: 'default',
       settings: {
         timezone: 'UTC',
         currency: 'USD',
@@ -137,38 +130,40 @@ async function createTenant() {
       }
     }
   })
-  
-  console.log(`✅ Created tenant: ${tenant.id}`)
+  console.log(`✅ Tenant ready: ${tenant.id}`)
   return tenant
 }
 
-async function createRoles(tenantId) {
+async function createRoles() {
   console.log('👥 Creating roles...')
   
   const roles = []
   
-  for (const manager of MANAGERS) {
+  // Seed a Super Admin role entry as well (even though users use role strings)
+  const roleSeeds = [
+    { name: 'System Administrator', permissions: { '*': ['*'] }, description: 'Full system access' },
+    ...MANAGERS.map((m) => ({
+      name: m.roleName,
+      description: `${m.roleName} with full access to ${Object.keys(m.permissions).join(', ')}`,
+      permissions: m.permissions
+    }))
+  ]
+
+  for (const roleSeed of roleSeeds) {
     const existingRole = await prisma.role.findFirst({
-      where: { 
-        name: manager.roleName,
-        // Note: roles table doesn't have tenantId in schema, so we'll use name uniqueness
-      }
+      where: { name: roleSeed.name }
     })
-    
+
     if (existingRole) {
-      console.log(`✅ Role already exists: ${manager.roleName}`)
+      console.log(`✅ Role already exists: ${roleSeed.name}`)
       roles.push(existingRole)
       continue
     }
-    
+
     const role = await prisma.role.create({
-      data: {
-        name: manager.roleName,
-        description: `${manager.roleName} with full access to ${Object.keys(manager.permissions).join(', ')}`,
-        permissions: manager.permissions
-      }
+      data: roleSeed
     })
-    
+
     console.log(`✅ Created role: ${role.name}`)
     roles.push(role)
   }
@@ -176,7 +171,7 @@ async function createRoles(tenantId) {
   return roles
 }
 
-async function createManagers(tenantId, roles) {
+async function createManagers(roles, tenant) {
   console.log('👤 Creating manager users...')
   
   const passwordHash = await bcrypt.hash(PASSWORD, 10)
@@ -196,26 +191,36 @@ async function createManagers(tenantId, roles) {
       continue
     }
     
+    // Map role keys to role constants
+    const roleMap = {
+      'inventory_manager': 'INVENTORY_MANAGER',
+      'purchase_manager': 'PURCHASE_MANAGER',
+      'crm_manager': 'CRM_MANAGER',
+      'hr_manager': 'HR_MANAGER',
+      'accountant': 'ACCOUNTANT',
+      'sales_manager': 'SALES_MANAGER'
+    }
+    
     const user = await prisma.user.create({
       data: {
-        tenantId,
         email: manager.email,
-        passwordHash,
-        firstName: manager.firstName,
-        lastName: manager.lastName,
-        roleId: role.id,
+        password: passwordHash,
+        name: `${manager.firstName} ${manager.lastName}`,
+        role: roleMap[manager.roleKey] || 'USER',
+        tenantId: tenant?.id || null,
+        isFirstLogin: true,
         isActive: true
       }
     })
     
-    console.log(`✅ Created user: ${user.email} (${user.firstName} ${user.lastName})`)
+    console.log(`✅ Created user: ${user.email} (${user.name})`)
     createdUsers.push(user)
   }
   
   return createdUsers
 }
 
-async function createAdminUser(tenantId) {
+async function createAdminUser(tenant) {
   console.log('👑 Creating admin user...')
   
   const existingAdmin = await prisma.user.findUnique({
@@ -240,8 +245,7 @@ async function createAdminUser(tenantId) {
         permissions: {
           '*': ['read', 'write', 'approve', 'delete', 'admin'],
           system: ['read', 'write', 'approve', 'delete', 'admin'],
-          users: ['read', 'write', 'approve', 'delete', 'admin'],
-          tenants: ['read', 'write', 'approve', 'delete', 'admin']
+          users: ['read', 'write', 'approve', 'delete', 'admin']
         }
       }
     })
@@ -252,12 +256,12 @@ async function createAdminUser(tenantId) {
   
   const admin = await prisma.user.create({
     data: {
-      tenantId,
       email: 'admin@galaxy.com',
-      passwordHash,
-      firstName: 'System',
-      lastName: 'Administrator',
-      roleId: adminRole.id,
+      password: passwordHash,
+      name: 'System Administrator',
+      role: 'SUPER_ADMIN',
+      tenantId: tenant?.id || null,
+      isFirstLogin: true,
       isActive: true
     }
   })
@@ -275,21 +279,23 @@ async function main() {
     console.log('')
     
     // 2. Create roles
-    const roles = await createRoles(tenant.id)
+    const roles = await createRoles()
     console.log('')
     
     // 3. Create managers
-    const managers = await createManagers(tenant.id, roles)
+    const managers = await createManagers(roles, tenant)
     console.log('')
     
     // 4. Create admin user
-    const admin = await createAdminUser(tenant.id)
+    const admin = await createAdminUser(tenant)
     console.log('')
     
     // 5. Summary
     console.log('📋 Setup Summary:')
     console.log('================')
-    console.log(`🏢 Tenant: ${tenant.name} (${tenant.id})`)
+    if (tenant) {
+      console.log(`🏢 Tenant: ${tenant.name} (${tenant.id})`)
+    }
     console.log(`👥 Roles created: ${roles.length}`)
     console.log(`👤 Manager users created: ${managers.length}`)
     console.log(`👑 Admin user: admin@galaxy.com`)

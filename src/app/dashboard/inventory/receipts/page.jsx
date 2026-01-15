@@ -15,6 +15,8 @@ import {
   Calendar
 } from 'lucide-react'
 import DataTable from '@/components/ui/DataTable'
+import LoadingBar from '@/components/ui/LoadingBar'
+import { toast } from '@/lib/toast'
 
 export default function ReceiptsPage() {
   const [receipts, setReceipts] = useState([])
@@ -48,7 +50,6 @@ export default function ReceiptsPage() {
         setReceipts(data.receipts || [])
       } else {
         console.error('Failed to fetch receipts:', response.status)
-        // Fallback to mock data for development
         setReceipts([])
       }
     } catch (error) {
@@ -99,6 +100,7 @@ export default function ReceiptsPage() {
 
   const handleValidateReceipt = async (receiptId) => {
     try {
+      toast.info('Validating Receipt...', 'Please wait while the receipt is being validated and stock is being updated.')
       const response = await fetch(`/api/inventory/receipts/${receiptId}/validate`, {
         method: 'POST',
         headers: {
@@ -109,16 +111,17 @@ export default function ReceiptsPage() {
         })
       })
       
+      const result = await response.json()
+      
       if (response.ok) {
+        toast.success('Receipt Validated', 'Receipt validated successfully! Stock levels have been updated.')
         await fetchReceipts() // Refresh the list
-        alert('Receipt validated successfully! Stock levels have been updated.')
       } else {
-        const error = await response.json()
-        alert(error.error || 'Failed to validate receipt')
+        toast.error('Validation Failed', result.error || 'Failed to validate receipt')
       }
     } catch (error) {
       console.error('Error validating receipt:', error)
-      alert('Failed to validate receipt')
+      toast.error('Validation Failed', 'An error occurred while validating the receipt.')
     }
   }
 
@@ -162,7 +165,9 @@ export default function ReceiptsPage() {
       render: (item) => (
         <div className="flex items-center">
           <Building2 className="h-4 w-4 text-gray-400 mr-2" />
-          <span className="text-sm text-gray-900">Main Warehouse</span>
+          <span className="text-sm text-gray-900">
+            {item.warehouse?.name || item.purchaseOrder?.warehouse?.name || 'No Warehouse'}
+          </span>
         </div>
       )
     },

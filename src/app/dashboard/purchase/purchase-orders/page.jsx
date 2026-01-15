@@ -7,6 +7,7 @@ import { StatusBadge } from '../_components/StatusBadge';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import { Button } from '@/components/ui/Button';
 import { Toast } from '@/components/ui/Toast';
+import LoadingBar from '@/components/ui/LoadingBar';
 
 export default function PurchaseOrdersPage() {
   const router = useRouter();
@@ -97,10 +98,46 @@ export default function PurchaseOrdersPage() {
     }
   };
 
+  const handleApprovePO = async (poId) => {
+    try {
+      const response = await fetch(`/api/purchase/purchase-orders/${poId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notes: 'Purchase Order approved - creating incoming shipment'
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setToast({
+          type: 'success',
+          message: `Purchase Order approved! Incoming shipment ${result.data.incomingShipment.shipmentNumber} created.`
+        });
+        fetchPurchaseOrders(); // Refresh the list
+      } else {
+        setToast({
+          type: 'error',
+          message: result.error || 'Failed to approve purchase order'
+        });
+      }
+    } catch (err) {
+      setToast({
+        type: 'error',
+        message: 'Failed to approve purchase order'
+      });
+      console.error('Error approving purchase order:', err);
+    }
+  };
+
   const getStatusColor = (status) => {
     const statusMap = {
       'draft': 'bg-gray-100 text-gray-700 border-gray-200',
       'sent': 'bg-blue-100 text-blue-700 border-blue-200',
+      'approved': 'bg-green-100 text-green-700 border-green-200',
       'confirmed': 'bg-green-100 text-green-700 border-green-200',
       'received': 'bg-purple-100 text-purple-700 border-purple-200',
       'cancelled': 'bg-red-100 text-red-700 border-red-200',
@@ -161,28 +198,28 @@ export default function PurchaseOrdersPage() {
               Send
             </button>
           )}
+          {row.status === 'sent' && (
+            <button
+              onClick={() => handleApprovePO(row.po_id)}
+              className="text-blue-600 hover:text-blue-800 text-sm"
+            >
+              Approve
+            </button>
+          )}
         </div>
       )
     }
   ];
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <Breadcrumbs items={breadcrumbs} />
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading purchase orders...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <Breadcrumbs items={breadcrumbs} />
+      
+      {/* Loading Bar */}
+      {loading && <LoadingBar loading={loading} message="Loading purchase orders..." />}
+      
+      {!loading && (
+        <>
       
       <div className="flex items-center justify-between">
         <div>
@@ -299,6 +336,8 @@ export default function PurchaseOrdersPage() {
           message={toast.message}
           onClose={() => setToast(null)}
         />
+      )}
+        </>
       )}
     </div>
   );

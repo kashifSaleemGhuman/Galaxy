@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/db'
-import { crmCache, rateLimit } from '@/lib/redis'
+import prisma from '@/lib/db'
+import { ROLES } from '@/lib/constants/roles'
+
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic'
 
 // GET /api/inventory/warehouses - Get all warehouses
 export async function GET(request) {
@@ -13,21 +16,6 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Rate limiting
-    const rateLimitKey = `ratelimit:${session.user.id}:warehouses:get`
-    const rateLimitResult = await rateLimit.check(rateLimitKey, 100, 60)
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded', 
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset
-        }, 
-        { status: 429 }
-      )
-    }
-
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page')) || 1
     const limit = parseInt(searchParams.get('limit')) || 10
@@ -36,31 +24,12 @@ export async function GET(request) {
     
     const skip = (page - 1) * limit
     
-    // Build cache key based on filters
-    const cacheKey = {
-      tenantId: session.user.tenantId,
-      page,
-      limit,
-      search,
-      status
-    }
-    
-    // Try to get cached data first
-    const cachedData = await crmCache.getCustomerList(session.user.tenantId, cacheKey)
-    if (cachedData) {
-      console.log('📦 Serving warehouses from cache')
-      return NextResponse.json(cachedData)
-    }
-    
     // Build where clause
-    const where = {
-      tenantId: session.user.tenantId,
+  const where = {
       ...(search && {
         OR: [
           { name: { contains: search, mode: 'insensitive' } },
-          { code: { contains: search, mode: 'insensitive' } },
-          { city: { contains: search, mode: 'insensitive' } },
-          { state: { contains: search, mode: 'insensitive' } }
+          { code: { contains: search, mode: 'insensitive' } }
         ]
       }),
       ...(status && status !== 'all' && { isActive: status === 'active' })
@@ -77,18 +46,9 @@ export async function GET(request) {
           manager: {
             select: {
               id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          },
-          locations: {
-            select: {
-              id: true,
               name: true,
-              code: true,
-              type: true,
-              isActive: true
+              email: true,
+              role: true
             }
           },
           _count: {
@@ -116,10 +76,6 @@ export async function GET(request) {
       }
     }
     
-    // Cache the response for 30 minutes
-    await crmCache.setCustomerList(session.user.tenantId, cacheKey, responseData, 1800)
-    console.log('💾 Cached warehouses data')
-    
     return NextResponse.json(responseData)
     
   } catch (error) {
@@ -132,6 +88,7 @@ export async function GET(request) {
 }
 
 // POST /api/inventory/warehouses - Create new warehouse
+// Only SUPER_ADMIN can create warehouses
 export async function POST(request) {
   try {
     const session = await getServerSession(authOptions)
@@ -139,38 +96,29 @@ export async function POST(request) {
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    
-    // Rate limiting
-    const rateLimitKey = `ratelimit:${session.user.id}:warehouses:post`
-    const rateLimitResult = await rateLimit.check(rateLimitKey, 50, 60)
-    
-    if (!rateLimitResult.allowed) {
+
+    // Check if user is SUPER_ADMIN
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { role: true }
+    })
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    const userRole = (currentUser.role || '').toUpperCase()
+    if (userRole !== ROLES.SUPER_ADMIN) {
       return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded', 
-          remaining: rateLimitResult.remaining,
-          reset: rateLimitResult.reset
-        }, 
-        { status: 429 }
+        { error: 'Only Super Admin can create warehouses' },
+        { status: 403 }
       )
     }
     
     const body = await request.json()
     console.log('🔍 Debug: Request body:', body)
     
-    const {
-      name,
-      code,
-      address,
-      city,
-      state,
-      country,
-      postalCode,
-      phone,
-      email,
-      managerId,
-      isActive = true
-    } = body
+    const { name, code, address, isActive = true } = body 
     
     // Validate required fields
     if (!name || !code) {
@@ -181,9 +129,7 @@ export async function POST(request) {
     }
     
     // Check for duplicate code
-    const existingCode = await prisma.warehouse.findFirst({
-      where: { code, tenantId: session.user.tenantId }
-    })
+    const existingCode = await prisma.warehouse.findFirst({ where: { code } })
     if (existingCode) {
       return NextResponse.json(
         { error: 'Warehouse with this code already exists' },
@@ -191,45 +137,14 @@ export async function POST(request) {
       )
     }
     
-    console.log('🔍 Debug: About to create warehouse with data:', {
-      tenantId: session.user.tenantId,
-      name,
-      code
-    })
+    console.log('🔍 Debug: About to create warehouse with data:', { name, code })
     
     // Create warehouse
     const warehouse = await prisma.warehouse.create({
-      data: {
-        tenantId: session.user.tenantId,
-        name,
-        code,
-        address,
-        city,
-        state,
-        country,
-        postalCode,
-        phone,
-        email,
-        managerId: managerId || null,
-        isActive
-      },
-      include: {
-        manager: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        }
-      }
+      data: { name, code, address, isActive }
     })
     
     console.log('✅ Warehouse created successfully:', warehouse.id)
-    
-    // Invalidate warehouse cache for this tenant
-    await crmCache.invalidateCustomer(session.user.tenantId)
-    console.log('🗑️ Invalidated warehouse cache after creation')
     
     return NextResponse.json({ 
       message: 'Warehouse created successfully',

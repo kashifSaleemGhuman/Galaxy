@@ -4,6 +4,9 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { crmCache, rateLimit } from '@/lib/redis'
 
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic'
+
 // GET /api/crm/customers/[id] - Get customer by ID
 export async function GET(request, { params }) {
   try {

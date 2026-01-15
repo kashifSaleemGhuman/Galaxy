@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { 
   Search, 
   Filter, 
@@ -16,9 +17,18 @@ import {
   XCircle
 } from 'lucide-react'
 import DataTable from '@/components/ui/DataTable'
+import LoadingBar from '@/components/ui/LoadingBar'
 import WarehouseModal from './_components/WarehouseModal'
+import LocationManager from './_components/LocationManager'
+import ManagerCreator from './_components/ManagerCreator'
+import { ROLES } from '@/lib/constants/roles'
+import { toast } from '@/lib/toast'
 
 export default function WarehousesPage() {
+  const { data: session } = useSession()
+  const userRole = (session?.user?.role || '').toUpperCase()
+  const isSuperAdmin = userRole === ROLES.SUPER_ADMIN
+  
   const [warehouses, setWarehouses] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -29,6 +39,9 @@ export default function WarehousesPage() {
   const [modalMode, setModalMode] = useState('create')
   const [selectedWarehouse, setSelectedWarehouse] = useState(null)
   const [managers, setManagers] = useState([])
+  const [showLocationManager, setShowLocationManager] = useState(false)
+  const [showManagerCreator, setShowManagerCreator] = useState(false)
+  const [selectedWarehouseForManager, setSelectedWarehouseForManager] = useState(null)
 
   // Fetch warehouses from API
   useEffect(() => {
@@ -63,15 +76,25 @@ export default function WarehousesPage() {
 
   const fetchManagers = async () => {
     try {
-      // This would be a separate API call to get users who can be managers
-      // For now, using mock data
-      setManagers([
-        { id: '1', name: 'John Smith', email: 'john@company.com' },
-        { id: '2', name: 'Jane Doe', email: 'jane@company.com' },
-        { id: '3', name: 'Mike Johnson', email: 'mike@company.com' }
-      ])
+      // Fetch users with WAREHOUSE_OPERATOR role who can be managers
+      const response = await fetch('/api/users?role=WAREHOUSE_OPERATOR')
+      if (response.ok) {
+        const result = await response.json()
+        if (result.users) {
+          setManagers(result.users.map(user => ({
+            id: user.id,
+            name: user.name,
+            email: user.email
+          })))
+        } else {
+          setManagers([])
+        }
+      } else {
+        setManagers([])
+      }
     } catch (error) {
       console.error('Error fetching managers:', error)
+      setManagers([])
     }
   }
 
@@ -96,30 +119,38 @@ export default function WarehousesPage() {
   const handleDeleteWarehouse = async (warehouse) => {
     if (window.confirm(`Are you sure you want to delete "${warehouse.name}"?`)) {
       try {
+        toast.info('Deleting Warehouse...', 'Please wait while the warehouse is being deleted.')
         const response = await fetch(`/api/inventory/warehouses/${warehouse.id}`, {
           method: 'DELETE'
         })
         
         if (response.ok) {
+          toast.success('Warehouse Deleted', `"${warehouse.name}" has been deleted successfully.`)
           await fetchWarehouses()
         } else {
           const error = await response.json()
-          alert(error.error || 'Failed to delete warehouse')
+          toast.error('Delete Failed', error.error || 'Failed to delete warehouse')
         }
       } catch (error) {
         console.error('Error deleting warehouse:', error)
-        alert('Failed to delete warehouse')
+        toast.error('Delete Failed', 'An error occurred while deleting the warehouse.')
       }
     }
   }
 
   const handleSaveWarehouse = async (warehouseData) => {
     try {
-      const url = modalMode === 'create' 
+      const isCreating = modalMode === 'create'
+      toast.info(
+        isCreating ? 'Creating Warehouse...' : 'Updating Warehouse...',
+        `Please wait while ${isCreating ? 'creating' : 'updating'} the warehouse.`
+      )
+
+      const url = isCreating
         ? '/api/inventory/warehouses'
         : `/api/inventory/warehouses/${selectedWarehouse.id}`
       
-      const method = modalMode === 'create' ? 'POST' : 'PUT'
+      const method = isCreating ? 'POST' : 'PUT'
       
       const response = await fetch(url, {
         method,
@@ -129,18 +160,82 @@ export default function WarehousesPage() {
         body: JSON.stringify(warehouseData),
       })
       
+      const result = await response.json()
+      
       if (response.ok) {
+        toast.success(
+          isCreating ? 'Warehouse Created' : 'Warehouse Updated',
+          `Warehouse "${warehouseData.name}" has been ${isCreating ? 'created' : 'updated'} successfully.`
+        )
         await fetchWarehouses()
         setShowModal(false)
         return true
       } else {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to save warehouse')
+        toast.error('Save Failed', result.error || 'Failed to save warehouse')
+        throw new Error(result.error || 'Failed to save warehouse')
       }
     } catch (error) {
       console.error('Error saving warehouse:', error)
       throw error
     }
+  }
+
+  const handleManageLocations = (warehouse) => {
+    setSelectedWarehouse(warehouse)
+    setShowLocationManager(true)
+  }
+
+  const handleCreateManager = async (warehouse) => {
+    // Check if warehouse already has a manager
+    if (warehouse.managerId || warehouse.manager) {
+      // Fetch and show manager credentials in modal
+      if (isSuperAdmin) {
+        try {
+          const response = await fetch(`/api/inventory/warehouses/${warehouse.id}/create-manager`)
+          if (response.ok) {
+            const data = await response.json()
+            if (data.data.credentials) {
+              const creds = data.data.credentials
+              // Store in localStorage for persistence
+              localStorage.setItem(`manager_creds_${warehouse.id}`, JSON.stringify(creds))
+              // Open modal with credentials
+              setSelectedWarehouseForManager(warehouse)
+              setShowManagerCreator(true)
+            } else {
+              alert(`Manager: ${data.data.manager.name}\nEmail: ${data.data.manager.email}\n\n${data.data.note || 'Password has expired. Please reset password if needed.'}`)
+            }
+          } else {
+            // Try to load from localStorage
+            const stored = localStorage.getItem(`manager_creds_${warehouse.id}`)
+            if (stored) {
+              setSelectedWarehouseForManager(warehouse)
+              setShowManagerCreator(true)
+            } else {
+              alert(`Manager already assigned: ${warehouse.manager?.name || warehouse.manager?.email || 'N/A'}\n\nNote: Password cannot be retrieved.`)
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching credentials:', error)
+          // Try to load from localStorage
+          const stored = localStorage.getItem(`manager_creds_${warehouse.id}`)
+          if (stored) {
+            setSelectedWarehouseForManager(warehouse)
+            setShowManagerCreator(true)
+          } else {
+            alert(`Manager already assigned: ${warehouse.manager?.name || warehouse.manager?.email || 'N/A'}`)
+          }
+        }
+      } else {
+        alert(`Manager already assigned: ${warehouse.manager?.name || warehouse.manager?.email || 'N/A'}`)
+      }
+      return
+    }
+    setSelectedWarehouseForManager(warehouse)
+    setShowManagerCreator(true)
+  }
+
+  const handleManagerCreated = () => {
+    fetchWarehouses() // Refresh to show new manager
   }
 
   const getStatusColor = (isActive) => {
@@ -217,7 +312,7 @@ export default function WarehousesPage() {
           <div>
             {item.manager ? (
               <>
-                <div className="text-sm text-gray-900">{item.manager.firstName} {item.manager.lastName}</div>
+                <div className="text-sm text-gray-900">{item.manager.name || item.manager.email}</div>
                 <div className="text-sm text-gray-500">{item.manager.email}</div>
               </>
             ) : (
@@ -258,7 +353,7 @@ export default function WarehousesPage() {
     }
   ]
 
-  // Table actions
+  // Table actions - only Super Admin can edit/delete warehouses
   const tableActions = [
     {
       icon: <Eye className="h-4 w-4" />,
@@ -266,30 +361,39 @@ export default function WarehousesPage() {
       title: 'View',
       className: 'text-blue-600 hover:text-blue-900'
     },
-    {
+    ...(isSuperAdmin ? [{
       icon: <Edit className="h-4 w-4" />,
       onClick: (item) => handleEditWarehouse(item),
       title: 'Edit',
       className: 'text-green-600 hover:text-green-900'
+    }] : []),
+    {
+      icon: <MapPin className="h-4 w-4" />,
+      onClick: (item) => handleManageLocations(item),
+      title: 'Manage Locations',
+      className: 'text-purple-600 hover:text-purple-900'
     },
     {
+      icon: <User className="h-4 w-4" />,
+      onClick: (item) => handleCreateManager(item),
+      title: 'Manager',
+      className: 'text-orange-600 hover:text-orange-900'
+    },
+    ...(isSuperAdmin ? [{
       icon: <Trash2 className="h-4 w-4" />,
       onClick: (item) => handleDeleteWarehouse(item),
       title: 'Delete',
       className: 'text-red-600 hover:text-red-900'
-    }
+    }] : [])
   ]
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
 
   return (
     <div className="p-6 space-y-6">
+      {/* Loading Bar */}
+      {loading && <LoadingBar loading={loading} message="Loading warehouses..." />}
+      
+      {!loading && (
+        <>
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -297,13 +401,15 @@ export default function WarehousesPage() {
           <p className="text-gray-600 mt-2">Manage your warehouse locations and operations</p>
         </div>
         <div className="flex space-x-3">
-          <button 
-            onClick={handleCreateWarehouse}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-          >
-            <Plus className="h-5 w-5" />
-            <span>Add Warehouse</span>
-          </button>
+          {isSuperAdmin && (
+            <button 
+              onClick={handleCreateWarehouse}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+            >
+              <Plus className="h-5 w-5" />
+              <span>Add Warehouse</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -420,13 +526,13 @@ export default function WarehousesPage() {
               
               <div className="space-y-3 mb-4">
                 <div className="flex items-center text-sm text-gray-600">
-                  <MapPinIcon className="h-4 w-4 mr-2" />
+                  <MapPin className="h-4 w-4 mr-2" />
                   <span>{warehouse.city}, {warehouse.state}</span>
                 </div>
                 {warehouse.manager && (
                   <div className="flex items-center text-sm text-gray-600">
-                    <UserIcon className="h-4 w-4 mr-2" />
-                    <span>{warehouse.manager.firstName} {warehouse.manager.lastName}</span>
+                    <User className="h-4 w-4 mr-2" />
+                    <span>{warehouse.manager.name || warehouse.manager.email}</span>
                   </div>
                 )}
                 <div className="flex items-center text-sm text-gray-600">
@@ -466,14 +572,16 @@ export default function WarehousesPage() {
               ? 'Try adjusting your search or filters.'
               : 'Get started by creating your first warehouse.'}
           </p>
-          <div className="mt-6">
-            <button 
-              onClick={handleCreateWarehouse}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-            >
-              Add Warehouse
-            </button>
-          </div>
+          {isSuperAdmin && (
+            <div className="mt-6">
+              <button 
+                onClick={handleCreateWarehouse}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                Add Warehouse
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -487,6 +595,35 @@ export default function WarehousesPage() {
           onSave={handleSaveWarehouse}
           managers={managers}
         />
+      )}
+
+      {/* Location Manager Modal */}
+      {showLocationManager && selectedWarehouse && (
+        <LocationManager
+          warehouseId={selectedWarehouse.id}
+          isOpen={showLocationManager}
+          onClose={() => {
+            setShowLocationManager(false)
+            setSelectedWarehouse(null)
+          }}
+          onLocationChange={fetchWarehouses}
+        />
+      )}
+
+      {/* Manager Creator Modal */}
+      {showManagerCreator && selectedWarehouseForManager && (
+        <ManagerCreator
+          warehouseId={selectedWarehouseForManager.id}
+          warehouseName={selectedWarehouseForManager.name}
+          isOpen={showManagerCreator}
+          onClose={() => {
+            setShowManagerCreator(false)
+            setSelectedWarehouseForManager(null)
+          }}
+          onManagerCreated={handleManagerCreated}
+        />
+      )}
+        </>
       )}
     </div>
   )
