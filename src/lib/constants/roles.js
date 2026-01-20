@@ -18,6 +18,7 @@ export const ROLES = {
   WAREHOUSE_OPERATOR: 'WAREHOUSE_OPERATOR',
   CRM_MANAGER: 'CRM_MANAGER',
   SALES_MANAGER: 'SALES_MANAGER',
+  SALES_USER: 'SALES_USER',
   HR_MANAGER: 'HR_MANAGER',
   ACCOUNTANT: 'ACCOUNTANT',
   VENDOR: 'VENDOR',
@@ -105,6 +106,9 @@ export const PERMISSIONS = {
     QUOTE_WRITE: 'sales.quote.write',
     INVOICE_READ: 'sales.invoice.read',
     INVOICE_WRITE: 'sales.invoice.write',
+    CREATE_QUOTATION: 'sales.create_quotation',
+    APPROVE_QUOTATION: 'sales.approve_quotation',
+    SEND_QUOTATION: 'sales.send_quotation',
     VIEW_REPORTS: 'sales.view_reports',
     MANAGE_SETTINGS: 'sales.manage_settings'
   },
@@ -272,7 +276,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.CRM.MANAGE_SETTINGS
   ],
   
-  // Sales Manager - Full sales access
+  // Sales Manager - Full sales access (merged with quotation permissions)
   [ROLES.SALES_MANAGER]: [
     PERMISSIONS.SALES.VIEW_ALL,
     PERMISSIONS.SALES.ORDER_READ,
@@ -281,8 +285,21 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.SALES.QUOTE_WRITE,
     PERMISSIONS.SALES.INVOICE_READ,
     PERMISSIONS.SALES.INVOICE_WRITE,
+    PERMISSIONS.SALES.CREATE_QUOTATION,
+    PERMISSIONS.SALES.APPROVE_QUOTATION,
+    PERMISSIONS.SALES.SEND_QUOTATION,
     PERMISSIONS.SALES.VIEW_REPORTS,
     PERMISSIONS.SALES.MANAGE_SETTINGS
+  ],
+  
+  // Sales User - Limited sales access (can create and send quotations)
+  [ROLES.SALES_USER]: [
+    PERMISSIONS.SALES.VIEW_ALL,
+    PERMISSIONS.SALES.ORDER_READ,
+    PERMISSIONS.SALES.QUOTE_READ,
+    PERMISSIONS.SALES.CREATE_QUOTATION,
+    PERMISSIONS.SALES.SEND_QUOTATION,
+    PERMISSIONS.SALES.VIEW_REPORTS
   ],
   
   // Accounts Manager - Full accounts access
