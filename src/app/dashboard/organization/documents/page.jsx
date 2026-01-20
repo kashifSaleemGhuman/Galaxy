@@ -80,6 +80,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'ENVIRONMENTAL ORGANISATION CHART → PERSONNEL COMPETENCY') {
+      router.push('/dashboard/organization/organisation-chart')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
