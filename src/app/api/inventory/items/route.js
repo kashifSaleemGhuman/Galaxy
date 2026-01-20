@@ -1,161 +1,232 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
-import { getAssignedWarehouseId } from '@/lib/warehouse-auth';
 
-// Force dynamic rendering - this route uses getServerSession which requires headers()
+// Force dynamic rendering
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
-export async function GET(request) {
+// POST /api/inventory/items - Create or update inventory item
+export async function POST(req) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user has permission to view inventory
     const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email }
+      where: { email: session.user.email },
+      select: { role: true }
     });
 
     if (!currentUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check permissions - inventory managers, admins, and warehouse operators can view inventory
-    const role = (currentUser.role || '').toUpperCase()
-    const canViewInventory = [
-      ROLES.INVENTORY_MANAGER, 
-      ROLES.INVENTORY_USER, 
-      ROLES.SUPER_ADMIN, 
+    const userRole = (currentUser.role || '').toUpperCase();
+    // Allow SUPER_ADMIN, ADMIN, and WAREHOUSE_OPERATOR to manage inventory
+    const canManage = [
+      ROLES.SUPER_ADMIN,
       ROLES.ADMIN,
       ROLES.WAREHOUSE_OPERATOR
-    ].includes(role);
-    
-    if (!canViewInventory) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    ].includes(userRole);
+
+    if (!canManage) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions to manage inventory' },
+        { status: 403 }
+      );
     }
 
-    const { searchParams } = new URL(request.url);
-    const warehouseId = searchParams.get('warehouseId');
-    const status = searchParams.get('status');
+    const body = await req.json();
+    const { productId, warehouseId, quantity, minLevel, maxLevel, locationId } = body;
 
-    // Build where clause
-    const where = {};
-    
-    // For warehouse operators, only show items for their assigned warehouse
-    if (role === ROLES.WAREHOUSE_OPERATOR) {
-      const assignedWarehouseId = await getAssignedWarehouseId(currentUser.id);
-      if (!assignedWarehouseId) {
-        // Warehouse operator not assigned to any warehouse
-        return NextResponse.json({
-          success: true,
-          data: [],
-          warehouses: [],
-          count: 0,
-          message: 'No warehouse assigned. Please contact administrator.'
-        });
-      }
-      where.warehouseId = assignedWarehouseId;
-    } else if (warehouseId && warehouseId !== 'all') {
-      where.warehouseId = warehouseId;
+    // Validate required fields
+    if (!productId || !warehouseId || quantity === undefined) {
+      return NextResponse.json(
+        { error: 'productId, warehouseId, and quantity are required' },
+        { status: 400 }
+      );
     }
 
-    // Get inventory items with related data
-    const inventoryItems = await prisma.inventoryItem.findMany({
-      where,
-      include: {
-        product: true,
-        warehouse: true,
-        warehouseLocation: true, // Include location relation
-        stockMovements: {
-          orderBy: { createdAt: 'desc' },
-          take: 1
+    // Verify product exists
+    const product = await prisma.product.findUnique({
+      where: { id: productId }
+    });
+
+    if (!product) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      );
+    }
+
+    // Verify warehouse exists
+    const warehouse = await prisma.warehouse.findUnique({
+      where: { id: warehouseId }
+    });
+
+    if (!warehouse) {
+      return NextResponse.json(
+        { error: 'Warehouse not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if inventory item exists
+    const existing = await prisma.inventoryItem.findUnique({
+      where: {
+        productId_warehouseId: {
+          productId,
+          warehouseId
         }
-      },
-      orderBy: {
-        updatedAt: 'desc'
       }
     });
 
-    // Get warehouses for filtering
-    const warehouses = await prisma.warehouse.findMany({
-      where: { isActive: true },
-      select: { id: true, name: true, code: true }
-    });
+    let inventoryItem;
+    const quantityNum = parseInt(quantity);
+    const available = quantityNum - (existing?.reserved || 0);
 
-    // Transform data for frontend
-    const shapedItems = inventoryItems.map(item => {
-      const lastMovement = item.stockMovements[0];
-      
-      // Determine stock status
-      let stockStatus = 'in_stock';
-      if (item.quantity <= 0) {
-        stockStatus = 'out_of_stock';
-      } else if (item.quantity <= item.minLevel) {
-        stockStatus = 'low_stock';
-      } else if (item.quantity >= item.maxLevel * 0.9) {
-        stockStatus = 'high_stock';
-      }
+    if (existing) {
+      // Update existing inventory item
+      inventoryItem = await prisma.inventoryItem.update({
+        where: { id: existing.id },
+        data: {
+          quantity: quantityNum,
+          available: Math.max(0, available),
+          minLevel: minLevel !== undefined ? parseInt(minLevel) : existing.minLevel,
+          maxLevel: maxLevel !== undefined ? parseInt(maxLevel) : existing.maxLevel,
+          locationId: locationId || existing.locationId
+        },
+        include: {
+          product: {
+            select: { id: true, name: true, sku: true }
+          },
+          warehouse: {
+            select: { id: true, name: true, code: true }
+          }
+        }
+      });
+    } else {
+      // Create new inventory item
+      inventoryItem = await prisma.inventoryItem.create({
+        data: {
+          productId,
+          warehouseId,
+          quantity: quantityNum,
+          available: Math.max(0, available),
+          reserved: 0,
+          minLevel: minLevel !== undefined ? parseInt(minLevel) : 0,
+          maxLevel: maxLevel !== undefined ? parseInt(maxLevel) : 0,
+          locationId: locationId || null
+        },
+        include: {
+          product: {
+            select: { id: true, name: true, sku: true }
+          },
+          warehouse: {
+            select: { id: true, name: true, code: true }
+          }
+        }
+      });
+    }
 
-      return {
-        id: item.id,
-        product: {
-          id: item.product.id,
-          name: item.product.name,
-          sku: item.product.id, // Using ID as SKU for now
-          barcode: item.product.id, // Using ID as barcode for now
-          category: { name: item.product.category || 'Uncategorized' }
-        },
-        warehouse: {
-          id: item.warehouse.id,
-          name: item.warehouse.name,
-          code: item.warehouse.code
-        },
-        location: item.warehouseLocation ? {
-          id: item.warehouseLocation.id,
-          name: item.warehouseLocation.name,
-          code: item.warehouseLocation.code
-        } : {
-          id: 'default',
-          name: 'No Location',
-          code: 'N/A'
-        },
-        quantityOnHand: item.quantity,
-        quantityReserved: item.reserved,
-        quantityAvailable: item.available,
-        reorderPoint: item.minLevel,
-        maxStock: item.maxLevel,
-        minStock: item.minLevel,
-        averageCost: 0, // TODO: Calculate from stock movements
-        lastCost: 0, // TODO: Get from last stock movement
-        lastMovementDate: lastMovement?.createdAt || item.updatedAt,
-        status: stockStatus
-      };
-    });
+    // Create stock movement record
+    const quantityChange = existing 
+      ? quantityNum - existing.quantity 
+      : quantityNum;
 
-    // Filter by status if specified
-    let filteredItems = shapedItems;
-    if (status && status !== 'all') {
-      filteredItems = shapedItems.filter(item => item.status === status);
+    if (quantityChange !== 0) {
+      await prisma.stockMovement.create({
+        data: {
+          productId,
+          warehouseId,
+          type: quantityChange > 0 ? 'in' : 'out',
+          quantity: Math.abs(quantityChange),
+          reason: existing ? 'Manual inventory adjustment' : 'Initial stock entry',
+          reference: `MANUAL-${Date.now()}`,
+          createdBy: session.user.id
+        }
+      });
     }
 
     return NextResponse.json({
-      success: true,
-      data: filteredItems,
-      warehouses,
-      count: filteredItems.length
+      message: existing ? 'Inventory updated successfully' : 'Inventory created successfully',
+      inventoryItem
     });
 
   } catch (error) {
-    console.error('Error fetching inventory items:', error);
+    console.error('Error managing inventory:', error);
+    
+    if (error.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Inventory item already exists for this product and warehouse' },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to manage inventory' },
       { status: 500 }
     );
   }
 }
 
+// GET /api/inventory/items - List inventory items
+export async function GET(req) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const productId = searchParams.get('productId');
+    const warehouseId = searchParams.get('warehouseId');
+    const page = parseInt(searchParams.get('page')) || 1;
+    const limit = parseInt(searchParams.get('limit')) || 50;
+
+    const where = {};
+    if (productId) where.productId = productId;
+    if (warehouseId) where.warehouseId = warehouseId;
+
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await Promise.all([
+      prisma.inventoryItem.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          product: {
+            select: { id: true, name: true, sku: true }
+          },
+          warehouse: {
+            select: { id: true, name: true, code: true }
+          }
+        },
+        orderBy: { updatedAt: 'desc' }
+      }),
+      prisma.inventoryItem.count({ where })
+    ]);
+
+    return NextResponse.json({
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching inventory items:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch inventory items' },
+      { status: 500 }
+    );
+  }
+}

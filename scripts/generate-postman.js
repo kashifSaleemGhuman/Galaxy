@@ -44,6 +44,162 @@ function detectMethods(filePath) {
   return Array.from(methods).sort((a, b) => HTTP_METHODS.indexOf(a) - HTTP_METHODS.indexOf(b));
 }
 
+function extractQueryParams(filePath, method) {
+  if (method !== 'GET' && method !== 'HEAD') return [];
+  if (!filePath) return [];
+  
+  const src = fs.readFileSync(filePath, 'utf8');
+  const queryParams = [];
+  
+  // Find the function body for this method
+  const methodRegex = new RegExp(`export\\s+async?\\s*function\\s+${method}\\s*\\([^)]*\\)\\s*\\{([\\s\\S]*?)(?=export|$)`, 'i');
+  const match = methodRegex.exec(src);
+  if (!match) return [];
+  
+  const functionBody = match[1];
+  
+  // Extract searchParams.get() calls
+  const searchParamsRegex = /searchParams\.get\(['"`]([^'"`]+)['"`]\)/g;
+  let paramMatch;
+  const seen = new Set();
+  
+  while ((paramMatch = searchParamsRegex.exec(functionBody)) !== null) {
+    const paramName = paramMatch[1];
+    if (!seen.has(paramName)) {
+      seen.add(paramName);
+      // Try to find default value
+      const defaultValue = extractDefaultValue(functionBody, paramName);
+      queryParams.push({
+        key: paramName,
+        value: defaultValue || '',
+        description: ''
+      });
+    }
+  }
+  
+  return queryParams;
+}
+
+function extractDefaultValue(functionBody, paramName) {
+  // Look for patterns like: 
+  // - searchParams.get('param') || defaultValue
+  // - parseInt(searchParams.get('param')) || defaultValue
+  // - searchParams.get('param') || ''
+  const escapedParam = paramName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  
+  // Try pattern with parseInt/parseFloat wrapper
+  let regex = new RegExp('(?:parseInt|parseFloat)\\(\\s*searchParams\\.get\\([\'"`]' + escapedParam + '[\'"`]\\)\\s*\\)\\s*\\|\\|\\s*([^\\n;]+)', 'g');
+  let match = regex.exec(functionBody);
+  
+  // If not found, try without wrapper
+  if (!match) {
+    regex = new RegExp('searchParams\\.get\\([\'"`]' + escapedParam + '[\'"`]\\)\\s*\\|\\|\\s*([^\\n;]+)', 'g');
+    match = regex.exec(functionBody);
+  }
+  
+  if (match) {
+    const defaultValue = match[1].trim();
+    // Clean up common patterns
+    if (defaultValue === '1' || defaultValue === '10' || defaultValue === '20' || defaultValue === '50') {
+      return defaultValue;
+    }
+    if (defaultValue.startsWith("'") && defaultValue.endsWith("'")) {
+      return defaultValue.slice(1, -1);
+    }
+    if (defaultValue.startsWith('"') && defaultValue.endsWith('"')) {
+      return defaultValue.slice(1, -1);
+    }
+    // Return numeric defaults as strings for query params
+    if (!isNaN(defaultValue) && defaultValue !== '') {
+      return defaultValue;
+    }
+  }
+  return null;
+}
+
+function extractBodyFields(filePath, method) {
+  if (method === 'GET' || method === 'HEAD' || method === 'DELETE') return null;
+  if (!filePath) return null;
+  
+  const src = fs.readFileSync(filePath, 'utf8');
+  
+  // Find the function body for this method
+  const methodRegex = new RegExp(`export\\s+async?\\s*function\\s+${method}\\s*\\([^)]*\\)\\s*\\{([\\s\\S]*?)(?=export|$)`, 'i');
+  const match = methodRegex.exec(src);
+  if (!match) return null;
+  
+  const functionBody = match[1];
+  
+  // Look for await request.json() or await req.json()
+  const jsonRegex = /await\s+(?:request|req)\.json\(\)/;
+  if (!jsonRegex.test(functionBody)) return null;
+  
+  // Find destructuring pattern - can be on same line or next line after json() call
+  // Pattern: const body = await request.json() followed by const { field1, ... } = body
+  // OR: const { field1, ... } = await request.json()
+  let destructureMatch = /(?:const|let|var)\s*\{([^}]+)\}\s*=\s*await\s+(?:request|req)\.json\(\)/s.exec(functionBody);
+  
+  // If not found, look for: const body = await request.json() ... const { fields } = body
+  if (!destructureMatch) {
+    const bodyVarMatch = /(?:const|let|var)\s+(\w+)\s*=\s*await\s+(?:request|req)\.json\(\)/s.exec(functionBody);
+    if (bodyVarMatch) {
+      const bodyVar = bodyVarMatch[1];
+      const destructurePattern = new RegExp(`(?:const|let|var)\\s*\\{([^}]+)\}\\s*=\\s*${bodyVar}`, 's');
+      destructureMatch = destructurePattern.exec(functionBody);
+    }
+  }
+  
+  if (destructureMatch) {
+    const fieldsStr = destructureMatch[1];
+    const bodyFields = {};
+    
+    // Parse individual fields: field, field = defaultValue, field: alias
+    // Handle multi-line destructuring by splitting on commas and newlines
+    const fieldLines = fieldsStr.split(/[,\n]/).map(f => f.trim()).filter(f => f);
+    
+    for (const fieldLine of fieldLines) {
+      // Match: fieldName or fieldName = defaultValue
+      const fieldMatch = /^\s*(\w+)(?:\s*=\s*([^=]+))?\s*$/.exec(fieldLine);
+      if (!fieldMatch) continue;
+      
+      const fieldName = fieldMatch[1].trim();
+      const defaultValue = fieldMatch[2] ? fieldMatch[2].trim() : null;
+      
+      // Skip rest/spread operator
+      if (fieldName === '...' || fieldName.startsWith('...')) continue;
+      
+      // Determine type and default value
+      let value = '';
+      if (defaultValue) {
+        // Clean up default value
+        const cleaned = defaultValue
+          .replace(/^['"`]|['"`]$/g, '') // Remove quotes
+          .replace(/^\{|\}$/g, '') // Remove object braces
+          .replace(/^\[|\]$/g, ''); // Remove array brackets
+        
+        if (cleaned === 'true' || cleaned === 'false') {
+          value = cleaned === 'true';
+        } else if (!isNaN(cleaned) && cleaned !== '') {
+          value = Number(cleaned);
+        } else if (cleaned === '[]') {
+          value = [];
+        } else if (cleaned === '{}') {
+          value = {};
+        } else {
+          value = cleaned || '';
+        }
+      }
+      
+      bodyFields[fieldName] = value;
+    }
+    
+    return Object.keys(bodyFields).length > 0 ? bodyFields : null;
+  }
+  
+  // If no destructuring found, return a generic example
+  return { example: true };
+}
+
 function toPostmanPath(apiPath) {
   // convert Next.js dynamic [id] to :id for Postman display and retain as path var
   return apiPath
@@ -53,13 +209,19 @@ function toPostmanPath(apiPath) {
     .join('/');
 }
 
-function buildItem(name, urlPath, method) {
+function buildItem(name, urlPath, method, filePath) {
   const rawPath = urlPath.split('/').filter(Boolean);
   const pathVars = rawPath
     .filter(p => p.startsWith(':'))
     .map(p => p.slice(1));
 
   const postmanPath = rawPath.map(p => (p.startsWith(':') ? `{{${p.slice(1)}}}` : p));
+
+  // Extract query parameters for GET requests
+  const queryParams = filePath ? extractQueryParams(filePath, method) : [];
+
+  // Extract body fields for POST/PUT/PATCH requests
+  const bodyFields = filePath ? extractBodyFields(filePath, method) : null;
 
   const item = {
     name: `${method} /${toPostmanPath(urlPath)}`,
@@ -78,12 +240,26 @@ function buildItem(name, urlPath, method) {
     },
   };
 
-  if (method !== 'GET' && method !== 'HEAD') {
-    item.request.body = {
-      mode: 'raw',
-      raw: '{\n  \"example\": true\n}',
-      options: { raw: { language: 'json' } },
-    };
+  // Add query parameters for GET/HEAD requests
+  if (queryParams.length > 0) {
+    item.request.url.query = queryParams;
+  }
+
+  // Add body for POST/PUT/PATCH requests
+  if (method !== 'GET' && method !== 'HEAD' && method !== 'DELETE') {
+    if (bodyFields) {
+      item.request.body = {
+        mode: 'raw',
+        raw: JSON.stringify(bodyFields, null, 2),
+        options: { raw: { language: 'json' } },
+      };
+    } else {
+      item.request.body = {
+        mode: 'raw',
+        raw: '{\n  \"example\": true\n}',
+        options: { raw: { language: 'json' } },
+      };
+    }
   }
 
   return item;
@@ -145,16 +321,16 @@ function main() {
     const folder = path.dirname(path.relative(API_ROOT, file)).split(path.sep).slice(0, -1).join('/');
     const displayName = urlPath || '/';
 
-    const routeItems = methods.map(m => applySpecialCases(buildItem(displayName, urlPath, m), urlPath, m));
+    const routeItems = methods.map(m => applySpecialCases(buildItem(displayName, urlPath, m, file), urlPath, m));
     itemsByFolder.set(urlPath, routeItems);
 
     // If this is NextAuth catch-all route, add implicit NextAuth endpoints
     if (urlPath === 'auth/[...nextauth]') {
       const nextAuthExtras = [
-        buildItem('NextAuth Credentials Callback', 'auth/callback/credentials', 'POST'),
-        buildItem('NextAuth Session', 'auth/session', 'GET'),
-        buildItem('NextAuth CSRF', 'auth/csrf', 'GET'),
-        buildItem('NextAuth Signout', 'auth/signout', 'POST'),
+        buildItem('NextAuth Credentials Callback', 'auth/callback/credentials', 'POST', null),
+        buildItem('NextAuth Session', 'auth/session', 'GET', null),
+        buildItem('NextAuth CSRF', 'auth/csrf', 'GET', null),
+        buildItem('NextAuth Signout', 'auth/signout', 'POST', null),
       ];
       itemsByFolder.set('auth/callback/credentials', [nextAuthExtras[0]]);
       itemsByFolder.set('auth/session', [nextAuthExtras[1]]);

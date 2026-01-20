@@ -27,7 +27,8 @@ export async function POST(request, { params }) {
     }
 
     // Only SUPER_ADMIN can create warehouse managers
-    if (currentUser.role !== ROLES.SUPER_ADMIN) {
+    // Normalize role comparison to handle case differences (DB stores lowercase, constant is uppercase)
+    if (currentUser.role?.toUpperCase() !== ROLES.SUPER_ADMIN) {
       return NextResponse.json({ error: 'Only Super Admin can create warehouse managers' }, { status: 403 });
     }
 
@@ -156,7 +157,8 @@ export async function GET(request, { params }) {
     }
 
     // Only SUPER_ADMIN can view credentials
-    if (currentUser.role !== ROLES.SUPER_ADMIN) {
+    // Normalize role comparison to handle case differences (DB stores lowercase, constant is uppercase)
+    if (currentUser.role?.toUpperCase() !== ROLES.SUPER_ADMIN) {
       return NextResponse.json({ error: 'Only Super Admin can view credentials' }, { status: 403 });
     }
 
