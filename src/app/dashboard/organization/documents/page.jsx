@@ -90,6 +90,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'ENVIRONMENTAL PERSONNEL COMPETENCY MATRIX') {
+      router.push('/dashboard/organization/personnel-competency-matrix')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
