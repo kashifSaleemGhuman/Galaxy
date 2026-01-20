@@ -199,3 +199,4 @@ All features are accessible from:
 - Quick Links: Click any card to go to that section
 - Statistics: See counts for each stage at the top
 
+

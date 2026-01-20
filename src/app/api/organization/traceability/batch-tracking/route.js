@@ -146,6 +146,40 @@ export async function GET(req) {
           });
 
           if (finishedBatch) {
+            // Get outgoing traceability data
+            const [measurementPackings, dispatches, deliveries] = await Promise.all([
+              prisma.measurementPacking.findMany({
+                where: { finishedBatchId: finishedBatch.id },
+                orderBy: { measurementDate: 'desc' }
+              }).catch(() => []),
+              prisma.dispatch.findMany({
+                where: { finishedBatchId: finishedBatch.id },
+                include: {
+                  measurementPacking: {
+                    select: {
+                      id: true,
+                      recordNumber: true,
+                      status: true
+                    }
+                  }
+                },
+                orderBy: { dispatchDate: 'desc' }
+              }).catch(() => []),
+              prisma.customerDelivery.findMany({
+                where: { finishedBatchId: finishedBatch.id },
+                include: {
+                  dispatch: {
+                    select: {
+                      id: true,
+                      dispatchNumber: true,
+                      dispatchDate: true
+                    }
+                  }
+                },
+                orderBy: { deliveryDate: 'desc' }
+              }).catch(() => [])
+            ]);
+
             traceabilityData = {
               type: 'finished',
               batch: finishedBatch,
@@ -155,7 +189,11 @@ export async function GET(req) {
                 rawBatch: finishedBatch.rtBatch?.wbBatch?.rawBatch,
                 igp: finishedBatch.rtBatch?.wbBatch?.rawBatch?.igp
               },
-              downstream: null
+              downstream: {
+                measurementPackings: measurementPackings || [],
+                dispatches: dispatches || [],
+                deliveries: deliveries || []
+              }
             };
           }
         }

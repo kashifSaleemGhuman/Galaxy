@@ -677,6 +677,51 @@ model Document {
 
   // Tenant relation
   tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  
+  // Relations
+  content     DocumentContent?
+  revisions   DocumentRevision[]
+}
+
+// Document Content - stores the actual content of documents
+model DocumentContent {
+  id          String   @id @default(cuid())
+  documentId  String   @unique
+  documentName String  // Document name (denormalized for quick access)
+  content     Json     // JSON structure containing all document sections/content
+  revisionNo  Int      @default(1) // Current revision number
+  revisionDate DateTime @default(now()) // Current revision date
+  lastEditedBy String? // User who last edited
+  lastEditedAt DateTime @default(now())
+  
+  // Relations
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([documentName])
+}
+
+// Document Revision History - tracks all revisions
+model DocumentRevision {
+  id          String   @id @default(cuid())
+  documentId  String
+  documentName String  // Document name (denormalized)
+  revisionNo  Int      // Revision number
+  revisionDate DateTime // Date of this revision
+  content     Json     // Content at this revision
+  editedBy    String?  // User who made this revision
+  changeDescription String? // Description of changes made
+  
+  // Relations
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([documentId])
+  @@index([documentName])
+  @@unique([documentId, revisionNo])
 }
 
 // Employee model (HRM module)
@@ -1023,6 +1068,9 @@ model FinishedLeatherBatch {
   rtBatch          ReTanningBatch @relation(fields: [rtBatchId], references: [id])
   jobCards         JobCard[]
   batchCards       BatchCard[]
+  measurementPackings MeasurementPacking[]
+  dispatches       Dispatch[]
+  deliveries       CustomerDelivery[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1102,4 +1150,141 @@ model ProductionStage {
   
   @@unique([stageName])
   @@index([order])
+}
+
+// Outgoing Traceability Models
+
+// Measurement/Packing Record - tracks measurement and packing of finished leather
+model MeasurementPacking {
+  id              String   @id @default(cuid())
+  recordNumber    String   @unique // Record number for measurement/packing
+  finishedBatchId String   // Reference to finished leather batch
+  batchNumber     String   // Finished batch number (denormalized)
+  rtCode          String?  // Re-tanning code (denormalized)
+  wbCode          String?  // W/B Code (denormalized)
+  rawBatchCode    String?  // Raw batch code (denormalized)
+  
+  // Measurement details
+  measurementDate DateTime // Date of measurement
+  batchNumberMeas String?  // Batch number for measurement
+  customerOrderNumber String? // Customer order number
+  vendorCode      String?  // Vendor code
+  thickness       Decimal? // Thickness
+  color           String?  // Color
+  weight          Decimal? // Weight
+  pieces          Int?     // Number of pieces
+  areaDm2         Decimal? // Area in square decimeters (dm²)
+  areaM2          Decimal? // Area in square meters (m²) - converted from dm²
+  
+  // Packing details
+  packedDate      DateTime? // Date when packed
+  packingStatus   String   @default("pending") // pending, in_progress, completed
+  packingNotes    String?  // Packing notes
+  
+  // Quality control
+  qcStatus        String?  // Quality control status
+  qcNotes         String?  // Quality control notes
+  qcDate          DateTime? // Quality control date
+  
+  // Status
+  status          String   @default("pending") // pending, measured, packed, ready_for_dispatch
+  
+  // Relations
+  finishedBatch   FinishedLeatherBatch @relation(fields: [finishedBatchId], references: [id])
+  dispatches      Dispatch[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([recordNumber])
+  @@index([finishedBatchId])
+  @@index([batchNumber])
+  @@index([customerOrderNumber])
+}
+
+// Dispatch Record - tracks dispatch of finished leather to customers
+model Dispatch {
+  id                  String   @id @default(cuid())
+  dispatchNumber      String   @unique // Dispatch number
+  measurementPackingId String?  // Reference to measurement/packing record
+  finishedBatchId     String   // Reference to finished leather batch
+  batchNumber         String   // Finished batch number (denormalized)
+  rtCode              String?  // Re-tanning code (denormalized)
+  wbCode              String?  // W/B Code (denormalized)
+  rawBatchCode        String?  // Raw batch code (denormalized)
+  
+  // Customer information
+  customerId          String?  // Reference to customer (if exists in CRM)
+  customerName        String   // Customer name
+  customerOrderNumber String?  // Customer order number
+  vendorCode          String?  // Vendor code
+  
+  // Dispatch details
+  dispatchDate        DateTime // Date of dispatch
+  dispatchType        String?  // Type: direct, warehouse, etc.
+  vehicleNumber       String?  // Vehicle number
+  driverName          String?  // Driver name
+  driverPhone         String?  // Driver phone
+  destination         String?  // Destination address
+  deliveryAddress     String?  // Delivery address
+  
+  // Quantity details
+  quantity            Decimal? // Quantity dispatched
+  unit                String?  // Unit of measurement
+  pieces              Int?     // Number of pieces
+  areaM2              Decimal? // Area in square meters
+  
+  // Status
+  status              String   @default("pending") // pending, dispatched, in_transit, delivered
+  
+  // Relations
+  measurementPacking  MeasurementPacking? @relation(fields: [measurementPackingId], references: [id])
+  finishedBatch      FinishedLeatherBatch @relation(fields: [finishedBatchId], references: [id])
+  deliveries         CustomerDelivery[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([dispatchNumber])
+  @@index([finishedBatchId])
+  @@index([customerOrderNumber])
+  @@index([dispatchDate])
+}
+
+// Customer Delivery - tracks delivery confirmation to customers
+model CustomerDelivery {
+  id              String   @id @default(cuid())
+  deliveryNumber  String   @unique // Delivery number
+  dispatchId      String   // Reference to dispatch
+  dispatchNumber  String   // Dispatch number (denormalized)
+  finishedBatchId String   // Reference to finished leather batch
+  batchNumber     String   // Finished batch number (denormalized)
+  
+  // Customer information
+  customerId      String?  // Reference to customer
+  customerName    String   // Customer name
+  customerOrderNumber String? // Customer order number
+  
+  // Delivery details
+  deliveryDate    DateTime // Date of delivery
+  deliveryStatus  String   @default("pending") // pending, delivered, rejected, partial
+  receivedBy      String?  // Name of person who received
+  receivedByPhone String?  // Phone of person who received
+  deliveryNotes   String?  // Delivery notes
+  
+  // Quality feedback
+  qualityStatus   String?  // Quality status: accepted, rejected, partial
+  qualityNotes    String?  // Quality feedback notes
+  
+  // Relations
+  dispatch        Dispatch @relation(fields: [dispatchId], references: [id])
+  finishedBatch   FinishedLeatherBatch @relation(fields: [finishedBatchId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([deliveryNumber])
+  @@index([dispatchId])
+  @@index([finishedBatchId])
+  @@index([customerOrderNumber])
 }
