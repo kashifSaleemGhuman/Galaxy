@@ -7,35 +7,35 @@ import { Toast } from '@/components/ui/Toast';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import { PlusIcon, EyeIcon } from '@heroicons/react/24/outline';
 
-export default function FinishedLeatherListPage() {
+export default function DispatchListPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
-  const [finishedBatches, setFinishedBatches] = useState([]);
+  const [dispatches, setDispatches] = useState([]);
 
   const breadcrumbs = [
     { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
     { key: 'organization', label: 'Organization', href: '/dashboard/organization' },
-    { key: 'traceability', label: 'Incoming Traceability', href: '/dashboard/organization/traceability' },
-    { key: 'finished-leather', label: 'Finished Leather Batches', href: '#' },
+    { key: 'traceability', label: 'Outgoing Traceability', href: '/dashboard/organization/traceability/outgoing' },
+    { key: 'dispatch', label: 'Dispatch', href: '#' },
   ];
 
   useEffect(() => {
-    fetchFinishedBatches();
+    fetchDispatches();
   }, []);
 
-  const fetchFinishedBatches = async () => {
+  const fetchDispatches = async () => {
     try {
       setLoading(true);
       setError('');
-      const res = await fetch('/api/organization/traceability/finished-leather');
+      const res = await fetch('/api/organization/traceability/dispatch');
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Failed to fetch finished leather batches');
+        throw new Error(data.error || 'Failed to fetch dispatch records');
       }
       const result = await res.json();
-      setFinishedBatches(result.data || []);
+      setDispatches(result.data || []);
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -71,17 +71,17 @@ export default function FinishedLeatherListPage() {
       <div className="bg-white shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Finished Leather Batches</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Dispatch Records</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Manage finished leather batches - final product ready for dispatch
+              Track dispatch of finished leather to customers
             </p>
           </div>
           <Button
-            onClick={() => router.push('/dashboard/organization/traceability/finished-leather/create')}
+            onClick={() => router.push('/dashboard/organization/traceability/dispatch/create')}
             className="flex items-center gap-2"
           >
             <PlusIcon className="h-5 w-5" />
-            New Finished Batch
+            New Dispatch
           </Button>
         </div>
 
@@ -96,28 +96,25 @@ export default function FinishedLeatherListPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Dispatch Number
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Batch Number
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  RT Code
+                  Customer Name
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  W/B Code
+                  Customer Order
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Raw Batch Code
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Completion Date
+                  Dispatch Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Quantity
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Area (m²)
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Customer Order
+                  Vehicle Number
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -128,46 +125,44 @@ export default function FinishedLeatherListPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {finishedBatches.length === 0 ? (
+              {dispatches.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="px-6 py-8 text-center text-gray-500">
-                    No finished leather batches found. Create your first finished batch to get started.
+                  <td colSpan="9" className="px-6 py-8 text-center text-gray-500">
+                    No dispatch records found. Create your first dispatch to get started.
                   </td>
                 </tr>
               ) : (
-                finishedBatches.map((batch) => (
-                  <tr key={batch.id} className="hover:bg-gray-50">
+                dispatches.map((dispatch) => (
+                  <tr key={dispatch.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {batch.batchNumber}
+                      {dispatch.dispatchNumber}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {batch.rtCode}
+                      {dispatch.batchNumber}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {batch.wbCode || 'N/A'}
+                      {dispatch.customerName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {batch.rawBatchCode || 'N/A'}
+                      {dispatch.customerOrderNumber || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(batch.completionDate).toLocaleDateString()}
+                      {new Date(dispatch.dispatchDate).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {batch.quantity ? `${batch.quantity} ${batch.unit || ''}` : 'N/A'}
+                      {dispatch.quantity ? `${dispatch.quantity} ${dispatch.unit || ''}` : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {batch.areaM2 ? `${batch.areaM2} m²` : 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {batch.customerOrderNumber || 'N/A'}
+                      {dispatch.vehicleNumber || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        batch.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        batch.status === 'dispatched' ? 'bg-blue-100 text-blue-800' :
-                        'bg-yellow-100 text-yellow-800'
+                        dispatch.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                        dispatch.status === 'in_transit' ? 'bg-yellow-100 text-yellow-800' :
+                        dispatch.status === 'dispatched' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
                       }`}>
-                        {batch.status}
+                        {dispatch.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -175,7 +170,7 @@ export default function FinishedLeatherListPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => router.push(`/dashboard/organization/traceability/finished-leather/${batch.id}`)}
+                          onClick={() => router.push(`/dashboard/organization/traceability/dispatch/${dispatch.id}`)}
                           className="flex items-center gap-2"
                         >
                           <EyeIcon className="h-4 w-4" />
@@ -193,5 +188,4 @@ export default function FinishedLeatherListPage() {
     </div>
   );
 }
-
 

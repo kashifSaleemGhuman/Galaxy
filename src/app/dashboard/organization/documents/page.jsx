@@ -10,6 +10,7 @@ import { Dialog } from '@headlessui/react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
 export default function DocumentDetailsPage() {
+  const router = useRouter()
   const [documents, setDocuments] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedDoc, setSelectedDoc] = useState(null)
@@ -46,6 +47,55 @@ export default function DocumentDetailsPage() {
   }, [])
 
   const handleEdit = (doc) => {
+    // Check if this is a special document that should navigate to a specific page
+    if (doc.name === 'OUTGOING TRACEABILITY') {
+      router.push('/dashboard/organization/traceability/outgoing')
+      return
+    }
+    
+    if (doc.name === 'INCOMING TRACEABILITY') {
+      router.push('/dashboard/organization/traceability')
+      return
+    }
+    
+    if (doc.name === 'EMS POLICY') {
+      router.push('/dashboard/organization/environmental-policy')
+      return
+    }
+    
+    if (doc.name === 'EMS PROCEDURE') {
+      router.push('/dashboard/organization/ems-procedure')
+      return
+    }
+    
+    if (doc.name === 'KPI' || 
+        doc.name === 'KPI → PRODUCTION CONSUMPTION RECORD' || 
+        doc.name === 'Key Performance Indicator Records') {
+      router.push('/dashboard/organization/kpi')
+      return
+    }
+    
+    if (doc.name === 'OBJECTIVES & TARGETS → ENVIRONMENTAL IMPROVEMENT') {
+      router.push('/dashboard/organization/objectives-targets')
+      return
+    }
+    
+    if (doc.name === 'ENVIRONMENTAL ORGANISATION CHART → PERSONNEL COMPETENCY') {
+      router.push('/dashboard/organization/organisation-chart')
+      return
+    }
+    
+    if (doc.name === 'ENVIRONMENTAL MANAGEMENT CHART') {
+      router.push('/dashboard/organization/environmental-management-chart')
+      return
+    }
+    
+    if (doc.name === 'ENVIRONMENTAL PERSONNEL COMPETENCY MATRIX') {
+      router.push('/dashboard/organization/personnel-competency-matrix')
+      return
+    }
+    
+    // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
       docNo: doc.docNo || '',

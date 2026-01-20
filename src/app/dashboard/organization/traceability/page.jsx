@@ -241,6 +241,54 @@ export default function TraceabilityPage() {
                   ))}
                 </div>
               )}
+
+              {/* Outgoing Traceability for Finished Batches */}
+              {type === 'finished' && downstream && (
+                <>
+                  {downstream.measurementPackings && downstream.measurementPackings.length > 0 && (
+                    <div>
+                      <h4 className="font-medium text-gray-700 mb-2">Measurement & Packing Records:</h4>
+                      {downstream.measurementPackings.map((mp) => (
+                        <div key={mp.id} className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-2">
+                          <div className="font-semibold text-indigo-900">Record: {mp.recordNumber}</div>
+                          <div className="text-sm">Date: {new Date(mp.measurementDate).toLocaleDateString()}</div>
+                          <div className="text-sm">Status: {mp.status}</div>
+                          {mp.areaDm2 && <div className="text-sm">Area: {mp.areaDm2} dm²</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {downstream.dispatches && downstream.dispatches.length > 0 && (
+                    <div>
+                      <h4 className="font-medium text-gray-700 mb-2">Dispatch Records:</h4>
+                      {downstream.dispatches.map((dispatch) => (
+                        <div key={dispatch.id} className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-2">
+                          <div className="font-semibold text-purple-900">Dispatch: {dispatch.dispatchNumber}</div>
+                          <div className="text-sm">Customer: {dispatch.customerName}</div>
+                          <div className="text-sm">Date: {new Date(dispatch.dispatchDate).toLocaleDateString()}</div>
+                          <div className="text-sm">Status: {dispatch.status}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {downstream.deliveries && downstream.deliveries.length > 0 && (
+                    <div>
+                      <h4 className="font-medium text-gray-700 mb-2">Customer Deliveries:</h4>
+                      {downstream.deliveries.map((delivery) => (
+                        <div key={delivery.id} className="bg-green-50 border border-green-200 rounded-lg p-4 mb-2">
+                          <div className="font-semibold text-green-900">Delivery: {delivery.deliveryNumber}</div>
+                          <div className="text-sm">Customer: {delivery.customerName}</div>
+                          <div className="text-sm">Date: {new Date(delivery.deliveryDate).toLocaleDateString()}</div>
+                          <div className="text-sm">Status: {delivery.deliveryStatus}</div>
+                          {delivery.qualityStatus && <div className="text-sm">Quality: {delivery.qualityStatus}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         )}
@@ -354,6 +402,24 @@ export default function TraceabilityPage() {
               {renderTraceabilityChain(searchResult)}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Outgoing Traceability Link */}
+      <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Outgoing Traceability</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Track finished leather from measurement through dispatch to customer delivery
+            </p>
+          </div>
+          <Button
+            onClick={() => router.push('/dashboard/organization/traceability/outgoing')}
+            className="flex items-center gap-2"
+          >
+            View Outgoing Traceability
+          </Button>
         </div>
       </div>
 
