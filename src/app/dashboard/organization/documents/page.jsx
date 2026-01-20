@@ -85,6 +85,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'ENVIRONMENTAL MANAGEMENT CHART') {
+      router.push('/dashboard/organization/environmental-management-chart')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
