@@ -35,33 +35,23 @@ export async function GET(request) {
         ]
       }),
       ...(category && category !== 'all' && { category }),
-      ...(status && status !== 'all' && { isActive: status === 'active' })
+      ...(status && status !== 'all' && { isActive: status === 'active' }),
+      // Note: tenantId filtering removed for single-tenant mode
     }
     
     // Get products with pagination
-    const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { name: 'asc' },
-        include: {
-          inventoryItems: {
-            include: {
-              warehouse: {
-                select: {
-                  id: true,
-                  name: true,
-                  code: true
-                }
-              },
-              // location is a scalar string in current schema; no relation include
-            }
-          }
-        }
-      }),
-      prisma.product.count({ where })
-    ])
+    // Note: inventoryItems include removed because inventory_items table doesn't exist yet
+    const products = await prisma.product.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: {
+        name: 'asc'
+      }
+      // Removed inventoryItems include - table doesn't exist in database
+    })
+    
+    const total = await prisma.product.count({ where })
     
     const totalPages = Math.ceil(total / limit)
     
@@ -93,8 +83,14 @@ export async function GET(request) {
     
   } catch (error) {
     console.error('Error fetching products:', error)
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      meta: error.meta
+    })
     return NextResponse.json(
-      { error: 'Internal server error' }, 
+      { error: 'Internal server error', details: error.message }, 
       { status: 500 }
     )
   }

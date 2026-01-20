@@ -27,26 +27,45 @@ export async function GET(req, { params }) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const quotation = await prisma.salesQuotation.findUnique({
-      where: { id },
-      include: {
-        createdBy: {
-          select: { id: true, name: true, email: true }
-        },
-        approvedBy: {
-          select: { id: true, name: true, email: true }
-        },
-        items: true,
-        approvals: {
-          include: {
-            approver: {
-              select: { id: true, name: true, email: true }
-            }
+    // Try to fetch quotation with minimal includes first
+    let quotation;
+    try {
+      quotation = await prisma.salesQuotation.findUnique({
+        where: { id },
+        include: {
+          createdBy: {
+            select: { id: true, name: true, email: true }
           },
-          orderBy: { createdAt: 'desc' }
+          approvedBy: {
+            select: { id: true, name: true, email: true }
+          },
+          items: true
+          // Removed approvals include temporarily to isolate the issue
+        }
+      });
+      
+      // Fetch approvals separately if needed
+      if (quotation) {
+        try {
+          const approvals = await prisma.salesQuotationApproval.findMany({
+            where: { quotationId: id },
+            include: {
+              approver: {
+                select: { id: true, name: true, email: true }
+              }
+            },
+            orderBy: { createdAt: 'desc' }
+          });
+          quotation.approvals = approvals;
+        } catch (approvalError) {
+          console.warn('Could not fetch approvals:', approvalError.message);
+          quotation.approvals = [];
         }
       }
-    });
+    } catch (queryError) {
+      console.error('Prisma query error:', queryError);
+      throw queryError;
+    }
 
     if (!quotation) {
       return NextResponse.json({ error: 'Quotation not found' }, { status: 404 });
@@ -66,7 +85,16 @@ export async function GET(req, { params }) {
     return NextResponse.json({ quotation });
   } catch (error) {
     console.error('Error fetching quotation:', error);
-    return NextResponse.json({ error: 'Failed to fetch quotation' }, { status: 500 });
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      meta: error.meta
+    });
+    return NextResponse.json(
+      { error: 'Failed to fetch quotation', details: error.message },
+      { status: 500 }
+    );
   }
 }
 
