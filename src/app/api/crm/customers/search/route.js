@@ -4,6 +4,9 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { crmCache, rateLimit } from '@/lib/redis'
 
+// Force dynamic rendering - this route uses getServerSession which requires headers()
+export const dynamic = 'force-dynamic'
+
 // POST /api/crm/customers/search - Advanced search
 export async function POST(request) {
   try {
@@ -41,10 +44,8 @@ export async function POST(request) {
 
     const skip = (page - 1) * limit
 
-    // Build where clause
-    const where = {
-      tenantId: session.user.tenantId
-    }
+    // Build where clause (tenantId removed - single tenant mode)
+    const where = {}
 
     // Text search across multiple fields
     if (query) {

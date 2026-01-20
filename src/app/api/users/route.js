@@ -34,11 +34,25 @@ async function checkPermission() {
   };
 }
 
-export async function GET() {
+export async function GET(request) {
   try {
     const permission = await checkPermission();
     if (!permission.allowed) {
       return NextResponse.json({ error: permission.error }, { status: 403 });
+    }
+
+    // Get role filter from query params
+    const { searchParams } = new URL(request.url);
+    const roleFilter = searchParams.get('role');
+
+    // Build where clause
+    const where = permission.isSuperAdmin ? {} : {
+      role: { not: ROLES.SUPER_ADMIN }
+    };
+
+    // Add role filter if provided
+    if (roleFilter) {
+      where.role = roleFilter.toUpperCase();
     }
 
     const users = await prisma.user.findMany({
@@ -52,9 +66,7 @@ export async function GET() {
         createdAt: true,
         updatedAt: true
       },
-      where: permission.isSuperAdmin ? {} : {
-        role: { not: ROLES.SUPER_ADMIN }
-      },
+      where,
       orderBy: { createdAt: 'desc' }
     });
 

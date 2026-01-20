@@ -61,6 +61,30 @@ export const quotationService = {
     if (filters.limit) params.append('limit', filters.limit);
     
     return await api.get(`/api/sales/quotations/approvals?${params.toString()}`);
+  },
+
+  // Sales Order methods
+  async createSalesOrderFromQuotation(quotationId, warehouseId) {
+    return await api.post('/api/sales/orders/create-from-quotation', {
+      quotationId,
+      warehouseId
+    });
+  },
+
+  async getSalesOrders(filters = {}) {
+    const params = new URLSearchParams();
+    if (filters.status) params.append('status', filters.status);
+    if (filters.warehouseId) params.append('warehouseId', filters.warehouseId);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    if (filters.page) params.append('page', filters.page);
+    if (filters.limit) params.append('limit', filters.limit);
+    
+    return await api.get(`/api/sales/orders?${params.toString()}`);
+  },
+
+  async getSalesOrder(id) {
+    return await api.get(`/api/sales/orders/${id}`);
   }
 };
 

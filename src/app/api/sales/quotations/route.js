@@ -50,17 +50,87 @@ export async function GET(req) {
     }
 
     // Check user role
-    const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    });
+    // Handle tenantId column gracefully if migration hasn't been applied
+    let currentUser;
+    try {
+      // Try with explicit select first (works if tenantId column exists)
+      currentUser = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          isFirstLogin: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+    } catch (dbError) {
+      // If tenantId column doesn't exist, try without explicit select
+      if (dbError.message?.includes('tenantId') || dbError.code === 'P2022') {
+        console.warn('tenantId column not found, using fallback query');
+        try {
+          currentUser = await prisma.user.findUnique({
+            where: { email: session.user.email }
+          });
+          if (currentUser) {
+            // Remove sensitive fields
+            const { password, tenantId, ...userWithoutSensitive } = currentUser;
+            currentUser = userWithoutSensitive;
+          }
+        } catch (fallbackError) {
+          console.error('Fallback query failed:', fallbackError);
+          return NextResponse.json({ 
+            error: 'Database error',
+            details: process.env.NODE_ENV === 'development' ? fallbackError.message : undefined
+          }, { status: 500 });
+        }
+      } else {
+        // Re-throw if it's a different error
+        throw dbError;
+      }
+    }
 
     if (!currentUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      console.error('User not found for email:', session.user.email);
+      // Try case-insensitive search as a fallback
+      try {
+        const users = await prisma.user.findMany({
+          where: {
+            email: {
+              contains: session.user.email.split('@')[0],
+              mode: 'insensitive'
+            }
+          },
+          take: 1
+        });
+        if (users.length > 0) {
+          const { password, tenantId, ...userWithoutSensitive } = users[0];
+          currentUser = userWithoutSensitive;
+          console.log('Found user with case-insensitive search:', users[0].email);
+        }
+      } catch (searchError) {
+        console.error('Case-insensitive search failed:', searchError);
+      }
     }
+
+    if (!currentUser) {
+      return NextResponse.json({ 
+        error: 'User not found',
+        details: process.env.NODE_ENV === 'development' 
+          ? `Email: ${session.user.email}. Please run 'npm run db:seed' to create demo users.` 
+          : undefined
+      }, { status: 404 });
+    }
+
+    // Normalize role to uppercase for comparison
+    const userRole = (currentUser.role || '').toUpperCase();
 
     // Sales users can only see their own quotations
     // Managers and admins can see all
-    if (![ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SALES_MANAGER].includes(currentUser.role)) {
+    if (![ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SALES_MANAGER].includes(userRole)) {
       where.createdById = currentUser.id;
     }
 
@@ -126,13 +196,83 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    });
+    // Handle tenantId column gracefully if migration hasn't been applied
+    let currentUser;
+    try {
+      // Try with explicit select first (works if tenantId column exists)
+      currentUser = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          isFirstLogin: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+    } catch (dbError) {
+      // If tenantId column doesn't exist, try without explicit select
+      if (dbError.message?.includes('tenantId') || dbError.code === 'P2022') {
+        console.warn('tenantId column not found, using fallback query');
+        try {
+          currentUser = await prisma.user.findUnique({
+            where: { email: session.user.email }
+          });
+          if (currentUser) {
+            // Remove sensitive fields
+            const { password, tenantId, ...userWithoutSensitive } = currentUser;
+            currentUser = userWithoutSensitive;
+          }
+        } catch (fallbackError) {
+          console.error('Fallback query failed:', fallbackError);
+          return NextResponse.json({ 
+            error: 'Database error',
+            details: process.env.NODE_ENV === 'development' ? fallbackError.message : undefined
+          }, { status: 500 });
+        }
+      } else {
+        // Re-throw if it's a different error
+        throw dbError;
+      }
+    }
 
     if (!currentUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      console.error('User not found for email:', session.user.email);
+      // Try case-insensitive search as a fallback
+      try {
+        const users = await prisma.user.findMany({
+          where: {
+            email: {
+              contains: session.user.email.split('@')[0],
+              mode: 'insensitive'
+            }
+          },
+          take: 1
+        });
+        if (users.length > 0) {
+          const { password, tenantId, ...userWithoutSensitive } = users[0];
+          currentUser = userWithoutSensitive;
+          console.log('Found user with case-insensitive search:', users[0].email);
+        }
+      } catch (searchError) {
+        console.error('Case-insensitive search failed:', searchError);
+      }
     }
+
+    if (!currentUser) {
+      return NextResponse.json({ 
+        error: 'User not found',
+        details: process.env.NODE_ENV === 'development' 
+          ? `Email: ${session.user.email}. Please run 'npm run db:seed' to create demo users.` 
+          : undefined
+      }, { status: 404 });
+    }
+
+    // Normalize role to uppercase for comparison
+    const userRole = (currentUser.role || '').toUpperCase();
 
     // Check permissions
     const canCreate = [
@@ -140,7 +280,7 @@ export async function POST(req) {
       ROLES.ADMIN,
       ROLES.SALES_MANAGER,
       ROLES.SALES_USER
-    ].includes(currentUser.role);
+    ].includes(userRole);
 
     if (!canCreate) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });

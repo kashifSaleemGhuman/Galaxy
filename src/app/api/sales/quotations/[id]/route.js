@@ -52,8 +52,11 @@ export async function GET(req, { params }) {
       return NextResponse.json({ error: 'Quotation not found' }, { status: 404 });
     }
 
+    // Normalize role to uppercase for comparison
+    const userRole = (currentUser.role || '').toUpperCase();
+
     // Check if user can view this quotation
-    const canView = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SALES_MANAGER].includes(currentUser.role) 
+    const canView = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SALES_MANAGER].includes(userRole) 
         || quotation.createdById === currentUser.id;
 
     if (!canView) {
@@ -104,8 +107,11 @@ export async function PUT(req, { params }) {
       );
     }
 
+    // Normalize role to uppercase for comparison
+    const userRole = (currentUser.role || '').toUpperCase();
+
     // Only creator or managers can edit
-    const canEdit = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SALES_MANAGER].includes(currentUser.role) 
+    const canEdit = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SALES_MANAGER].includes(userRole) 
                    || existingQuotation.createdById === currentUser.id;
 
     if (!canEdit) {
@@ -248,7 +254,10 @@ export async function DELETE(req, { params }) {
       return NextResponse.json({ error: 'Quotation not found' }, { status: 404 });
     }
 
-    const canDelete = [ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(currentUser.role) 
+    // Normalize role to uppercase for comparison
+    const userRole = (currentUser.role || '').toUpperCase();
+
+    const canDelete = [ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(userRole) 
                      || (existingQuotation.createdById === currentUser.id && 
                          ['draft', 'rejected'].includes(existingQuotation.status));
 

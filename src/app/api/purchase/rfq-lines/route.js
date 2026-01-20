@@ -6,7 +6,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url)
     const rfq_id = searchParams.get('rfq_id')
     const where = rfq_id ? { rfqId: rfq_id } : {}
-    const lines = await prisma.rFQ_Line.findMany({ where })
+    const lines = await prisma.rFQItem.findMany({ where })
     return NextResponse.json({ success: true, data: lines })
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
@@ -22,7 +22,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'rfq_id, product_id, quantity, price required' }, { status: 400 })
     }
 
-    const created = await prisma.rFQ_Line.create({
+    const created = await prisma.rFQItem.create({
       data: {
         rfqLineId: rfq_line_id ?? undefined,
         rfqId: rfq_id,
