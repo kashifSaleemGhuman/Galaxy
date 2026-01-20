@@ -15,11 +15,8 @@ import {
   Package
 } from 'lucide-react'
 import useSWR from 'swr'
-import useSWR from 'swr'
 import DataTable from '@/components/ui/DataTable'
 import CycleCountModal from './_components/CycleCountModal'
-
-const fetcher = (url) => fetch(url).then(res => res.json())
 
 const fetcher = (url) => fetch(url).then(res => res.json())
 
