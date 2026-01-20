@@ -156,6 +156,56 @@ export default function DashboardLayout({ children }) {
       })
     }
 
+    // Get user permissions for permission-based checks
+    const userPermissions = session?.user?.permissions || []
+
+    // HRM module - for HR Managers, Super Admin, Admin, and Employees
+    const isHRManager = userRole === ROLES.HR_MANAGER
+    const isEmployee = userRole === ROLES.USER
+    const hasHRMAccess = userRole === ROLES.SUPER_ADMIN || 
+                         userRole === ROLES.ADMIN || 
+                         isHRManager || 
+                         isEmployee ||
+                         userPermissions.includes(PERMISSIONS.HR.VIEW_ALL) ||
+                         userPermissions.includes(PERMISSIONS.HR.EMPLOYEE_READ)
+    
+    if (hasHRMAccess) {
+      if (isEmployee) {
+        // Employee navigation - limited access
+        baseNavigation.push({
+          name: 'HRM',
+          href: '/dashboard/hrm',
+          icon: UsersIcon,
+          current: pathname.startsWith('/dashboard/hrm'),
+          children: [
+            { name: 'My Documents', href: '/dashboard/hrm/my-documents', current: pathname === '/dashboard/hrm/my-documents' },
+            { name: 'My Payroll', href: '/dashboard/hrm/my-payroll', current: pathname.startsWith('/dashboard/hrm/my-payroll') },
+            { name: 'Attendance', href: '/dashboard/hrm/attendance', current: pathname.startsWith('/dashboard/hrm/attendance') },
+            { name: 'Leave Request', href: '/dashboard/hrm/leave/request', current: pathname === '/dashboard/hrm/leave/request' },
+            { name: 'My Leave', href: '/dashboard/hrm/leave', current: pathname.startsWith('/dashboard/hrm/leave') && pathname !== '/dashboard/hrm/leave/request' }
+          ]
+        })
+      } else {
+        // HR Manager and Admin navigation - full access
+        baseNavigation.push({
+          name: 'HRM',
+          href: '/dashboard/hrm',
+          icon: UsersIcon,
+          current: pathname.startsWith('/dashboard/hrm'),
+          children: [
+            { name: 'Overview', href: '/dashboard/hrm', current: pathname === '/dashboard/hrm' },
+            { name: 'Employees', href: '/dashboard/hrm/employees', current: pathname.startsWith('/dashboard/hrm/employees') },
+            { name: 'Departments', href: '/dashboard/hrm/departments', current: pathname.startsWith('/dashboard/hrm/departments') },
+            { name: 'Attendance', href: '/dashboard/hrm/attendance', current: pathname.startsWith('/dashboard/hrm/attendance') },
+            { name: 'Leave Management', href: '/dashboard/hrm/leave', current: pathname.startsWith('/dashboard/hrm/leave') },
+            { name: 'Shifts', href: '/dashboard/hrm/shifts', current: pathname.startsWith('/dashboard/hrm/shifts') },
+            { name: 'Payroll', href: '/dashboard/hrm/payroll', current: pathname.startsWith('/dashboard/hrm/payroll') },
+            { name: 'Documents', href: '/dashboard/hrm/documents', current: pathname.startsWith('/dashboard/hrm/documents') }
+          ]
+        })
+      }
+    }
+
     // Super Admin and Admin get access to all other modules
     if (userRole === ROLES.SUPER_ADMIN || userRole === ROLES.ADMIN) {
       baseNavigation.push(
@@ -170,17 +220,6 @@ export default function DashboardLayout({ children }) {
             { name: 'Leads', href: '/dashboard/crm/leads', current: pathname === '/dashboard/crm/leads' },
             { name: 'Opportunities', href: '/dashboard/crm/opportunities', current: pathname === '/dashboard/crm/opportunities' },
             { name: 'Contacts', href: '/dashboard/crm/contacts', current: pathname === '/dashboard/crm/contacts' }
-          ]
-        },
-        { 
-          name: 'HRM', 
-          href: '/dashboard/hrm', 
-          icon: UsersIcon,
-          current: pathname.startsWith('/dashboard/hrm'),
-          children: [
-            { name: 'Employees', href: '/dashboard/hrm/employees', current: pathname === '/dashboard/hrm/employees' },
-            { name: 'Departments', href: '/dashboard/hrm/departments', current: pathname === '/dashboard/hrm/departments' },
-            { name: 'Payroll', href: '/dashboard/hrm/payroll', current: pathname === '/dashboard/hrm/payroll' }
           ]
         },
         { 
@@ -208,9 +247,6 @@ export default function DashboardLayout({ children }) {
         }
       )
     }
-
-    // Get user permissions for permission-based checks
-    const userPermissions = session?.user?.permissions || [];
 
     // Warehouse module - for warehouse operators, inventory users, and admins
     // NOTE: INVENTORY_USER should also have warehouse access
