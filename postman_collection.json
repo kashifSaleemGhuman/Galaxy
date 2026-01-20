@@ -165,7 +165,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"firstName\": \"\",\n  \"lastName\": \"\",\n  \"email\": \"\",\n  \"password\": \"\",\n  \"companyName\": \"\",\n  \"companyDomain\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -283,7 +283,34 @@
                     "crm",
                     "customers"
                   ],
-                  "variable": []
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": ""
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": ""
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "status",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "industry",
+                      "value": "",
+                      "description": ""
+                    }
+                  ]
                 }
               }
             },
@@ -315,7 +342,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"companyName\": \"\",\n  \"contactPerson\": \"\",\n  \"email\": \"\",\n  \"phone\": \"\",\n  \"address\": \"\",\n  \"website\": \"\",\n  \"industry\": \"\",\n  \"value\": \"\",\n  \"status\": \"active\",\n  \"lastContact\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -387,7 +414,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"companyName\": \"\",\n  \"contactPerson\": \"\",\n  \"email\": \"\",\n  \"phone\": \"\",\n  \"address\": \"\",\n  \"website\": \"\",\n  \"industry\": \"\",\n  \"value\": \"\",\n  \"status\": \"\",\n  \"lastContact\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -422,15 +449,6 @@
                     "[id]"
                   ],
                   "variable": []
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
                 }
               }
             }
@@ -468,7 +486,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"operation\": \"\",\n  \"customerIds\": \"\",\n  \"data\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -593,7 +611,24 @@
                     "customers",
                     "stats"
                   ],
-                  "variable": []
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "period",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "trends",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "charts",
+                      "value": "",
+                      "description": ""
+                    }
+                  ]
                 }
               }
             }
@@ -626,7 +661,34 @@
                     "crm",
                     "leads"
                   ],
-                  "variable": []
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": ""
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": ""
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "status",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "source",
+                      "value": "",
+                      "description": ""
+                    }
+                  ]
                 }
               }
             },
@@ -658,7 +720,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"title\": \"\",\n  \"description\": \"\",\n  \"value\": \"\",\n  \"source\": \"\",\n  \"status\": \"new\",\n  \"customerId\": \"\",\n  \"assignedTo\": \"\",\n  \"priority\": \"medium\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -696,7 +758,14 @@
                     "crm",
                     "stats"
                   ],
-                  "variable": []
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "period",
+                      "value": "",
+                      "description": ""
+                    }
+                  ]
                 }
               }
             }
@@ -766,6 +835,72 @@
                   "path": [
                     "debug",
                     "db"
+                  ],
+                  "variable": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/debug/db-check",
+          "item": [
+            {
+              "name": "GET /debug/db-check",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/debug/db-check",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "debug",
+                    "db-check"
+                  ],
+                  "variable": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/debug/email-config",
+          "item": [
+            {
+              "name": "GET /debug/email-config",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/debug/email-config",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "debug",
+                    "email-config"
                   ],
                   "variable": []
                 }
@@ -870,12 +1005,660 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"operation\": \"\",\n  \"key\": \"\",\n  \"data\": \"\",\n  \"ttl\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "inventory",
+      "item": [
+        {
+          "name": "/inventory/products",
+          "item": [
+            {
+              "name": "GET /inventory/products",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/inventory/products",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "products"
+                  ],
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "category",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": ""
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": ""
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "organization",
+      "item": [
+        {
+          "name": "/organization",
+          "item": [
+            {
+              "name": "GET /organization",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization"
+                  ],
+                  "variable": []
+                }
+              }
+            },
+            {
+              "name": "POST /organization",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"\",\n  \"companyName\": \"\",\n  \"companyLogo\": \"\",\n  \"shortName\": \"\",\n  \"address\": \"\",\n  \"factoryContactNo\": \"\",\n  \"email\": \"\",\n  \"fullAddress\": \"\",\n  \"auditDate\": \"\",\n  \"internalAuditorNames\": \"\",\n  \"dataFrom\": \"\",\n  \"siteNameLocalLanguage\": \"\",\n  \"siteURN\": \"\",\n  \"fullestScopeOfOperations\": \"\",\n  \"abbreviations\": \"\",\n  \"companyRegistrationNumber\": \"\",\n  \"latitude\": \"\",\n  \"longitude\": \"\",\n  \"country\": \"\",\n  \"telephoneNumber\": \"\",\n  \"principalContactName\": \"\",\n  \"principalContactPosition\": \"\",\n  \"principalContactEmail\": \"\",\n  \"environmentalResponsibleName\": \"\",\n  \"environmentalResponsiblePosition\": \"\",\n  \"environmentalResponsibleEmail\": \"\",\n  \"lwgCommunicationsMembers\": \"\",\n  \"website\": \"\",\n  \"facilityDescription\": \"\",\n  \"totalSiteArea\": \"\",\n  \"siteAreaBoundaries\": \"\",\n  \"directLabourShiftAM\": \"\",\n  \"directLabourShiftPM\": \"\",\n  \"directLabourShiftNight\": \"\",\n  \"directLabourCount\": \"\",\n  \"indirectLabourShiftAM\": \"\",\n  \"indirectLabourShiftPM\": \"\",\n  \"indirectLabourShiftNight\": \"\",\n  \"indirectLabourCount\": \"\",\n  \"shiftTotalAM\": \"\",\n  \"shiftTotalPM\": \"\",\n  \"shiftTotalNight\": \"\",\n  \"shiftTotal\": \"\",\n  \"workerDaysPerWeek\": \"\",\n  \"workerWeeksPerYear\": \"\",\n  \"workerDaysPerYear\": \"\",\n  \"manufacturingDaysPerWeek\": \"\",\n  \"manufacturingWeeksPerYear\": \"\",\n  \"manufacturingDaysPerYear\": \"\",\n  \"environmentalImpacts\": \"\",\n  \"operationsForOtherOrganisations\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/organization/documents",
+          "item": [
+            {
+              "name": "GET /organization/documents",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization/documents",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "documents"
+                  ],
+                  "variable": []
+                }
+              }
+            },
+            {
+              "name": "PUT /organization/documents",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization/documents",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "documents"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"\",\n  \"docNo\": \"\",\n  \"revDate\": \"\",\n  \"description\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/organization/employees",
+          "item": [
+            {
+              "name": "GET /organization/employees",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization/employees",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "employees"
+                  ],
+                  "variable": []
+                }
+              }
+            },
+            {
+              "name": "POST /organization/employees",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization/employees",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "employees"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"employeeId\": \"\",\n  \"idCardNumber\": \"\",\n  \"name\": \"\",\n  \"photo\": \"\",\n  \"parentName\": \"\",\n  \"dob\": \"\",\n  \"address\": \"\",\n  \"gender\": \"\",\n  \"contactNumber\": \"\",\n  \"emergencyContact\": \"\",\n  \"dateOfJoining\": \"\",\n  \"department\": \"\",\n  \"lastEmployment\": \"\",\n  \"process\": \"\",\n  \"designation\": \"\",\n  \"salary\": \"\",\n  \"dateOfLeaving\": \"\",\n  \"shift\": \"\",\n  \"secondaryJob\": \"\",\n  \"isFirstAider\": \"\",\n  \"isEmergencyResponder\": \"\",\n  \"isFirefighter\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/organization/employees/:id",
+          "item": [
+            {
+              "name": "GET /organization/employees/:id",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization/employees/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "employees",
+                    "[id]"
+                  ],
+                  "variable": []
+                }
+              }
+            },
+            {
+              "name": "PUT /organization/employees/:id",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization/employees/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "employees",
+                    "[id]"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"employeeId\": \"\",\n  \"idCardNumber\": \"\",\n  \"name\": \"\",\n  \"photo\": \"\",\n  \"parentName\": \"\",\n  \"dob\": \"\",\n  \"address\": \"\",\n  \"gender\": \"\",\n  \"contactNumber\": \"\",\n  \"emergencyContact\": \"\",\n  \"dateOfJoining\": \"\",\n  \"department\": \"\",\n  \"lastEmployment\": \"\",\n  \"process\": \"\",\n  \"designation\": \"\",\n  \"salary\": \"\",\n  \"dateOfLeaving\": \"\",\n  \"shift\": \"\",\n  \"secondaryJob\": \"\",\n  \"isFirstAider\": \"\",\n  \"isEmergencyResponder\": \"\",\n  \"isFirefighter\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "DELETE /organization/employees/:id",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization/employees/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "employees",
+                    "[id]"
+                  ],
+                  "variable": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/organization/machines",
+          "item": [
+            {
+              "name": "GET /organization/machines",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization/machines",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "machines"
+                  ],
+                  "variable": []
+                }
+              }
+            },
+            {
+              "name": "POST /organization/machines",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization/machines",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "machines"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"serialNumber\": \"\",\n  \"machineId\": \"\",\n  \"name\": \"\",\n  \"quantity\": \"\",\n  \"motorDetails\": \"\",\n  \"powerRating\": \"\",\n  \"airPressure\": \"\",\n  \"modelNumber\": \"\",\n  \"manufacturingYear\": \"\",\n  \"length\": \"\",\n  \"width\": \"\",\n  \"height\": \"\",\n  \"steamTemp\": \"\",\n  \"steamConsumption\": \"\",\n  \"electricityRating\": \"\",\n  \"operationType\": \"\",\n  \"department\": \"\",\n  \"status\": \"\",\n  \"remarks\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/organization/machines/:id",
+          "item": [
+            {
+              "name": "GET /organization/machines/:id",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization/machines/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "machines",
+                    "[id]"
+                  ],
+                  "variable": []
+                }
+              }
+            },
+            {
+              "name": "PUT /organization/machines/:id",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization/machines/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "machines",
+                    "[id]"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"serialNumber\": \"\",\n  \"machineId\": \"\",\n  \"name\": \"\",\n  \"quantity\": \"\",\n  \"motorDetails\": \"\",\n  \"powerRating\": \"\",\n  \"airPressure\": \"\",\n  \"modelNumber\": \"\",\n  \"manufacturingYear\": \"\",\n  \"length\": \"\",\n  \"width\": \"\",\n  \"height\": \"\",\n  \"steamTemp\": \"\",\n  \"steamConsumption\": \"\",\n  \"electricityRating\": \"\",\n  \"operationType\": \"\",\n  \"department\": \"\",\n  \"status\": \"\",\n  \"remarks\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "DELETE /organization/machines/:id",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization/machines/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "machines",
+                    "[id]"
+                  ],
+                  "variable": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/organization/permits",
+          "item": [
+            {
+              "name": "GET /organization/permits",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization/permits",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "permits"
+                  ],
+                  "variable": []
+                }
+              }
+            },
+            {
+              "name": "PUT /organization/permits",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization/permits",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "permits"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"\",\n  \"authorizedNumber\": \"\",\n  \"issuingAuthority\": \"\",\n  \"dateOfIssue\": \"\",\n  \"dateOfExpiry\": \"\",\n  \"renewalSubmissionDate\": \"\",\n  \"reportingFrequency\": \"\",\n  \"lastReportDate\": \"\",\n  \"responsiblePerson\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/organization/raw-purchases",
+          "item": [
+            {
+              "name": "GET /organization/raw-purchases",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/organization/raw-purchases",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "organization",
+                    "raw-purchases"
+                  ],
+                  "variable": []
                 }
               }
             }
@@ -912,7 +1695,19 @@
                   "path": [
                     "products"
                   ],
-                  "variable": []
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
+                      "description": ""
+                    }
+                  ]
                 }
               }
             }
@@ -982,7 +1777,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"agreement_no\": \"\",\n  \"supplier_id\": \"\",\n  \"start_date\": \"\",\n  \"end_date\": \"\",\n  \"status\": \"active\",\n  \"lines\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1054,7 +1849,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"agreement_no\": \"\",\n  \"supplier_id\": \"\",\n  \"start_date\": \"\",\n  \"end_date\": \"\",\n  \"status\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1089,15 +1884,6 @@
                     "[id]"
                   ],
                   "variable": []
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
                 }
               }
             }
@@ -1162,7 +1948,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"receipt_id\": \"\",\n  \"po_id\": \"\",\n  \"status\": \"Draft\",\n  \"date_received\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1234,7 +2020,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"po_id\": \"\",\n  \"status\": \"\",\n  \"date_received\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1269,15 +2055,6 @@
                     "[id]"
                   ],
                   "variable": []
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
                 }
               }
             }
@@ -1310,7 +2087,14 @@
                     "purchase",
                     "po-lines"
                   ],
-                  "variable": []
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "po_id",
+                      "value": "",
+                      "description": ""
+                    }
+                  ]
                 }
               }
             },
@@ -1342,7 +2126,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"po_line_id\": \"\",\n  \"po_id\": \"\",\n  \"product_id\": \"\",\n  \"quantity_ordered\": \"\",\n  \"quantity_received\": 0,\n  \"price\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1414,7 +2198,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"po_id\": \"\",\n  \"product_id\": \"\",\n  \"quantity_ordered\": \"\",\n  \"quantity_received\": \"\",\n  \"price\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1449,15 +2233,6 @@
                     "[id]"
                   ],
                   "variable": []
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
                 }
               }
             }
@@ -1490,7 +2265,19 @@
                     "purchase",
                     "pricelists"
                   ],
-                  "variable": []
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "supplier_id",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "product_id",
+                      "value": "",
+                      "description": ""
+                    }
+                  ]
                 }
               }
             },
@@ -1522,7 +2309,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"supplier_id\": \"\",\n  \"product_id\": \"\",\n  \"min_qty\": 1,\n  \"price\": \"\",\n  \"currency\": \"USD\",\n  \"valid_from\": \"\",\n  \"valid_to\": \"\",\n  \"discount_pct\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1561,7 +2348,24 @@
                     "pricelists",
                     "best-price"
                   ],
-                  "variable": []
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "supplier_id",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "product_id",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "qty",
+                      "value": "",
+                      "description": ""
+                    }
+                  ]
                 }
               }
             }
@@ -1594,7 +2398,14 @@
                     "purchase",
                     "products"
                   ],
-                  "variable": []
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "activeOnly",
+                      "value": "",
+                      "description": ""
+                    }
+                  ]
                 }
               }
             },
@@ -1626,7 +2437,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"name\": \"\",\n  \"description\": \"\",\n  \"category\": \"\",\n  \"unit\": \"\",\n  \"attributes\": \"\",\n  \"traceabilityQuestions\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1640,35 +2451,6 @@
         {
           "name": "/purchase/products/:id",
           "item": [
-            {
-              "name": "GET /purchase/products/:id",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "disabled": true
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/purchase/products/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "purchase",
-                    "products",
-                    "[id]"
-                  ],
-                  "variable": []
-                }
-              }
-            },
             {
               "name": "PUT /purchase/products/:id",
               "request": {
@@ -1698,7 +2480,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"name\": \"\",\n  \"description\": \"\",\n  \"category\": \"\",\n  \"unit\": \"\",\n  \"isActive\": \"\",\n  \"attributes\": \"\",\n  \"traceabilityQuestions\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1733,15 +2515,6 @@
                     "[id]"
                   ],
                   "variable": []
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
                 }
               }
             }
@@ -1774,7 +2547,34 @@
                     "purchase",
                     "purchase-orders"
                   ],
-                  "variable": []
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "supplier_id",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "rfqId",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "rfq_id",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": ""
+                    }
+                  ]
                 }
               }
             },
@@ -1806,7 +2606,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"po_id\": \"\",\n  \"rfq_id\": \"\",\n  \"supplier_id\": \"\",\n  \"status\": \"draft\",\n  \"lines\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1878,7 +2678,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"rfq_id\": \"\",\n  \"supplier_id\": \"\",\n  \"status\": \"\",\n  \"lines\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1913,15 +2713,6 @@
                     "[id]"
                   ],
                   "variable": []
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
                 }
               }
             }
@@ -1960,7 +2751,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"notes\": \"\",\n  \"deliveryDate\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2003,7 +2794,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"rfqId\": \"\",\n  \"poNumber\": \"\",\n  \"notes\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2041,7 +2832,14 @@
                     "purchase",
                     "rfq-lines"
                   ],
-                  "variable": []
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "rfq_id",
+                      "value": "",
+                      "description": ""
+                    }
+                  ]
                 }
               }
             },
@@ -2073,7 +2871,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"rfq_line_id\": \"\",\n  \"rfq_id\": \"\",\n  \"product_id\": \"\",\n  \"quantity\": \"\",\n  \"price\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2145,7 +2943,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"rfq_id\": \"\",\n  \"product_id\": \"\",\n  \"quantity\": \"\",\n  \"price\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2180,15 +2978,6 @@
                     "[id]"
                   ],
                   "variable": []
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
                 }
               }
             }
@@ -2253,7 +3042,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"rfq_id\": \"\",\n  \"supplier_id\": \"\",\n  \"status\": \"Draft\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2325,7 +3114,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"supplier_id\": \"\",\n  \"status\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2360,15 +3149,6 @@
                     "[id]"
                   ],
                   "variable": []
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
                 }
               }
             }
@@ -2402,7 +3182,19 @@
                     "rfqs",
                     "approved"
                   ],
-                  "variable": []
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": ""
+                    },
+                    {
+                      "key": "vendor_id",
+                      "value": "",
+                      "description": ""
+                    }
+                  ]
                 }
               }
             }
@@ -2500,7 +3292,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"supplier_id\": \"\",\n  \"name\": \"\",\n  \"contact_info\": \"\",\n  \"email\": \"\",\n  \"phone\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2572,7 +3364,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"name\": \"\",\n  \"contact_info\": \"\",\n  \"email\": \"\",\n  \"phone\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2607,15 +3399,6 @@
                     "[id]"
                   ],
                   "variable": []
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
                 }
               }
             }
@@ -2680,7 +3463,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"bill_id\": \"\",\n  \"po_id\": \"\",\n  \"amount\": \"\",\n  \"status\": \"Draft\",\n  \"date_billed\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2752,7 +3535,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"po_id\": \"\",\n  \"amount\": \"\",\n  \"status\": \"\",\n  \"date_billed\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2787,10 +3570,83 @@
                     "[id]"
                   ],
                   "variable": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/purchase/vendor-products",
+          "item": [
+            {
+              "name": "GET /purchase/vendor-products",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/purchase/vendor-products",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "purchase",
+                    "vendor-products"
+                  ],
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "vendorId",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "productId",
+                      "value": "",
+                      "description": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "POST /purchase/vendor-products",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/purchase/vendor-products",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "purchase",
+                    "vendor-products"
+                  ],
+                  "variable": []
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"vendorId\": \"\",\n  \"productId\": \"\",\n  \"price\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2832,7 +3688,24 @@
                   "path": [
                     "rfqs"
                   ],
-                  "variable": []
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": ""
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": ""
+                    }
+                  ]
                 }
               }
             },
@@ -2933,7 +3806,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"status\": \"\",\n  \"vendorPrice\": \"\",\n  \"expectedDelivery\": \"\",\n  \"vendorNotes\": \"\",\n  \"rejectionReason\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2967,15 +3840,6 @@
                     "[id]"
                   ],
                   "variable": []
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
                 }
               }
             }
@@ -3013,7 +3877,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"action\": \"\",\n  \"comments\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -3056,7 +3920,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"vendorNotes\": \"\",\n  \"items\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -3137,7 +4001,441 @@
                     "rfqs",
                     "approvals"
                   ],
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "pending",
+                      "description": ""
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": ""
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sales",
+      "item": [
+        {
+          "name": "/sales/quotations",
+          "item": [
+            {
+              "name": "GET /sales/quotations",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sales/quotations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sales",
+                    "quotations"
+                  ],
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": ""
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": ""
+                    },
+                    {
+                      "key": "customer",
+                      "value": "",
+                      "description": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "POST /sales/quotations",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sales/quotations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sales",
+                    "quotations"
+                  ],
                   "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"validityDate\": \"\",\n  \"customerName\": \"\",\n  \"customerEmail\": \"\",\n  \"customerPhone\": \"\",\n  \"customerCompanyName\": \"\",\n  \"termsAndConditions\": \"\",\n  \"items\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/sales/quotations/:id",
+          "item": [
+            {
+              "name": "GET /sales/quotations/:id",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sales/quotations/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sales",
+                    "quotations",
+                    "[id]"
+                  ],
+                  "variable": []
+                }
+              }
+            },
+            {
+              "name": "PUT /sales/quotations/:id",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sales/quotations/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sales",
+                    "quotations",
+                    "[id]"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"validityDate\": \"\",\n  \"customerName\": \"\",\n  \"customerEmail\": \"\",\n  \"customerPhone\": \"\",\n  \"customerCompanyName\": \"\",\n  \"termsAndConditions\": \"\",\n  \"items\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "DELETE /sales/quotations/:id",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sales/quotations/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sales",
+                    "quotations",
+                    "[id]"
+                  ],
+                  "variable": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/sales/quotations/:id/approve",
+          "item": [
+            {
+              "name": "POST /sales/quotations/:id/approve",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sales/quotations/:id/approve",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sales",
+                    "quotations",
+                    "[id]",
+                    "approve"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"\",\n  \"comments\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/sales/quotations/:id/send",
+          "item": [
+            {
+              "name": "POST /sales/quotations/:id/send",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sales/quotations/:id/send",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sales",
+                    "quotations",
+                    "[id]",
+                    "send"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"example\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/sales/quotations/:id/submit",
+          "item": [
+            {
+              "name": "POST /sales/quotations/:id/submit",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sales/quotations/:id/submit",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sales",
+                    "quotations",
+                    "[id]",
+                    "submit"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"example\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/sales/quotations/approvals",
+          "item": [
+            {
+              "name": "GET /sales/quotations/approvals",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sales/quotations/approvals",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sales",
+                    "quotations",
+                    "approvals"
+                  ],
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "pending",
+                      "description": ""
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": ""
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/sales/quotations/my-quotations",
+          "item": [
+            {
+              "name": "GET /sales/quotations/my-quotations",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sales/quotations/my-quotations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sales",
+                    "quotations",
+                    "my-quotations"
+                  ],
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50",
+                      "description": ""
+                    }
+                  ]
                 }
               }
             }
@@ -3175,6 +4473,48 @@
                     "test"
                   ],
                   "variable": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/test/email",
+          "item": [
+            {
+              "name": "POST /test/email",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/test/email",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "test",
+                    "email"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"to\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 }
               }
             }
@@ -3242,7 +4582,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"name\": \"\",\n  \"email\": \"\",\n  \"role\": \"\",\n  \"isActive\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -3278,7 +4618,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"id\": \"\",\n  \"name\": \"\",\n  \"role\": \"\",\n  \"isActive\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -3320,7 +4660,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"example\": true\n}",
+                  "raw": "{\n  \"currentPassword\": \"\",\n  \"newPassword\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -3361,6 +4701,129 @@
                   ],
                   "path": [
                     "vendors"
+                  ],
+                  "variable": [],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "activeOnly",
+                      "value": "",
+                      "description": ""
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "POST /vendors",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/vendors",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "vendors"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"\",\n  \"email\": \"\",\n  \"phone\": \"\",\n  \"address\": \"\",\n  \"bankName\": \"\",\n  \"bankAccountNumber\": \"\",\n  \"attributes\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "/vendors/:id",
+          "item": [
+            {
+              "name": "PUT /vendors/:id",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/vendors/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "vendors",
+                    "[id]"
+                  ],
+                  "variable": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"\",\n  \"email\": \"\",\n  \"phone\": \"\",\n  \"address\": \"\",\n  \"bankName\": \"\",\n  \"bankAccountNumber\": \"\",\n  \"attributes\": \"\",\n  \"isActive\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "DELETE /vendors/:id",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": false
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/vendors/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "vendors",
+                    "[id]"
                   ],
                   "variable": []
                 }

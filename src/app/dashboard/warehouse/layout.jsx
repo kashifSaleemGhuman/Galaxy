@@ -14,9 +14,17 @@ import {
 import Link from 'next/link'
 import { ROLES } from '@/lib/constants/roles'
 
+const tabs = [
+  { href: '/dashboard/warehouse', label: 'Dashboard' },
+  { href: '/dashboard/warehouse/shipments', label: 'Incoming Shipments' },
+  { href: '/dashboard/warehouse/process', label: 'Process Goods' },
+  { href: '/dashboard/warehouse/completed', label: 'Completed Tasks' },
+]
+
 export default function WarehouseLayout({ children }) {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const pathname = usePathname()
   const [expandedMenus, setExpandedMenus] = useState(new Set())
 
   // Role guard: SUPER_ADMIN, ADMIN, WAREHOUSE_OPERATOR, INVENTORY_USER, INVENTORY_MANAGER can access warehouse module
@@ -33,6 +41,16 @@ export default function WarehouseLayout({ children }) {
       router.push('/dashboard')
       return null
     }
+  }
+
+  const isHome = pathname === '/dashboard/warehouse'
+
+  // Helper function to check if a tab is active
+  const isTabActive = (tabHref) => {
+    if (tabHref === '/dashboard/warehouse') {
+      return pathname === '/dashboard/warehouse'
+    }
+    return pathname.startsWith(tabHref)
   }
 
   return (
@@ -64,8 +82,31 @@ export default function WarehouseLayout({ children }) {
         </div>
       </div>
 
+      {/* Navigation Tabs */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <div className="flex flex-wrap gap-2">
+              {tabs.map((tab) => (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={`px-3 py-2 text-sm rounded-md border transition-colors cursor-pointer ${
+                    isTabActive(tab.href)
+                      ? 'bg-blue-50 border-blue-200 text-blue-700 font-medium'
+                      : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200'
+                  }`}
+                >
+                  {tab.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Main Content */}
-      <div className="p-6 max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </div>
     </div>

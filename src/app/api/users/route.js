@@ -21,7 +21,14 @@ async function checkPermission() {
     where: { email: session.user.email }
   });
 
-  if (!currentUser || !ALLOWED_ROLES.includes(currentUser.role)) {
+  if (!currentUser) {
+    return { allowed: false, error: 'User not found' };
+  }
+
+  // Normalize role to uppercase for comparison (database stores lowercase)
+  const userRole = (currentUser.role || '').toUpperCase();
+  
+  if (!ALLOWED_ROLES.includes(userRole)) {
     return { allowed: false, error: 'Insufficient permissions' };
   }
 
@@ -29,7 +36,7 @@ async function checkPermission() {
   // Admin can't manage super admin users
   return {
     allowed: true,
-    isSuperAdmin: currentUser.role === ROLES.SUPER_ADMIN,
+    isSuperAdmin: userRole === ROLES.SUPER_ADMIN,
     currentUser
   };
 }
@@ -47,12 +54,15 @@ export async function GET(request) {
 
     // Build where clause
     const where = permission.isSuperAdmin ? {} : {
-      role: { not: ROLES.SUPER_ADMIN }
+      role: { not: ROLES.SUPER_ADMIN.toLowerCase() }
     };
 
     // Add role filter if provided
+    // Database stores roles in lowercase (e.g., 'warehouse_operator')
+    // but ROLES constants are uppercase (e.g., 'WAREHOUSE_OPERATOR')
     if (roleFilter) {
-      where.role = roleFilter.toUpperCase();
+      // Convert filter to lowercase to match database format
+      where.role = roleFilter.toLowerCase();
     }
 
     const users = await prisma.user.findMany({

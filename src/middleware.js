@@ -6,7 +6,8 @@ export default withAuth(
   function middleware(req) {
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
-    const userRole = token?.role;
+    // Normalize role to uppercase for consistent comparison
+    const userRole = token?.role ? String(token.role).toUpperCase() : null;
 
     // Redirect from root to dashboard if authenticated
     if (path === '/' && token) {
@@ -65,11 +66,14 @@ export default withAuth(
     // NOTE: WAREHOUSE_OPERATOR should NOT have access to inventory module, even if they have inventory permissions
     if (path.startsWith('/dashboard/inventory')) {
       // Block warehouse operators from accessing inventory module
-      if (token.role === 'WAREHOUSE_OPERATOR') {
+      if (userRole === 'WAREHOUSE_OPERATOR') {
         return NextResponse.redirect(new URL('/dashboard', req.url));
       }
       
-      const hasInventoryPermission = token.permissions?.includes(PERMISSIONS.INVENTORY.VIEW_ALL) ||
+      // Allow SUPER_ADMIN and ADMIN without permission check
+      const isAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ADMIN';
+      const hasInventoryPermission = isAdmin || 
+                                     token.permissions?.includes(PERMISSIONS.INVENTORY.VIEW_ALL) ||
                                      token.permissions?.includes(PERMISSIONS.INVENTORY.PRODUCT_READ) ||
                                      token.permissions?.includes(PERMISSIONS.INVENTORY.STOCK_READ);
       if (!hasInventoryPermission) {
@@ -80,30 +84,22 @@ export default withAuth(
     // Check permissions for Warehouse module
     if (path.startsWith('/dashboard/warehouse')) {
       // Allow warehouse operators and inventory users by role, or check permissions for others
-      const isWarehouseOperator = token.role === 'WAREHOUSE_OPERATOR';
-      const isInventoryUser = token.role === 'INVENTORY_USER';
+      const isWarehouseOperator = userRole === 'WAREHOUSE_OPERATOR';
+      const isInventoryUser = userRole === 'INVENTORY_USER';
+      const isInventoryManager = userRole === 'INVENTORY_MANAGER';
+      const isAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ADMIN';
       const hasWarehousePermission = token.permissions?.includes(PERMISSIONS.WAREHOUSE.VIEW_ALL) ||
                                      token.permissions?.includes(PERMISSIONS.WAREHOUSE.SHIPMENT_READ);
       
-      // Allow access if user is warehouse operator, inventory user, or has warehouse permissions
-      if (!isWarehouseOperator && !isInventoryUser && !hasWarehousePermission) {
+      // Allow access if user is warehouse operator, inventory user, inventory manager, admin, or has warehouse permissions
+      if (!isWarehouseOperator && !isInventoryUser && !isInventoryManager && !isAdmin && !hasWarehousePermission) {
         console.log('🚫 Warehouse access denied:', {
           role: token.role,
+          normalizedRole: userRole,
           hasPermission: hasWarehousePermission,
           permissions: token.permissions?.slice(0, 5)
         });
         return NextResponse.redirect(new URL('/dashboard', req.url));
-      }
-      
-      // Debug logging
-      if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Warehouse access granted:', {
-          role: token.role,
-          isWarehouseOperator,
-          isInventoryUser,
-          hasPermission: hasWarehousePermission,
-          path
-        });
       }
     }
 

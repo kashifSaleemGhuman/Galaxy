@@ -1,0 +1,1237 @@
+{
+  "info": {
+    "name": "Inventory Module API",
+    "description": "Complete Postman collection for Inventory module with all endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Warehouses",
+      "item": [
+        {
+          "name": "GET All Warehouses",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/warehouses?page=1&limit=10&search=&status=",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "warehouses"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (default: 10)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by name or code"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by status: active, inactive, or all"
+                }
+              ]
+            },
+            "description": "Get all warehouses with pagination, search, and status filters. Requires authentication."
+          }
+        },
+        {
+          "name": "POST Create Warehouse",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Warehouse\",\n  \"code\": \"WH-001\",\n  \"address\": \"123 Warehouse Street, City, State, ZIP\",\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/warehouses",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "warehouses"]
+            },
+            "description": "Create a new warehouse. Requires SUPER_ADMIN role. name and code are required fields."
+          }
+        },
+        {
+          "name": "GET Warehouse by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/warehouses/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "warehouses", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "warehouse-id-here",
+                  "description": "Warehouse ID"
+                }
+              ]
+            },
+            "description": "Get a specific warehouse by ID. Requires authentication."
+          }
+        },
+        {
+          "name": "PUT Update Warehouse",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Warehouse Updated\",\n  \"code\": \"WH-001\",\n  \"address\": \"123 Warehouse Street, City, State, ZIP Updated\",\n  \"isActive\": true,\n  \"managerId\": \"manager-user-id-here\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/warehouses/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "warehouses", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "warehouse-id-here",
+                  "description": "Warehouse ID"
+                }
+              ]
+            },
+            "description": "Update a warehouse. Requires SUPER_ADMIN role."
+          }
+        },
+        {
+          "name": "DELETE Warehouse",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/warehouses/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "warehouses", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "warehouse-id-here",
+                  "description": "Warehouse ID"
+                }
+              ]
+            },
+            "description": "Delete a warehouse. Requires SUPER_ADMIN role. Cannot delete if warehouse has inventory items or locations."
+          }
+        },
+        {
+          "name": "POST Create Warehouse Manager",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Manager\",\n  \"email\": \"manager@example.com\",\n  \"password\": \"securePassword123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/warehouses/:id/create-manager",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "warehouses", ":id", "create-manager"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "warehouse-id-here",
+                  "description": "Warehouse ID"
+                }
+              ]
+            },
+            "description": "Create a warehouse manager for a specific warehouse. Requires SUPER_ADMIN role."
+          }
+        },
+        {
+          "name": "Locations",
+          "item": [
+            {
+              "name": "GET Warehouse Locations",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/inventory/warehouses/:id/locations",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["inventory", "warehouses", ":id", "locations"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "warehouse-id-here",
+                      "description": "Warehouse ID"
+                    }
+                  ]
+                },
+                "description": "Get all locations for a specific warehouse. Requires authentication."
+              }
+            },
+            {
+              "name": "POST Create Location",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Aisle A, Shelf 1\",\n  \"code\": \"A-A1\",\n  \"description\": \"Aisle A, Shelf 1 location\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/inventory/warehouses/:id/locations",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["inventory", "warehouses", ":id", "locations"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "warehouse-id-here",
+                      "description": "Warehouse ID"
+                    }
+                  ]
+                },
+                "description": "Create a new location within a warehouse. Requires authentication."
+              }
+            },
+            {
+              "name": "GET Location by ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/inventory/warehouses/:id/locations/:locationId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["inventory", "warehouses", ":id", "locations", ":locationId"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "warehouse-id-here",
+                      "description": "Warehouse ID"
+                    },
+                    {
+                      "key": "locationId",
+                      "value": "location-id-here",
+                      "description": "Location ID"
+                    }
+                  ]
+                },
+                "description": "Get a specific location by ID. Requires authentication."
+              }
+            },
+            {
+              "name": "PUT Update Location",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Aisle A, Shelf 1 Updated\",\n  \"code\": \"A-A1\",\n  \"description\": \"Updated description\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/inventory/warehouses/:id/locations/:locationId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["inventory", "warehouses", ":id", "locations", ":locationId"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "warehouse-id-here",
+                      "description": "Warehouse ID"
+                    },
+                    {
+                      "key": "locationId",
+                      "value": "location-id-here",
+                      "description": "Location ID"
+                    }
+                  ]
+                },
+                "description": "Update a location. Requires authentication."
+              }
+            },
+            {
+              "name": "DELETE Location",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/inventory/warehouses/:id/locations/:locationId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["inventory", "warehouses", ":id", "locations", ":locationId"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "warehouse-id-here",
+                      "description": "Warehouse ID"
+                    },
+                    {
+                      "key": "locationId",
+                      "value": "location-id-here",
+                      "description": "Location ID"
+                    }
+                  ]
+                },
+                "description": "Delete a location. Requires authentication."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "GET All Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products?page=1&limit=10&search=&category=&status=&trackQuantity=",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (default: 10)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by name or description"
+                },
+                {
+                  "key": "category",
+                  "value": "",
+                  "description": "Filter by category"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by status: active, inactive, or all"
+                },
+                {
+                  "key": "trackQuantity",
+                  "value": "",
+                  "description": "Filter by trackQuantity: true or false"
+                }
+              ]
+            },
+            "description": "Get all products with pagination, search, category, status, and trackQuantity filters. Requires authentication."
+          }
+        },
+        {
+          "name": "POST Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Leather Product\",\n  \"sku\": \"SKU-001\",\n  \"barcode\": \"1234567890123\",\n  \"description\": \"High quality leather product\",\n  \"price\": 100.00,\n  \"cost\": 50.00,\n  \"categoryId\": \"category-id-here\",\n  \"unitOfMeasure\": \"pcs\",\n  \"weight\": 1.5,\n  \"trackQuantity\": true,\n  \"allowNegativeStock\": false,\n  \"reorderPoint\": 10,\n  \"maxStock\": 1000,\n  \"minStock\": 10,\n  \"isActive\": true,\n  \"warehouseId\": \"warehouse-id-here\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products"]
+            },
+            "description": "Create a new product. Requires Purchase Manager or Admin role. name is required. If trackQuantity is true, warehouseId is required."
+          }
+        },
+        {
+          "name": "GET Product by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "product-id-here",
+                  "description": "Product ID"
+                }
+              ]
+            },
+            "description": "Get a specific product by ID with inventory items. Requires authentication."
+          }
+        },
+        {
+          "name": "PUT Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Leather Product Updated\",\n  \"sku\": \"SKU-001\",\n  \"barcode\": \"1234567890123\",\n  \"description\": \"Updated description\",\n  \"price\": 120.00,\n  \"cost\": 60.00,\n  \"categoryId\": \"category-id-here\",\n  \"unitOfMeasure\": \"pcs\",\n  \"weight\": 1.5,\n  \"trackQuantity\": true,\n  \"allowNegativeStock\": false,\n  \"reorderPoint\": 15,\n  \"maxStock\": 1000,\n  \"minStock\": 15,\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "product-id-here",
+                  "description": "Product ID"
+                }
+              ]
+            },
+            "description": "Update a product. Requires Purchase Manager or Admin role."
+          }
+        },
+        {
+          "name": "DELETE Product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/products/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "products", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "product-id-here",
+                  "description": "Product ID"
+                }
+              ]
+            },
+            "description": "Delete a product. Requires Purchase Manager or Admin role. Cannot delete if product has inventory items."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory Items",
+      "item": [
+        {
+          "name": "GET All Inventory Items",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/items?warehouseId=&status=",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "items"],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "Filter by warehouse ID (or 'all' for all warehouses)"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by status: in_stock, out_of_stock, low_stock, high_stock, or all"
+                }
+              ]
+            },
+            "description": "Get all inventory items. For warehouse operators, only shows items for their assigned warehouse. Requires authentication."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "GET All Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "categories"]
+            },
+            "description": "Get all product categories. Categories are derived from products. Requires authentication."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stock Movements",
+      "item": [
+        {
+          "name": "GET All Movements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/movements?type=&warehouseId=&search=&page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "movements"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "",
+                  "description": "Filter by type: in, out, transfer, adjustment, or all"
+                },
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "Filter by warehouse ID (or 'all' for all warehouses)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by product name, product ID, warehouse name, or reference"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Items per page (default: 50)"
+                }
+              ]
+            },
+            "description": "Get all stock movements with filters and pagination. For warehouse operators, only shows movements for their assigned warehouse. Requires authentication."
+          }
+        },
+        {
+          "name": "POST Create Movement Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"product-id-here\",\n  \"warehouseId\": \"warehouse-id-here\",\n  \"locationId\": \"location-id-here\",\n  \"type\": \"in\",\n  \"quantity\": 100,\n  \"reason\": \"Stock received from supplier\",\n  \"reference\": \"PO-001\",\n  \"shipmentId\": \"shipment-id-here\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/movements",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "movements"]
+            },
+            "description": "Create a stock movement request (in or out). ALL movements require approval. Requires Inventory Manager or Warehouse Operator role. type must be 'in' or 'out'."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Adjustments",
+      "item": [
+        {
+          "name": "POST Create Adjustment Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"warehouse-id-here\",\n  \"reason\": \"Stock correction due to physical count\",\n  \"reference\": \"ADJ-001\",\n  \"lines\": [\n    {\n      \"productId\": \"product-id-here\",\n      \"expectedQuantity\": 100,\n      \"actualQuantity\": 95,\n      \"locationId\": \"location-id-here\",\n      \"notes\": \"Found 5 units missing\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/adjustments",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "adjustments"]
+            },
+            "description": "Create an adjustment request (stock correction). ALL adjustments require approval. Requires Inventory Manager or Warehouse Operator role."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transfers",
+      "item": [
+        {
+          "name": "POST Create Transfer Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromWarehouseId\": \"warehouse-id-1\",\n  \"toWarehouseId\": \"warehouse-id-2\",\n  \"notes\": \"Transfer to main warehouse\",\n  \"reference\": \"TR-001\",\n  \"lines\": [\n    {\n      \"productId\": \"product-id-here\",\n      \"quantity\": 50,\n      \"fromLocationId\": \"location-id-1\",\n      \"toLocationId\": \"location-id-2\",\n      \"reason\": \"Restocking main warehouse\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/transfers",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "transfers"]
+            },
+            "description": "Create a transfer request (stock movement between warehouses). ALL transfers require approval. Requires Inventory Manager or Warehouse Operator role. fromWarehouseId and toWarehouseId must be different."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cycle Counts",
+      "item": [
+        {
+          "name": "POST Create Cycle Count Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"warehouse-id-here\",\n  \"locationId\": \"location-id-here\",\n  \"countDate\": \"2024-01-15T00:00:00.000Z\",\n  \"notes\": \"Monthly cycle count\",\n  \"reference\": \"CC-001\",\n  \"lines\": [\n    {\n      \"productId\": \"product-id-here\",\n      \"actualQuantity\": 95,\n      \"locationId\": \"location-id-here\",\n      \"notes\": \"Counted 95 units\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/cycle-counts",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "cycle-counts"]
+            },
+            "description": "Create a cycle count request. Cycle counts are treated as adjustments and require approval. The system automatically calculates expectedQuantity from current inventory. Requires Inventory Manager or Warehouse Operator role."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Requests",
+      "item": [
+        {
+          "name": "GET All Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/requests?status=&requestType=&page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "requests"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by status: pending, approved, rejected, or all"
+                },
+                {
+                  "key": "requestType",
+                  "value": "",
+                  "description": "Filter by request type: movement, transfer, adjustment, or all"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Items per page (default: 50)"
+                }
+              ]
+            },
+            "description": "Get all stock movement requests. Only Super Admin and Admin can view all requests. Requires authentication."
+          }
+        },
+        {
+          "name": "POST Create Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requestType\": \"movement\",\n  \"productId\": \"product-id-here\",\n  \"warehouseId\": \"warehouse-id-here\",\n  \"locationId\": \"location-id-here\",\n  \"type\": \"in\",\n  \"quantity\": 100,\n  \"reason\": \"Stock received\",\n  \"reference\": \"PO-001\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/requests/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "requests", "create"]
+            },
+            "description": "Create a stock movement request directly. Requires authentication."
+          }
+        },
+        {
+          "name": "GET Request by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/requests/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "requests", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "request-id-here",
+                  "description": "Request ID"
+                }
+              ]
+            },
+            "description": "Get a specific request by ID. Requires authentication."
+          }
+        },
+        {
+          "name": "POST Approve Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Approved for processing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/requests/:id/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "requests", ":id", "approve"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "request-id-here",
+                  "description": "Request ID"
+                }
+              ]
+            },
+            "description": "Approve a stock movement request. Only Super Admin and Admin can approve requests. This will execute the movement/transfer/adjustment."
+          }
+        },
+        {
+          "name": "POST Reject Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rejectionReason\": \"Insufficient stock available\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/requests/:id/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "requests", ":id", "reject"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "request-id-here",
+                  "description": "Request ID"
+                }
+              ]
+            },
+            "description": "Reject a stock movement request. Only Super Admin and Admin can reject requests."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Incoming Shipments",
+      "item": [
+        {
+          "name": "GET All Incoming Shipments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/incoming-shipments?status=&warehouse_id=&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "incoming-shipments"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by status: pending, assigned, received, processed, rejected"
+                },
+                {
+                  "key": "warehouse_id",
+                  "value": "",
+                  "description": "Filter by warehouse ID"
+                },
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Maximum number of results (default: 50)"
+                }
+              ]
+            },
+            "description": "Get all incoming shipments. For warehouse operators, only shows shipments for their assigned warehouse. Requires authentication."
+          }
+        },
+        {
+          "name": "POST Assign Warehouse to Shipment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"warehouse-id-here\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/incoming-shipments/:id/assign-warehouse",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "incoming-shipments", ":id", "assign-warehouse"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "shipment-id-here",
+                  "description": "Shipment ID"
+                }
+              ]
+            },
+            "description": "Assign a warehouse to an incoming shipment. Requires authentication."
+          }
+        },
+        {
+          "name": "POST Approve Shipment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/incoming-shipments/:id/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "incoming-shipments", ":id", "approve"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "shipment-id-here",
+                  "description": "Shipment ID"
+                }
+              ]
+            },
+            "description": "Approve an incoming shipment. Requires authentication."
+          }
+        },
+        {
+          "name": "POST Process Shipment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/incoming-shipments/:id/process",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "incoming-shipments", ":id", "process"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "shipment-id-here",
+                  "description": "Shipment ID"
+                }
+              ]
+            },
+            "description": "Process an incoming shipment. Requires authentication."
+          }
+        },
+        {
+          "name": "POST Reject Shipment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Damaged goods received\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/incoming-shipments/:id/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "incoming-shipments", ":id", "reject"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "shipment-id-here",
+                  "description": "Shipment ID"
+                }
+              ]
+            },
+            "description": "Reject an incoming shipment. Requires authentication."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Receipts",
+      "item": [
+        {
+          "name": "GET All Receipts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/receipts?page=1&limit=10&search=&status=",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "receipts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (default: 10)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by receipt ID or PO ID"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by status: Draft, Validated, Cancelled, or all"
+                }
+              ]
+            },
+            "description": "Get all goods receipts with pagination, search, and status filters. Requires authentication and RECEIPT_READ permission."
+          }
+        },
+        {
+          "name": "POST Create Receipt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"poId\": \"PO-001\",\n  \"status\": \"Draft\",\n  \"dateReceived\": \"2024-01-15T00:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/receipts",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "receipts"]
+            },
+            "description": "Create a new goods receipt. Requires authentication and RECEIPT_CREATE permission. poId is required."
+          }
+        },
+        {
+          "name": "POST Validate Receipt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/receipts/:id/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "receipts", ":id", "validate"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "receipt-id-here",
+                  "description": "Receipt ID"
+                }
+              ]
+            },
+            "description": "Validate a goods receipt. Requires authentication."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stats",
+      "item": [
+        {
+          "name": "GET Inventory Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory", "stats"]
+            },
+            "description": "Get inventory statistics including total products, warehouses, locations, stock units, low stock items, recent movements, and pending receipts. WAREHOUSE_OPERATOR is excluded from accessing this endpoint. Requires authentication."
+          }
+        }
+      ]
+    }
+  ]
+}
+

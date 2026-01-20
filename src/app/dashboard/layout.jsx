@@ -132,6 +132,30 @@ export default function DashboardLayout({ children }) {
       })
     }
 
+    // Sales module - available to sales roles and admins
+    const isSalesManager = userRole === ROLES.SALES_MANAGER
+    const isSalesUser = userRole === ROLES.SALES_USER
+    const hasSalesAccess = userRole === ROLES.SUPER_ADMIN || 
+                          userRole === ROLES.ADMIN || 
+                          isSalesManager || 
+                          isSalesUser
+    
+    if (hasSalesAccess) {
+      baseNavigation.push({
+        name: 'Sales', 
+        href: '/dashboard/sales', 
+        icon: ShoppingBagIcon,
+        current: pathname.startsWith('/dashboard/sales'),
+        children: [
+          { name: 'Quotations', href: '/dashboard/sales/quotations', current: pathname.startsWith('/dashboard/sales/quotations') },
+          { name: 'Orders', href: '/dashboard/sales/orders', current: pathname.startsWith('/dashboard/sales/orders') },
+          ...(isSalesManager || userRole === ROLES.SUPER_ADMIN || userRole === ROLES.ADMIN ? [
+            { name: 'Approvals', href: '/dashboard/sales/approvals', current: pathname === '/dashboard/sales/approvals' }
+          ] : [])
+        ]
+      })
+    }
+
     // Super Admin and Admin get access to all other modules
     if (userRole === ROLES.SUPER_ADMIN || userRole === ROLES.ADMIN) {
       baseNavigation.push(
@@ -146,17 +170,6 @@ export default function DashboardLayout({ children }) {
             { name: 'Leads', href: '/dashboard/crm/leads', current: pathname === '/dashboard/crm/leads' },
             { name: 'Opportunities', href: '/dashboard/crm/opportunities', current: pathname === '/dashboard/crm/opportunities' },
             { name: 'Contacts', href: '/dashboard/crm/contacts', current: pathname === '/dashboard/crm/contacts' }
-          ]
-        },
-        { 
-          name: 'Sales', 
-          href: '/dashboard/sales', 
-          icon: ShoppingBagIcon,
-          current: pathname.startsWith('/dashboard/sales'),
-          children: [
-            { name: 'Orders', href: '/dashboard/sales/orders', current: pathname === '/dashboard/sales/orders' },
-            { name: 'Quotes', href: '/dashboard/sales/quotes', current: pathname === '/dashboard/sales/quotes' },
-            { name: 'Invoices', href: '/dashboard/sales/invoices', current: pathname === '/dashboard/sales/invoices' }
           ]
         },
         { 
