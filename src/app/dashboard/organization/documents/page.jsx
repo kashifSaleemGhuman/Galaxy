@@ -105,6 +105,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'EMS → DOCUMENT CONTROL REGISTER') {
+      router.push('/dashboard/organization/document-control-register')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
