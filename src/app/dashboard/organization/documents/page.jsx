@@ -125,6 +125,16 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'ASPECT & IMPACT') {
+      router.push('/dashboard/organization/environmental-aspects-register')
+      return
+    }
+    
+    if (doc.name === 'EMS → ASPECT & IMPACT REGISTER') {
+      router.push('/dashboard/organization/environmental-aspect-impact-register')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
