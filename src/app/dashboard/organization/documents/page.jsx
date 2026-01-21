@@ -155,6 +155,16 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'SCRAP AGENT REGISTER') {
+      router.push('/dashboard/organization/scrap-agent-register')
+      return
+    }
+    
+    if (doc.name === 'RSL POLICY') {
+      router.push('/dashboard/organization/rsl-policy')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
