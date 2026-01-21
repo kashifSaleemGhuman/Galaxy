@@ -120,6 +120,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'EMS → INTERNAL AUDIT & MRM') {
+      router.push('/dashboard/organization/management-review-meeting')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
