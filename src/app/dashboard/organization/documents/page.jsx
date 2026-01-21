@@ -150,6 +150,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'WASTE GENERATION') {
+      router.push('/dashboard/organization/waste-generation')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
