@@ -145,6 +145,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === '3R PROCEDURE') {
+      router.push('/dashboard/organization/3r-rinse-systems')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
