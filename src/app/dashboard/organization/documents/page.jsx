@@ -155,6 +155,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'SCRAP AGENT REGISTER') {
+      router.push('/dashboard/organization/scrap-agent-register')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
