@@ -110,6 +110,16 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'Internal Audit Schedule') {
+      router.push('/dashboard/organization/internal-audit-schedule')
+      return
+    }
+    
+    if (doc.name === 'EMS → OBSERVATION SHEET INTERNAL AUDIT') {
+      router.push('/dashboard/organization/internal-audit-observation-sheet')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
