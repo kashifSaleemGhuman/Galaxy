@@ -95,6 +95,16 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'EMS → TRANNING CALENDAR') {
+      router.push('/dashboard/organization/training-calendar')
+      return
+    }
+    
+    if (doc.name === 'EMS → TRANNING RECORD') {
+      router.push('/dashboard/organization/training-record')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
