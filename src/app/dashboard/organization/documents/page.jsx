@@ -140,6 +140,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'WASTE MANAGEMENT') {
+      router.push('/dashboard/organization/waste-management-procedure')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
