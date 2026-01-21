@@ -135,6 +135,16 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'Aspects & Impacts Risk Assessment Procedure') {
+      router.push('/dashboard/organization/aspects-impacts-risk-assessment')
+      return
+    }
+    
+    if (doc.name === 'WASTE MANAGEMENT') {
+      router.push('/dashboard/organization/waste-management-procedure')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
