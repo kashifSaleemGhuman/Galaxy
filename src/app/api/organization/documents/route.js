@@ -90,7 +90,9 @@ const DEFAULT_DOCUMENTS = [
   "Chemical Recipe",
   "Cr IV Prevention",
   "WASTE MANAGEMENT",
-  "HEALTH & SAFETY"
+  "HEALTH & SAFETY",
+  "OCCUPATIONAL HEALTH & SAFETY HAZARDS RECORD",
+  "Personnel Protective Equipments -RAW"
 ]
 
 export async function GET() {
