@@ -195,6 +195,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'STACK EMISSION INVENTORY') {
+      router.push('/dashboard/organization/stack-emission-inventory')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
