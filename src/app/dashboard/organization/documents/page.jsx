@@ -210,6 +210,16 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'HEALTH & SAFETY') {
+      router.push('/dashboard/organization/health-and-safety')
+      return
+    }
+    
+    if (doc.name === 'CHEMICAL RISK ASSESSMENT') {
+      router.push('/dashboard/organization/chemical-risk-assessment')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
