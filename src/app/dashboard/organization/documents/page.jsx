@@ -220,6 +220,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'OCCUPATIONAL HEALTH & SAFETY HAZARDS RECORD') {
+      router.push('/dashboard/organization/occupational-health-safety-hazards-record')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
