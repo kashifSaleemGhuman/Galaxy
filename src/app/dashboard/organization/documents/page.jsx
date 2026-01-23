@@ -190,6 +190,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'Chemical Recipe') {
+      router.push('/dashboard/organization/chemical-recipe')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
