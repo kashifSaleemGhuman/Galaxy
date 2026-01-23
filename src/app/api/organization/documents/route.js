@@ -96,7 +96,9 @@ const DEFAULT_DOCUMENTS = [
   "Personnel Protective Equipments -WET BLUE",
   "Personnel Protective Equipments -CRUST",
   "PPE REGISTER",
-  "EMERGENCY PREPARENESS PLAN"
+  "EMERGENCY PREPARENESS PLAN",
+  "Induction Assessment Program",
+  "Induction Assessment Form"
 ]
 
 export async function GET() {
