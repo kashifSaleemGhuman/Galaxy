@@ -175,6 +175,36 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'Client RSL Evaluation') {
+      router.push('/dashboard/organization/client-rsl-evaluation')
+      return
+    }
+    
+    if (doc.name === 'Cr IV Prevention') {
+      router.push('/dashboard/organization/cr-iv-prevention')
+      return
+    }
+    
+    if (doc.name === 'Incoming Part-Processed MRSL Compliance Register') {
+      router.push('/dashboard/organization/incoming-part-processed-mrsl-compliance-register')
+      return
+    }
+    
+    if (doc.name === 'Chemical Recipe') {
+      router.push('/dashboard/organization/chemical-recipe')
+      return
+    }
+    
+    if (doc.name === 'STACK EMISSION INVENTORY') {
+      router.push('/dashboard/organization/stack-emission-inventory')
+      return
+    }
+    
+    if (doc.name === 'PREVENTIVE MAINTENANCE CHECK LIST') {
+      router.push('/dashboard/organization/preventive-maintenance-check-list')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
