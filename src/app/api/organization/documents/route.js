@@ -91,7 +91,8 @@ const DEFAULT_DOCUMENTS = [
   "Cr IV Prevention",
   "WASTE MANAGEMENT",
   "HEALTH & SAFETY",
-  "OCCUPATIONAL HEALTH & SAFETY HAZARDS RECORD"
+  "OCCUPATIONAL HEALTH & SAFETY HAZARDS RECORD",
+  "Personnel Protective Equipments -RAW"
 ]
 
 export async function GET() {

@@ -225,6 +225,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'Personnel Protective Equipments -RAW') {
+      router.push('/dashboard/organization/personnel-protective-equipments-raw')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
