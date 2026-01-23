@@ -235,6 +235,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'Personnel Protective Equipments -CRUST') {
+      router.push('/dashboard/organization/personnel-protective-equipments-crust')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
