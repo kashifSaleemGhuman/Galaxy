@@ -250,6 +250,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'Induction Assessment Program') {
+      router.push('/dashboard/organization/induction-assessment-program')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
