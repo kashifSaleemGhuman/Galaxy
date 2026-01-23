@@ -165,6 +165,16 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'RSL PROCEDURE') {
+      router.push('/dashboard/organization/rsl-procedure')
+      return
+    }
+    
+    if (doc.name === 'MRSL COMPLAINCE REGISTER - CLIENT COMMUNCATION') {
+      router.push('/dashboard/organization/mrsl-compliance-register-client-communication')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
