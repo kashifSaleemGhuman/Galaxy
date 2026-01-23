@@ -200,6 +200,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'PREVENTIVE MAINTENANCE CHECK LIST') {
+      router.push('/dashboard/organization/preventive-maintenance-check-list')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
