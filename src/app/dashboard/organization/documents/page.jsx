@@ -165,6 +165,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'RSL PROCEDURE') {
+      router.push('/dashboard/organization/rsl-procedure')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
