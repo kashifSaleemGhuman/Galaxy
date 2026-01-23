@@ -205,6 +205,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'CETP Effluent Treated Water Register') {
+      router.push('/dashboard/organization/cetp-effluent-treated-water-register')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
