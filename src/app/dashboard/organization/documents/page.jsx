@@ -230,6 +230,26 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'Personnel Protective Equipments -WET BLUE') {
+      router.push('/dashboard/organization/personnel-protective-equipments-wet-blue')
+      return
+    }
+    
+    if (doc.name === 'Personnel Protective Equipments -CRUST') {
+      router.push('/dashboard/organization/personnel-protective-equipments-crust')
+      return
+    }
+    
+    if (doc.name === 'PPE REGISTER') {
+      router.push('/dashboard/organization/ppe-register')
+      return
+    }
+    
+    if (doc.name === 'EMERGENCY PREPARENESS PLAN') {
+      router.push('/dashboard/organization/emergency-preparedness-plan')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
