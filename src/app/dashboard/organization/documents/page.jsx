@@ -175,6 +175,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'Client RSL Evaluation') {
+      router.push('/dashboard/organization/client-rsl-evaluation')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
