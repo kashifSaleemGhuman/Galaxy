@@ -240,6 +240,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'PPE REGISTER') {
+      router.push('/dashboard/organization/ppe-register')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
