@@ -185,6 +185,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'Incoming Part-Processed MRSL Compliance Register') {
+      router.push('/dashboard/organization/incoming-part-processed-mrsl-compliance-register')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
