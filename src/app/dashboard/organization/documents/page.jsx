@@ -180,6 +180,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'Cr IV Prevention') {
+      router.push('/dashboard/organization/cr-iv-prevention')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
