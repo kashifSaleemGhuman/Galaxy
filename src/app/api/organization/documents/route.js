@@ -92,7 +92,8 @@ const DEFAULT_DOCUMENTS = [
   "WASTE MANAGEMENT",
   "HEALTH & SAFETY",
   "OCCUPATIONAL HEALTH & SAFETY HAZARDS RECORD",
-  "Personnel Protective Equipments -RAW"
+  "Personnel Protective Equipments -RAW",
+  "Personnel Protective Equipments -WET BLUE"
 ]
 
 export async function GET() {

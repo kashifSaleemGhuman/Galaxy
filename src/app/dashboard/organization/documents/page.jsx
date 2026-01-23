@@ -230,6 +230,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'Personnel Protective Equipments -WET BLUE') {
+      router.push('/dashboard/organization/personnel-protective-equipments-wet-blue')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Toast } from '@/components/ui/Toast'
 import { Input } from '@/components/ui/Input'
 
-export default function PersonnelProtectiveEquipmentsRawPage() {
+export default function PersonnelProtectiveEquipmentsWetBluePage() {
   const router = useRouter()
   const { data: session } = useSession()
   const [loading, setLoading] = useState(true)
@@ -43,7 +43,7 @@ export default function PersonnelProtectiveEquipmentsRawPage() {
         {
           id: 1,
           serialNo: 1,
-          sectionName: 'RAW ARRIVAL',
+          sectionName: 'WETBLUE SECTION',
           ppe: {
             apron: true,
             mask: true,
@@ -61,7 +61,7 @@ export default function PersonnelProtectiveEquipmentsRawPage() {
         {
           id: 2,
           serialNo: 2,
-          sectionName: 'RAW TRIMMINGS',
+          sectionName: 'SHAVING',
           ppe: {
             apron: true,
             mask: true,
@@ -79,150 +79,6 @@ export default function PersonnelProtectiveEquipmentsRawPage() {
         {
           id: 3,
           serialNo: 3,
-          sectionName: 'SOAKING SECTION',
-          ppe: {
-            apron: true,
-            mask: true,
-            handGloves: true,
-            safetyHelmet: false,
-            earProtection: false,
-            respiratorOrMask: false,
-            goggle: true,
-            safetyBoots: true,
-            h2sPortable: false,
-            electricalGloves: false,
-            gumBoots: true
-          }
-        },
-        {
-          id: 4,
-          serialNo: 4,
-          sectionName: 'LIMING SECTION',
-          ppe: {
-            apron: true,
-            mask: true,
-            handGloves: true,
-            safetyHelmet: false,
-            earProtection: false,
-            respiratorOrMask: false,
-            goggle: true,
-            safetyBoots: true,
-            h2sPortable: false,
-            electricalGloves: false,
-            gumBoots: true
-          }
-        },
-        {
-          id: 5,
-          serialNo: 5,
-          sectionName: 'UNHAIRING SECTION',
-          ppe: {
-            apron: true,
-            mask: true,
-            handGloves: true,
-            safetyHelmet: false,
-            earProtection: false,
-            respiratorOrMask: false,
-            goggle: true,
-            safetyBoots: true,
-            h2sPortable: false,
-            electricalGloves: false,
-            gumBoots: true
-          }
-        },
-        {
-          id: 6,
-          serialNo: 6,
-          sectionName: 'PADDLE SECTION (SCUDD)',
-          ppe: {
-            apron: true,
-            mask: true,
-            handGloves: true,
-            safetyHelmet: false,
-            earProtection: false,
-            respiratorOrMask: false,
-            goggle: true,
-            safetyBoots: true,
-            h2sPortable: false,
-            electricalGloves: false,
-            gumBoots: true
-          }
-        },
-        {
-          id: 7,
-          serialNo: 7,
-          sectionName: 'FLESHING SECTION',
-          ppe: {
-            apron: true,
-            mask: true,
-            handGloves: true,
-            safetyHelmet: false,
-            earProtection: false,
-            respiratorOrMask: false,
-            goggle: false,
-            safetyBoots: true,
-            h2sPortable: false,
-            electricalGloves: false,
-            gumBoots: false
-          }
-        },
-        {
-          id: 8,
-          serialNo: 8,
-          sectionName: 'CHROME TANNING DRUM',
-          ppe: {
-            apron: true,
-            mask: true,
-            handGloves: true,
-            safetyHelmet: true,
-            earProtection: true,
-            respiratorOrMask: true,
-            goggle: true,
-            safetyBoots: true,
-            h2sPortable: true,
-            electricalGloves: false,
-            gumBoots: true
-          }
-        },
-        {
-          id: 9,
-          serialNo: 9,
-          sectionName: 'WETBLUE SECTION',
-          ppe: {
-            apron: true,
-            mask: true,
-            handGloves: true,
-            safetyHelmet: false,
-            earProtection: false,
-            respiratorOrMask: false,
-            goggle: true,
-            safetyBoots: true,
-            h2sPortable: false,
-            electricalGloves: false,
-            gumBoots: true
-          }
-        },
-        {
-          id: 10,
-          serialNo: 10,
-          sectionName: 'SHAVING',
-          ppe: {
-            apron: true,
-            mask: true,
-            handGloves: true,
-            safetyHelmet: false,
-            earProtection: false,
-            respiratorOrMask: false,
-            goggle: false,
-            safetyBoots: true,
-            h2sPortable: false,
-            electricalGloves: false,
-            gumBoots: false
-          }
-        },
-        {
-          id: 11,
-          serialNo: 11,
           sectionName: 'DRUM SECTION',
           ppe: {
             apron: true,
@@ -233,14 +89,14 @@ export default function PersonnelProtectiveEquipmentsRawPage() {
             respiratorOrMask: true,
             goggle: true,
             safetyBoots: true,
-            h2sPortable: true,
+            h2sPortable: false,
             electricalGloves: false,
             gumBoots: true
           }
         },
         {
-          id: 12,
-          serialNo: 12,
+          id: 4,
+          serialNo: 4,
           sectionName: 'DRUM CHEMICAL STORE',
           ppe: {
             apron: true,
@@ -251,15 +107,87 @@ export default function PersonnelProtectiveEquipmentsRawPage() {
             respiratorOrMask: true,
             goggle: true,
             safetyBoots: true,
-            h2sPortable: true,
-            electricalGloves: true,
-            gumBoots: true
+            h2sPortable: false,
+            electricalGloves: false,
+            gumBoots: false
           }
         },
         {
-          id: 13,
-          serialNo: 13,
+          id: 5,
+          serialNo: 5,
           sectionName: 'SETTING MACHINE',
+          ppe: {
+            apron: true,
+            mask: true,
+            handGloves: true,
+            safetyHelmet: true,
+            earProtection: true,
+            respiratorOrMask: false,
+            goggle: false,
+            safetyBoots: true,
+            h2sPortable: false,
+            electricalGloves: false,
+            gumBoots: false
+          }
+        },
+        {
+          id: 6,
+          serialNo: 6,
+          sectionName: 'HOOKING',
+          ppe: {
+            apron: true,
+            mask: true,
+            handGloves: true,
+            safetyHelmet: true,
+            earProtection: true,
+            respiratorOrMask: false,
+            goggle: false,
+            safetyBoots: true,
+            h2sPortable: false,
+            electricalGloves: false,
+            gumBoots: false
+          }
+        },
+        {
+          id: 7,
+          serialNo: 7,
+          sectionName: 'AUTOSPRAY',
+          ppe: {
+            apron: true,
+            mask: true,
+            handGloves: true,
+            safetyHelmet: true,
+            earProtection: true,
+            respiratorOrMask: true,
+            goggle: true,
+            safetyBoots: true,
+            h2sPortable: false,
+            electricalGloves: false,
+            gumBoots: false
+          }
+        },
+        {
+          id: 8,
+          serialNo: 8,
+          sectionName: 'DRY DRUM',
+          ppe: {
+            apron: true,
+            mask: true,
+            handGloves: true,
+            safetyHelmet: true,
+            earProtection: true,
+            respiratorOrMask: false,
+            goggle: false,
+            safetyBoots: true,
+            h2sPortable: false,
+            electricalGloves: false,
+            gumBoots: false
+          }
+        },
+        {
+          id: 9,
+          serialNo: 9,
+          sectionName: 'MEASURING',
           ppe: {
             apron: true,
             mask: true,
@@ -271,6 +199,96 @@ export default function PersonnelProtectiveEquipmentsRawPage() {
             safetyBoots: true,
             h2sPortable: false,
             electricalGloves: false,
+            gumBoots: false
+          }
+        },
+        {
+          id: 10,
+          serialNo: 10,
+          sectionName: 'ETP COLLECTION TANK',
+          ppe: {
+            apron: true,
+            mask: true,
+            handGloves: true,
+            safetyHelmet: true,
+            earProtection: true,
+            respiratorOrMask: true,
+            goggle: true,
+            safetyBoots: true,
+            h2sPortable: true,
+            electricalGloves: false,
+            gumBoots: true
+          }
+        },
+        {
+          id: 11,
+          serialNo: 11,
+          sectionName: 'WASTE HANDLING',
+          ppe: {
+            apron: true,
+            mask: true,
+            handGloves: true,
+            safetyHelmet: true,
+            earProtection: true,
+            respiratorOrMask: true,
+            goggle: true,
+            safetyBoots: true,
+            h2sPortable: false,
+            electricalGloves: false,
+            gumBoots: true
+          }
+        },
+        {
+          id: 12,
+          serialNo: 12,
+          sectionName: 'SLUDGE HANDLING',
+          ppe: {
+            apron: true,
+            mask: true,
+            handGloves: true,
+            safetyHelmet: true,
+            earProtection: true,
+            respiratorOrMask: true,
+            goggle: true,
+            safetyBoots: true,
+            h2sPortable: true,
+            electricalGloves: false,
+            gumBoots: true
+          }
+        },
+        {
+          id: 13,
+          serialNo: 13,
+          sectionName: 'OFFICE',
+          ppe: {
+            apron: false,
+            mask: true,
+            handGloves: true,
+            safetyHelmet: false,
+            earProtection: false,
+            respiratorOrMask: false,
+            goggle: false,
+            safetyBoots: true,
+            h2sPortable: false,
+            electricalGloves: false,
+            gumBoots: false
+          }
+        },
+        {
+          id: 14,
+          serialNo: 14,
+          sectionName: 'EB ROOM/EB PANELS',
+          ppe: {
+            apron: false,
+            mask: true,
+            handGloves: true,
+            safetyHelmet: true,
+            earProtection: true,
+            respiratorOrMask: false,
+            goggle: false,
+            safetyBoots: true,
+            h2sPortable: false,
+            electricalGloves: true,
             gumBoots: false
           }
         }
@@ -287,7 +305,7 @@ export default function PersonnelProtectiveEquipmentsRawPage() {
   const fetchDocumentContent = async () => {
     try {
       setLoading(true)
-      const res = await fetch('/api/organization/documents/content?documentName=Personnel Protective Equipments -RAW')
+      const res = await fetch('/api/organization/documents/content?documentName=Personnel Protective Equipments -WET BLUE')
       const data = await res.json()
       
       if (res.ok) {
@@ -398,9 +416,9 @@ export default function PersonnelProtectiveEquipmentsRawPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          documentName: 'Personnel Protective Equipments -RAW',
+          documentName: 'Personnel Protective Equipments -WET BLUE',
           content: content,
-          changeDescription: 'Updated Personnel Protective Equipments -RAW'
+          changeDescription: 'Updated Personnel Protective Equipments -WET BLUE'
         })
       })
 
@@ -418,7 +436,7 @@ export default function PersonnelProtectiveEquipmentsRawPage() {
         })
       }
 
-      setToast({ type: 'success', message: 'Personnel Protective Equipments -RAW saved successfully. Revision number incremented.' })
+      setToast({ type: 'success', message: 'Personnel Protective Equipments -WET BLUE saved successfully. Revision number incremented.' })
     } catch (error) {
       console.error('Error saving record:', error)
       setToast({ type: 'error', message: 'Failed to save changes. Please try again.' })
@@ -429,7 +447,7 @@ export default function PersonnelProtectiveEquipmentsRawPage() {
     { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
     { key: 'organization', label: 'Organization', href: '/dashboard/organization' },
     { key: 'documents', label: 'Document Details', href: '/dashboard/organization/documents' },
-    { key: 'ppe-raw', label: 'Personnel Protective Equipments -RAW', href: '#' }
+    { key: 'ppe-wet-blue', label: 'Personnel Protective Equipments -WET BLUE', href: '#' }
   ]
 
   const handleNavigate = (index, item) => {
@@ -467,7 +485,7 @@ export default function PersonnelProtectiveEquipmentsRawPage() {
               ESF LEATHER CONSULTANCY
             </h1>
             <h2 className="text-xl font-bold text-gray-900 uppercase mt-2">
-              Personnel Protective Equipments -RAW
+              Personnel Protective Equipments -WET BLUE
             </h2>
             <div className="mt-4 flex gap-6 text-sm text-gray-600 flex-wrap">
               <div>
