@@ -245,6 +245,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'EMERGENCY PREPARENESS PLAN') {
+      router.push('/dashboard/organization/emergency-preparedness-plan')
+      return
+    }
+    
     // For other documents, open the edit modal
     setSelectedDoc(doc)
     setFormData({
