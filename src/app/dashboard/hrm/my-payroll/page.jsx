@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Breadcrumbs from '@/components/ui/Breadcrumbs'
+import BackButton from '@/components/ui/BackButton'
 import { toast } from '@/components/ui/Toast'
 import { DocumentArrowDownIcon, EyeIcon } from '@heroicons/react/24/outline'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
@@ -120,8 +121,13 @@ export default function MyPayrollPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Payroll</h1>
-        <Breadcrumbs items={breadcrumbs} className="mt-2" />
+        <div className="flex items-center gap-3">
+          <BackButton href="/dashboard/hrm" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">My Payroll</h1>
+            <Breadcrumbs items={breadcrumbs} className="mt-2" />
+          </div>
+        </div>
       </div>
 
       {/* Payroll Records */}

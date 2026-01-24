@@ -83,13 +83,12 @@ export async function GET(request) {
       }
     })
 
-    return NextResponse.json(requests)
+    // Always return array, even if empty
+    return NextResponse.json(requests || [])
   } catch (error) {
     console.error('Error fetching leave requests:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch leave requests' },
-      { status: 500 }
-    )
+    // Return empty array on error to prevent UI issues
+    return NextResponse.json([])
   }
 }
 

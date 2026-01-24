@@ -186,14 +186,13 @@ export default function DashboardLayout({ children }) {
           ]
         })
       } else {
-        // HR Manager and Admin navigation - full access
+        // HR Manager and Admin navigation - full access (main sections only)
         baseNavigation.push({
           name: 'HRM',
           href: '/dashboard/hrm',
           icon: UsersIcon,
           current: pathname.startsWith('/dashboard/hrm'),
           children: [
-            { name: 'Overview', href: '/dashboard/hrm', current: pathname === '/dashboard/hrm' },
             { name: 'Employees', href: '/dashboard/hrm/employees', current: pathname.startsWith('/dashboard/hrm/employees') },
             { name: 'Departments', href: '/dashboard/hrm/departments', current: pathname.startsWith('/dashboard/hrm/departments') },
             { name: 'Attendance', href: '/dashboard/hrm/attendance', current: pathname.startsWith('/dashboard/hrm/attendance') },

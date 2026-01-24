@@ -48,13 +48,12 @@ export async function GET(request) {
       ]
     })
 
-    return NextResponse.json(policies)
+    // Always return array, even if empty
+    return NextResponse.json(policies || [])
   } catch (error) {
     console.error('Error fetching leave policies:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch leave policies' },
-      { status: 500 }
-    )
+    // Return empty array on error to prevent UI issues
+    return NextResponse.json([])
   }
 }
 

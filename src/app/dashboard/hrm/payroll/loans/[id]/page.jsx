@@ -5,10 +5,10 @@ import { useRouter, useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
 import Breadcrumbs from '@/components/ui/Breadcrumbs'
+import BackButton from '@/components/ui/BackButton'
 import { toast } from '@/components/ui/Toast'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { ROLES } from '@/lib/constants/roles'
-import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 
 export default function LoanDetailPage() {
   const router = useRouter()
@@ -99,10 +99,7 @@ export default function LoanDetailPage() {
     return (
       <div className="p-8 text-center">
         <p className="text-gray-500">Loan not found</p>
-        <Button onClick={() => router.push('/dashboard/hrm/payroll/loans')} className="mt-4">
-          <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          Back to Loans
-        </Button>
+        <BackButton href="/dashboard/hrm/payroll/loans" className="mt-4" />
       </div>
     )
   }
@@ -114,13 +111,14 @@ export default function LoanDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Loan Details</h1>
-          <Breadcrumbs items={breadcrumbs} className="mt-2" />
+          <div className="flex items-center gap-3">
+            <BackButton href="/dashboard/hrm/payroll/loans" />
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Loan Details</h1>
+              <Breadcrumbs items={breadcrumbs} className="mt-2" />
+            </div>
+          </div>
         </div>
-        <Button variant="outline" onClick={() => router.push('/dashboard/hrm/payroll/loans')}>
-          <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          Back to Loans
-        </Button>
       </div>
 
       {/* Loan Summary */}

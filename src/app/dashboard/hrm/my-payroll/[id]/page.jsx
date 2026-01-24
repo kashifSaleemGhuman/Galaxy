@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Breadcrumbs from '@/components/ui/Breadcrumbs'
+import BackButton from '@/components/ui/BackButton'
 import { Button } from '@/components/ui/Button'
 import { toast } from '@/components/ui/Toast'
 import { DocumentArrowDownIcon } from '@heroicons/react/24/outline'
@@ -94,9 +95,12 @@ export default function MyPayrollRecordPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Payroll Details</h1>
-          <Breadcrumbs items={breadcrumbs} className="mt-2" />
+        <div className="flex items-center gap-3">
+          <BackButton href="/dashboard/hrm/my-payroll" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Payroll Details</h1>
+            <Breadcrumbs items={breadcrumbs} className="mt-2" />
+          </div>
         </div>
         <LoadingSpinner size="lg" text="Loading payroll details..." />
       </div>
@@ -124,9 +128,12 @@ export default function MyPayrollRecordPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Payroll Details</h1>
-          <Breadcrumbs items={breadcrumbs} className="mt-2" />
+        <div className="flex items-center gap-3">
+          <BackButton href="/dashboard/hrm/my-payroll" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Payroll Details</h1>
+            <Breadcrumbs items={breadcrumbs} className="mt-2" />
+          </div>
         </div>
         {(record.status === 'FINALIZED' || record.status === 'PAID') && (
           <Button variant="outline" onClick={handleDownloadPayslip}>

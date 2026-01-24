@@ -66,6 +66,9 @@ model User {
   requestedMovements StockMovementRequest[] @relation("RequestedMovements")
   approvedMovements  StockMovementRequest[] @relation("ApprovedMovements")
   rejectedMovements  StockMovementRequest[] @relation("RejectedMovements")
+
+  // Employee relation (one-to-one)
+  employee Employee?
 }
 
 // Role model for permission management
@@ -613,6 +616,10 @@ model Employee {
 
   // Tenant relation
   tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  // User relation (one-to-one)
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id])
 }
 
 // Machine model (equipment management)

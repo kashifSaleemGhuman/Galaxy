@@ -26,16 +26,32 @@ export default function EmployeesPage() {
   const fetchEmployees = async () => {
     try {
       const res = await fetch('/api/organization/employees')
-      if (!res.ok) throw new Error('Failed to fetch employees')
+      if (!res.ok) {
+        // Only show error for actual failures (5xx), not for empty data
+        if (res.status >= 500) {
+          throw new Error('Failed to fetch employees')
+        }
+        // For 4xx errors, still try to parse response
+        const errorData = await res.json().catch(() => ({}))
+        if (errorData.error) {
+          throw new Error(errorData.error)
+        }
+      }
       const data = await res.json()
-      setEmployees(data)
+      // Handle both array and object responses
+      setEmployees(Array.isArray(data) ? data : data.data || [])
     } catch (error) {
       console.error(error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load employees',
-        variant: 'destructive'
-      })
+      // Only show toast for actual errors, not for empty data
+      if (error.message && !error.message.includes('not found')) {
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to load employees',
+          variant: 'destructive'
+        })
+      }
+      // Set empty array on error to prevent UI issues
+      setEmployees([])
     } finally {
       setLoading(false)
     }

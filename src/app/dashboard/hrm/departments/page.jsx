@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Breadcrumbs from '@/components/ui/Breadcrumbs'
+import BackButton from '@/components/ui/BackButton'
 import { Button } from '@/components/ui/Button'
 import { PlusIcon } from '@heroicons/react/24/outline'
 
@@ -21,9 +22,12 @@ export default function DepartmentsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Departments</h1>
-          <Breadcrumbs items={breadcrumbs} className="mt-2" />
+        <div className="flex items-center gap-3">
+          <BackButton href="/dashboard/hrm" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Departments</h1>
+            <Breadcrumbs items={breadcrumbs} className="mt-2" />
+          </div>
         </div>
         <Button>
           <PlusIcon className="h-4 w-4 mr-2" />

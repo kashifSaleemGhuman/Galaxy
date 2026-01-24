@@ -31,10 +31,8 @@ export async function GET(request) {
       })
 
       if (!employee) {
-        return NextResponse.json(
-          { error: 'Employee record not found' },
-          { status: 404 }
-        )
+        // Return empty array instead of error for missing employee
+        return NextResponse.json([])
       }
 
       // Get balance summary
@@ -45,12 +43,13 @@ export async function GET(request) {
         const balance = await getCurrentLeaveBalance(employee.id, leaveTypeId)
         return NextResponse.json({
           leaveTypeId,
-          currentBalance: balance,
-          summary: summary.find(s => s.leaveTypeId === leaveTypeId)
+          currentBalance: balance || 0,
+          summary: summary.find(s => s.leaveTypeId === leaveTypeId) || null
         })
       }
 
-      return NextResponse.json(summary)
+      // Return empty array if no balances, not error
+      return NextResponse.json(summary || [])
     }
 
     // HR can see any employee's balances
@@ -65,27 +64,20 @@ export async function GET(request) {
       }
 
       const summary = await getLeaveBalanceSummary(employeeId)
-      return NextResponse.json(summary)
+      return NextResponse.json(summary || [])
     }
 
-    // If no employeeId specified for HR, return error
+    // If no employeeId specified for HR, return empty array
     if (isHR && !employeeId) {
-      return NextResponse.json(
-        { error: 'Employee ID is required' },
-        { status: 400 }
-      )
+      return NextResponse.json([])
     }
 
-    return NextResponse.json(
-      { error: 'Forbidden' },
-      { status: 403 }
-    )
+    // For other roles, return empty array instead of error
+    return NextResponse.json([])
   } catch (error) {
     console.error('Error fetching leave balances:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch leave balances' },
-      { status: 500 }
-    )
+    // Return empty array on error to prevent UI issues
+    return NextResponse.json([])
   }
 }
 

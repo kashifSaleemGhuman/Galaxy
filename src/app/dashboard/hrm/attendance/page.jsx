@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
 import Breadcrumbs from '@/components/ui/Breadcrumbs'
+import BackButton from '@/components/ui/BackButton'
 import { toast } from '@/components/ui/Toast'
 import { ClockIcon, CheckCircleIcon, XCircleIcon, CalendarIcon } from '@heroicons/react/24/outline'
 import { ROLES } from '@/lib/constants/roles'
@@ -21,17 +22,26 @@ export default function AttendancePage() {
   const [attendance, setAttendance] = useState([])
   const [summary, setSummary] = useState(null)
 
-  const isEmployee = session?.user?.role === ROLES.USER
+  const userRole = session?.user?.role
+  const isEmployee = userRole === ROLES.USER
+  const isHR = userRole === ROLES.SUPER_ADMIN || userRole === ROLES.ADMIN || userRole === ROLES.HR_MANAGER
+  const canAccess = isEmployee || isHR
 
   const breadcrumbs = [
     { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
-    { key: 'attendance', label: 'Attendance', href: '/dashboard/hrm/attendance' },
+    { key: 'attendance', label: isEmployee ? 'My Attendance' : 'Attendance', href: '/dashboard/hrm/attendance' },
   ]
 
   useEffect(() => {
-    fetchTodayStatus()
-    fetchAttendance()
-  }, [])
+    if (canAccess) {
+      if (isEmployee) {
+        fetchTodayStatus()
+        fetchAttendance()
+      } else {
+        fetchAllAttendance()
+      }
+    }
+  }, [canAccess, isEmployee])
 
   const fetchTodayStatus = async () => {
     try {
@@ -62,6 +72,26 @@ export default function AttendancePage() {
       }
     } catch (error) {
       console.error('Error fetching attendance:', error)
+    } finally {
+      setPageLoading(false)
+    }
+  }
+
+  const fetchAllAttendance = async () => {
+    try {
+      setPageLoading(true)
+      const res = await fetch('/api/hrm/attendance?limit=30')
+      if (res.ok) {
+        const data = await res.json()
+        setAttendance(data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching attendance:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load attendance data',
+        variant: 'destructive'
+      })
     } finally {
       setPageLoading(false)
     }
@@ -163,22 +193,36 @@ export default function AttendancePage() {
     return `${hours}h ${mins}m`
   }
 
-  if (!isEmployee) {
+  if (!canAccess) {
     return (
       <div className="p-8 text-center">
-        <p className="text-gray-500">This page is only accessible to employees.</p>
+        <p className="text-gray-500">This page is only accessible to employees and HR managers.</p>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Attendance</h1>
-        <Breadcrumbs items={breadcrumbs} className="mt-2" />
+      <div className="flex items-center gap-3">
+        <BackButton href="/dashboard/hrm" />
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">{isEmployee ? 'My Attendance' : 'Attendance'}</h1>
+          <Breadcrumbs items={breadcrumbs} className="mt-2" />
+          {isHR && (
+            <div className="mt-2">
+              <Button
+                variant="outline"
+                onClick={() => router.push('/dashboard/hrm/attendance/manage')}
+              >
+                Manage Attendance
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Check In/Out Card */}
+      {/* Check In/Out Card - Only for employees */}
+      {isEmployee && (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between">
           <div>
@@ -221,9 +265,10 @@ export default function AttendancePage() {
           </div>
         </div>
       </div>
+      )}
 
-      {/* Summary Cards */}
-      {summary && (
+      {/* Summary Cards - Only for employees */}
+      {isEmployee && summary && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <div className="text-sm text-gray-500">Total Days</div>
@@ -256,6 +301,9 @@ export default function AttendancePage() {
             <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                {isHR && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Check In</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Check Out</th>
@@ -268,6 +316,14 @@ export default function AttendancePage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {attendance.map((record) => (
                 <tr key={record.id} className="hover:bg-gray-50">
+                  {isHR && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div>
+                        <div className="font-medium">{record.employee?.name || 'N/A'}</div>
+                        <div className="text-xs text-gray-500">{record.employee?.employeeId || ''}</div>
+                      </div>
+                    </td>
+                  )}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {new Date(record.date).toLocaleDateString()}
                   </td>
@@ -295,7 +351,7 @@ export default function AttendancePage() {
               ))}
               {attendance.length === 0 && (
                 <tr>
-                  <td colSpan="7" className="px-6 py-10 text-center text-gray-500">
+                  <td colSpan={isHR ? "8" : "7"} className="px-6 py-10 text-center text-gray-500">
                     No attendance records found
                   </td>
                 </tr>
@@ -306,7 +362,8 @@ export default function AttendancePage() {
         )}
       </div>
 
-      {/* Actions */}
+      {/* Actions - Only for employees */}
+      {isEmployee && (
       <div className="flex justify-end gap-3">
         <Button
           variant="outline"
@@ -321,6 +378,7 @@ export default function AttendancePage() {
           View Full History
         </Button>
       </div>
+      )}
     </div>
   )
 }

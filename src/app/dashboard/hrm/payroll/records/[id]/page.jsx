@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
 import Breadcrumbs from '@/components/ui/Breadcrumbs'
+import BackButton from '@/components/ui/BackButton'
 import { toast } from '@/components/ui/Toast'
 import { ROLES } from '@/lib/constants/roles'
 import { DocumentArrowDownIcon, PrinterIcon } from '@heroicons/react/24/outline'
@@ -123,8 +124,13 @@ export default function PayrollRecordDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Payroll Record</h1>
-          <Breadcrumbs items={breadcrumbs} className="mt-2" />
+          <div className="flex items-center gap-3">
+            <BackButton href="/dashboard/hrm/payroll/records" />
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Payroll Record</h1>
+              <Breadcrumbs items={breadcrumbs} className="mt-2" />
+            </div>
+          </div>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" onClick={handleDownloadPayslip}>

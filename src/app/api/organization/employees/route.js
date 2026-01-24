@@ -14,10 +14,15 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     })
 
-    return NextResponse.json(employees)
+    // Always return 200 with array, even if empty
+    return NextResponse.json(employees || [])
   } catch (error) {
     console.error('[EMPLOYEES_GET]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+    // Only return 500 for actual errors, not for empty results
+    return NextResponse.json(
+      { error: 'Internal server error', details: error.message },
+      { status: 500 }
+    )
   }
 }
 

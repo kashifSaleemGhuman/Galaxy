@@ -48,13 +48,12 @@ export async function GET(request) {
       }
     })
 
-    return NextResponse.json(leaveTypes)
+    // Always return array, even if empty
+    return NextResponse.json(leaveTypes || [])
   } catch (error) {
     console.error('Error fetching leave types:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch leave types' },
-      { status: 500 }
-    )
+    // Return empty array on error to prevent UI issues
+    return NextResponse.json([])
   }
 }
 

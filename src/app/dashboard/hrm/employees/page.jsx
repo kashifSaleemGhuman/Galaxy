@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
 import Breadcrumbs from '@/components/ui/Breadcrumbs'
+import BackButton from '@/components/ui/BackButton'
 import { toast } from '@/components/ui/Toast'
 import { PlusIcon, PencilIcon, KeyIcon } from '@heroicons/react/24/outline'
 import CredentialsModal from '@/app/dashboard/organization/employees/_components/CredentialsModal'
@@ -69,9 +70,12 @@ export default function HRMEmployeesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Employees</h1>
-          <Breadcrumbs items={breadcrumbs} onNavigate={handleNavigate} className="mt-2" />
+        <div className="flex items-center gap-3">
+          <BackButton href="/dashboard/hrm" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Employees</h1>
+            <Breadcrumbs items={breadcrumbs} onNavigate={handleNavigate} className="mt-2" />
+          </div>
         </div>
         <Button onClick={() => router.push('/dashboard/hrm/employees/create')}>
           <PlusIcon className="h-4 w-4 mr-2" />
