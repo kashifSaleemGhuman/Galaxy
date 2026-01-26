@@ -88,3 +88,38 @@ BEGIN
         END IF;
     END IF;
 END $$;
+
+-- Add bankName, bankAccountNumber, and attributes columns to Vendor table if they don't exist
+DO $$ 
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Vendor') THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_schema = 'public' AND table_name = 'Vendor' AND column_name = 'bankName'
+        ) THEN
+            ALTER TABLE "Vendor" ADD COLUMN "bankName" TEXT;
+        END IF;
+        
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_schema = 'public' AND table_name = 'Vendor' AND column_name = 'bankAccountNumber'
+        ) THEN
+            ALTER TABLE "Vendor" ADD COLUMN "bankAccountNumber" TEXT;
+        END IF;
+        
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_schema = 'public' AND table_name = 'Vendor' AND column_name = 'attributes'
+        ) THEN
+            ALTER TABLE "Vendor" ADD COLUMN "attributes" JSONB DEFAULT '{}';
+        END IF;
+        
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_schema = 'public' AND table_name = 'Vendor' AND column_name = 'tenantId'
+        ) THEN
+            ALTER TABLE "Vendor" ADD COLUMN "tenantId" TEXT;
+            CREATE INDEX IF NOT EXISTS "Vendor_tenantId_idx" ON "Vendor"("tenantId");
+        END IF;
+    END IF;
+END $$;

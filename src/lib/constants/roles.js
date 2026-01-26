@@ -352,10 +352,13 @@ export const ROLE_PERMISSIONS = {
 export function hasPermission(userRole, permission) {
   if (!userRole || !permission) return false;
   
-  const rolePermissions = ROLE_PERMISSIONS[userRole] || [];
+  // Normalize role to uppercase for comparison (database stores lowercase)
+  const normalizedRole = (userRole || '').toUpperCase();
+  
+  const rolePermissions = ROLE_PERMISSIONS[normalizedRole] || [];
   
   // Super admin has all permissions
-  if (userRole === ROLES.SUPER_ADMIN) {
+  if (normalizedRole === ROLES.SUPER_ADMIN) {
     return true;
   }
   
