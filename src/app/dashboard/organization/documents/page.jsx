@@ -245,6 +245,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'Personnel Protective Equipments - GHS Hazard') {
+      router.push('/dashboard/organization/personnel-protective-equipments-ghs-hazard')
+      return
+    }
+    
     if (doc.name === 'PPE REGISTER') {
       router.push('/dashboard/organization/ppe-register')
       return

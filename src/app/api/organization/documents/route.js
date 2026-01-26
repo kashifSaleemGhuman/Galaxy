@@ -95,6 +95,7 @@ const DEFAULT_DOCUMENTS = [
   "Personnel Protective Equipments -RAW",
   "Personnel Protective Equipments -WET BLUE",
   "Personnel Protective Equipments -CRUST",
+  "Personnel Protective Equipments - GHS Hazard",
   "PPE REGISTER",
   "EMERGENCY PREPARENESS PLAN",
   "Induction Assessment Program",
