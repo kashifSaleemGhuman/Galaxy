@@ -215,6 +215,11 @@ export default function DocumentDetailsPage() {
       return
     }
     
+    if (doc.name === 'HEALTH & SAFETY PROCEDURE') {
+      router.push('/dashboard/organization/health-and-safety-procedure')
+      return
+    }
+    
     if (doc.name === 'CHEMICAL RISK ASSESSMENT') {
       router.push('/dashboard/organization/chemical-risk-assessment')
       return
