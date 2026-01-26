@@ -33,8 +33,11 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Normalize role to uppercase for permission check (database stores lowercase)
+    const userRole = (currentUser.role || '').toUpperCase();
+
     // Check permissions using unified permission system
-    if (!hasPermission(currentUser.role, PERMISSIONS.PURCHASE.APPROVE_RFQ)) {
+    if (!hasPermission(userRole, PERMISSIONS.PURCHASE.APPROVE_RFQ)) {
       return NextResponse.json({ error: 'Insufficient permissions. You need approval permissions to approve/reject RFQs.' }, { status: 403 });
     }
 

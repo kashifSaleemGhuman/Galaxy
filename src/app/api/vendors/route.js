@@ -8,6 +8,7 @@ import { authOptions } from '@/lib/auth';
 import prismaImported from '@/lib/db';
 import { PrismaClient } from '@prisma/client';
 import { hasPermission, PERMISSIONS } from '@/lib/constants/roles';
+import { normalizeAttributes } from '@/lib/purchase/productFieldUtils';
 
 export async function GET(req) {
   try {
