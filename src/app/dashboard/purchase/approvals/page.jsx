@@ -16,7 +16,9 @@ export default function ApprovalsPage() {
     },
   });
 
-  const isManager = session?.user && [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER].includes(session.user.role);
+  // Normalize role to uppercase for comparison (database stores lowercase)
+  const userRole = session?.user?.role ? (session.user.role || '').toUpperCase() : null;
+  const isManager = session?.user && [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER].includes(userRole);
 
   if (!session?.user) {
     return null;

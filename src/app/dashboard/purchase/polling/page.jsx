@@ -15,8 +15,9 @@ export default function ManagerPollingPage() {
   const router = useRouter();
   const { data: session } = useSession();
 
-  // Only show this page for managers
-  const isManager = ['super_admin', 'admin', 'purchase_manager'].includes(session?.user?.role);
+  // Only show this page for managers - normalize role to lowercase for comparison
+  const userRole = (session?.user?.role || '').toLowerCase();
+  const isManager = ['super_admin', 'admin', 'purchase_manager'].includes(userRole);
 
   const checkForUpdates = async () => {
     try {

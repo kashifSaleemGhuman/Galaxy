@@ -15,8 +15,11 @@ export default function PurchaseOverviewPage() {
     if (status === 'authenticated' && session?.user?.role) {
       setIsRedirecting(true);
       
+      // Normalize role to lowercase for comparison (database stores lowercase)
+      const userRole = (session.user.role || '').toLowerCase();
+      
       // Check if user is a manager
-      const isManager = ['super_admin', 'admin', 'purchase_manager'].includes(session.user.role);
+      const isManager = ['super_admin', 'admin', 'purchase_manager'].includes(userRole);
       
       if (isManager) {
         // Managers go to polling page

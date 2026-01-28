@@ -44,6 +44,10 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Extract rfqId from params (params is a Promise in Next.js App Router)
+    const resolvedParams = await params;
+    const rfqId = resolvedParams.id;
+
     if (!rfqId) {
       return NextResponse.json({ error: 'RFQ ID is required' }, { status: 400 });
     }
