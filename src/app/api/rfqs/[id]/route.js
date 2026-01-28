@@ -19,8 +19,16 @@ export async function GET(req, { params }) {
       where: { email: session.user.email }
     });
 
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Extract rfqId from params (params is a Promise in Next.js App Router)
+    const resolvedParams = await params;
+    const rfqId = resolvedParams.id;
+
     const rfq = await prisma.rFQ.findUnique({
-      where: { id: params.id },
+      where: { id: rfqId },
       include: {
         vendor: true,
         createdBy: {
@@ -49,8 +57,11 @@ export async function GET(req, { params }) {
       return NextResponse.json({ error: 'RFQ not found' }, { status: 404 });
     }
 
+    // Normalize role to uppercase for comparison (database stores lowercase)
+    const userRole = (currentUser.role || '').toUpperCase();
+
     // Check if user can view this RFQ
-    if (![ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER].includes(currentUser.role) 
+    if (![ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER].includes(userRole) 
         && rfq.createdById !== currentUser.id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
@@ -74,6 +85,14 @@ export async function PUT(req, { params }) {
       where: { email: session.user.email }
     });
 
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Extract rfqId from params (params is a Promise in Next.js App Router)
+    const resolvedParams = await params;
+    const rfqId = resolvedParams.id;
+
     const {
       status,
       vendorPrice,
@@ -84,7 +103,7 @@ export async function PUT(req, { params }) {
 
     // Get existing RFQ
     const existingRfq = await prisma.rFQ.findUnique({
-      where: { id: params.id },
+      where: { id: rfqId },
       include: { createdBy: true }
     });
 
@@ -92,8 +111,11 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ error: 'RFQ not found' }, { status: 404 });
     }
 
+    // Normalize role to uppercase for comparison (database stores lowercase)
+    const userRole = (currentUser.role || '').toUpperCase();
+
     // Check permissions
-    const canEdit = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER].includes(currentUser.role) 
+    const canEdit = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.PURCHASE_MANAGER].includes(userRole) 
                    || existingRfq.createdById === currentUser.id;
 
     if (!canEdit) {
@@ -173,13 +195,24 @@ export async function DELETE(req, { params }) {
       where: { email: session.user.email }
     });
 
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Extract rfqId from params (params is a Promise in Next.js App Router)
+    const resolvedParams = await params;
+    const rfqId = resolvedParams.id;
+
+    // Normalize role to uppercase for comparison (database stores lowercase)
+    const userRole = (currentUser.role || '').toUpperCase();
+
     // Only admins can delete RFQs
-    if (![ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(currentUser.role)) {
+    if (![ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(userRole)) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     const existingRfq = await prisma.rFQ.findUnique({
-      where: { id: params.id }
+      where: { id: rfqId }
     });
 
     if (!existingRfq) {

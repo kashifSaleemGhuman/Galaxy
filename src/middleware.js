@@ -39,7 +39,11 @@ export default withAuth(
     if (path.startsWith('/dashboard/purchase/approvals')) {
       // Only allow users with approval permissions
       const hasApprovalPermission = token.permissions?.includes(PERMISSIONS.PURCHASE.APPROVE_RFQ);
-      if (!hasApprovalPermission) {
+      
+      // Also check if user is a manager/admin (they should have access)
+      const isManagerOrAdmin = ['SUPER_ADMIN', 'ADMIN', 'PURCHASE_MANAGER'].includes(userRole);
+      
+      if (!hasApprovalPermission && !isManagerOrAdmin) {
         return NextResponse.redirect(new URL('/dashboard', req.url));
       }
     }

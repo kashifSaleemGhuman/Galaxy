@@ -15,14 +15,18 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Extract rfqId from params (params is a Promise in Next.js App Router)
+    const resolvedParams = await params;
+    const rfqId = resolvedParams.id;
+
+    if (!rfqId) {
+      return NextResponse.json({ error: 'RFQ ID is required' }, { status: 400 });
+    }
+
     const { action, comments } = await req.json();
 
     if (!action || !['approve', 'reject'].includes(action)) {
       return NextResponse.json({ error: 'Invalid action. Must be "approve" or "reject"' }, { status: 400 });
-    }
-
-    if (!rfqId) {
-      return NextResponse.json({ error: 'RFQ ID is required' }, { status: 400 });
     }
 
     const currentUser = await prisma.user.findUnique({
@@ -64,7 +68,7 @@ export async function POST(req, { params }) {
     // Update RFQ status
     // Note: Using sequential operations instead of transaction because Prisma Accelerate doesn't support transactions
     const updated = await prisma.rFQ.update({
-      where: { id: params.id },
+      where: { id: rfqId },
       data: {
         status: action === 'approve' ? 'approved' : 'rejected',
         approvedById: currentUser.id,
@@ -108,10 +112,8 @@ export async function POST(req, { params }) {
       // Continue - RFQ was successfully updated
     }
 
-    const updatedRfq = updated;
-
     return NextResponse.json({ 
-      rfq: updatedRfqWithRelations,
+      rfq: updated,
       message: `RFQ ${action}d successfully` 
     });
 
