@@ -80,14 +80,19 @@ export async function GET(req) {
     };
 
     counts.forEach(count => {
-      if (['sent', 'received'].includes(count.status)) {
+      // For approvals, only 'received' status counts as pending (waiting for manager approval)
+      // 'sent' status means waiting for vendor quote, not manager approval
+      if (count.status === 'received') {
         statusCounts.pending += count._count.status;
       } else if (count.status === 'approved') {
         statusCounts.approved += count._count.status;
       } else if (count.status === 'rejected') {
         statusCounts.rejected += count._count.status;
       }
-      statusCounts.total += count._count.status;
+      // Only count relevant statuses in total (exclude 'sent' and 'draft' from approvals total)
+      if (['received', 'approved', 'rejected'].includes(count.status)) {
+        statusCounts.total += count._count.status;
+      }
     });
 
     return NextResponse.json({
