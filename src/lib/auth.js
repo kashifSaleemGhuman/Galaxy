@@ -1,8 +1,8 @@
 import { getServerSession } from 'next-auth/next';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare } from 'bcryptjs';
-import { ROLES, ROLE_PERMISSIONS } from '@/lib/constants/roles';
-import { prisma } from '@/lib/db';
+import { ROLES, ROLE_PERMISSIONS } from './constants/roles';
+import { prisma } from './db';
 
 export const authOptions = {
   providers: [
@@ -13,53 +13,37 @@ export const authOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          console.log('[Auth] Missing credentials');
-          return null;
-        }
+        if (!credentials?.email || !credentials?.password) return null;
 
         try {
-          console.log('[Auth] Attempting login for:', credentials.email);
-          
           // Find user in database
           const user = await prisma.user.findUnique({
             where: { email: credentials.email }
           });
 
-          if (!user) {
-            console.log('[Auth] User not found:', credentials.email);
-            return null;
-          }
+          if (!user) return null;
 
-          console.log('[Auth] User found, verifying password...');
-          
           // Verify password
           const isValidPassword = await compare(credentials.password, user.password);
           
           if (isValidPassword) {
-            console.log('[Auth] Password valid for:', credentials.email);
-            try {
-              // Create audit log for successful login
-              await prisma.auditLog.create({
-                data: {
-                  userId: user.id,
-                  action: 'LOGIN',
-                  details: 'User logged in successfully'
-                }
-              });
-            } catch (logError) {
-              console.error('Failed to create audit log:', logError);
-            }
+            // Create audit log for successful login
+            await prisma.auditLog.create({
+              data: {
+                userId: user.id,
+                action: 'LOGIN',
+                details: 'User logged in successfully'
+              }
+            });
 
             // Never send the password
             const { password, ...userWithoutPass } = user;
             return userWithoutPass;
           }
 
-          console.log('[Auth] Invalid password for:', credentials.email);
           return null;
         } catch (error) {
-          console.error('[Auth] Error during authentication:', error);
+          console.error('Auth error:', error);
           return null;
         }
       }
@@ -89,6 +73,21 @@ export const authOptions = {
             firstFewPermissions: token.permissions?.slice(0, 5)
           });
         }
+        
+        // Debug logging (remove in production)
+        if (process.env.NODE_ENV === 'development') {
+          const hasWarehouseViewAll = token.permissions?.includes('warehouse.view_all');
+          const hasWarehouseShipmentRead = token.permissions?.includes('warehouse.shipment.read');
+          console.log('🔐 Auth JWT Callback:', {
+            userId: user.id,
+            email: user.email,
+            role: user.role,
+            permissionsCount: token.permissions?.length || 0,
+            hasWarehouseViewAll,
+            hasWarehouseShipmentRead,
+            firstFewPermissions: token.permissions?.slice(0, 5)
+          });
+        }
       }
       return token;
     },
@@ -96,6 +95,7 @@ export const authOptions = {
       if (session?.user) {
         session.user.role = token.role;
         session.user.permissions = token.permissions;
+        session.user.id = token.userId || token.id;
         session.user.id = token.userId || token.id;
         session.user.isFirstLogin = token.isFirstLogin;
         session.user.email = token.email;

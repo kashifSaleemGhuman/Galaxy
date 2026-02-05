@@ -17,7 +17,7 @@
     "change-password": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/change-password.ts",
     "postman:generate": "node scripts/generate-postman.js",
     "postinstall": "prisma generate",
-    "vercel-build": "prisma generate && (prisma migrate deploy || prisma db push --accept-data-loss --skip-generate || true) && (npm run db:seed || true) && next build"
+    "vercel-build": "prisma generate && prisma db push --accept-data-loss --skip-generate && next build"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
@@ -37,6 +37,7 @@
     "@radix-ui/react-toast": "^1.1.5",
     "@react-email/render": "^1.4.0",
     "@sendgrid/mail": "^8.1.6",
+    "@supabase/supabase-js": "^2.39.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.19",
@@ -54,6 +55,7 @@
     "next-auth": "^4.23.2",
     "next-themes": "^0.2.1",
     "nodemailer": "^7.0.7",
+    "pdf-lib": "^1.17.1",
     "postcss": "^8.4.31",
     "react": "^18",
     "react-day-picker": "^8.8.2",

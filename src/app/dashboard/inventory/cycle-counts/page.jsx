@@ -37,8 +37,8 @@ export default function CycleCountsPage() {
   const { data: warehousesData } = useSWR('/api/inventory/warehouses?limit=1000', fetcher)
   
   // Fetch cycle counts using SWR
-  const { data: movementsData, error: movementsError, mutate: mutateMovements } = useSWR(
-    '/api/inventory/movements?type=adjustment',
+  const { data: cycleCountsData, error: cycleCountsError, mutate: mutateCycleCounts } = useSWR(
+    '/api/inventory/cycle-counts',
     fetcher,
     { refreshInterval: 5000 }
   )
@@ -49,56 +49,24 @@ export default function CycleCountsPage() {
     }
   }, [warehousesData])
 
-  // Process movements data into cycle counts format
+  // Apply API data
   useEffect(() => {
-    if (movementsData?.success && movementsData.data) {
-      // Filter for cycle counts and group by reference
-      const cycleCountMap = new Map()
-      
-      movementsData.data
-        .filter(movement => movement.notes?.includes('Cycle Count') || movement.referenceId?.startsWith('CC-'))
-        .forEach(movement => {
-          if (movement.referenceId) {
-            if (!cycleCountMap.has(movement.referenceId)) {
-              cycleCountMap.set(movement.referenceId, {
-                id: movement.referenceId,
-                countNumber: movement.referenceId,
-                warehouse: movement.warehouse,
-                location: movement.location,
-                status: 'completed',
-                notes: movement.notes || '',
-                countDate: movement.movementDate,
-                createdAt: movement.createdAt,
-                user: movement.user,
-                lines: []
-              })
-            }
-            
-            const cycleCount = cycleCountMap.get(movement.referenceId)
-            cycleCount.lines.push({
-              id: movement.id,
-              product: movement.product,
-              expectedQuantity: movement.quantity < 0 ? Math.abs(movement.quantity) : 0,
-              countedQuantity: movement.quantity > 0 ? movement.quantity : 0,
-              difference: movement.quantity,
-              notes: movement.notes
-            })
-          }
-        })
-      
-      setCycleCounts(Array.from(cycleCountMap.values()))
+    if (cycleCountsData?.success && Array.isArray(cycleCountsData.data)) {
+      setCycleCounts(cycleCountsData.data)
       setLoading(false)
-    } else if (movementsError) {
-      console.error('Error fetching cycle counts:', movementsError)
+    } else if (cycleCountsError) {
+      console.error('Error fetching cycle counts:', cycleCountsError)
       setLoading(false)
-    } else if (movementsData && !movementsData.success) {
+    } else if (cycleCountsData && !cycleCountsData.success) {
       setLoading(false)
     }
-  }, [movementsData, movementsError])
+  }, [cycleCountsData, cycleCountsError])
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'draft': return 'bg-gray-100 text-gray-800'
+      case 'pending': return 'bg-yellow-100 text-yellow-800'
+      case 'approved': return 'bg-green-100 text-green-800'
       case 'in_progress': return 'bg-blue-100 text-blue-800'
       case 'completed': return 'bg-green-100 text-green-800'
       case 'cancelled': return 'bg-red-100 text-red-800'
@@ -109,6 +77,8 @@ export default function CycleCountsPage() {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'draft': return '📝'
+      case 'pending': return '⏳'
+      case 'approved': return '✅'
       case 'in_progress': return '🔄'
       case 'completed': return '✅'
       case 'cancelled': return '❌'
@@ -119,6 +89,8 @@ export default function CycleCountsPage() {
   const getStatusLabel = (status) => {
     switch (status) {
       case 'draft': return 'Draft'
+      case 'pending': return 'Pending'
+      case 'approved': return 'Approved'
       case 'in_progress': return 'In Progress'
       case 'completed': return 'Completed'
       case 'cancelled': return 'Cancelled'
@@ -170,17 +142,6 @@ export default function CycleCountsPage() {
 
   const handleSaveCycleCount = async (cycleCountData) => {
     try {
-      // Show loading message
-      const loadingEvent = new CustomEvent('show-toast', {
-        detail: { 
-          title: 'Creating Cycle Count Request...', 
-          message: 'Please wait while your cycle count request is being created.',
-          type: 'info',
-          duration: 3000
-        }
-      })
-      window.dispatchEvent(loadingEvent)
-
       // Prepare the payload for the API
       const payload = {
         warehouseId: cycleCountData.warehouseId,
@@ -207,28 +168,15 @@ export default function CycleCountsPage() {
       const result = await response.json()
 
       if (!response.ok) {
-        const errorEvent = new CustomEvent('show-toast', {
-          detail: { 
-            title: 'Error', 
-            message: result.error || 'Failed to create cycle count request',
-            type: 'error',
-            duration: 5000
-          }
-        })
-        window.dispatchEvent(errorEvent)
         throw new Error(result.error || 'Failed to create cycle count')
       }
 
-      // Show success message
-      const successEvent = new CustomEvent('show-toast', {
-        detail: { 
-          title: 'Cycle Count Request Created', 
-          message: result.message || 'Your cycle count request has been created and is pending approval from Super Admin.',
-          type: 'success',
-          duration: 6000
-        }
-      })
-      window.dispatchEvent(successEvent)
+      // Check if a request was created (for WAREHOUSE_OPERATOR and INVENTORY_MANAGER)
+      if (result.message && result.message.includes('pending approval')) {
+        alert('Cycle count request created successfully! It is now pending approval from Super Admin.')
+      } else {
+        alert('Cycle count completed successfully!')
+      }
 
       // Refresh the cycle counts list
       await fetchCycleCounts()
@@ -236,21 +184,13 @@ export default function CycleCountsPage() {
       return true
     } catch (error) {
       console.error('Error saving cycle count:', error)
-      const errorEvent = new CustomEvent('show-toast', {
-        detail: { 
-          title: 'Error', 
-          message: error.message || 'Failed to create cycle count',
-          type: 'error',
-          duration: 5000
-        }
-      })
-      window.dispatchEvent(errorEvent)
+      alert(`Error: ${error.message || 'Failed to create cycle count'}`)
       throw error
     }
   }
 
   const fetchCycleCounts = async () => {
-    mutateMovements()
+    mutateCycleCounts()
   }
 
   const handleSelectCycleCount = (cycleCountId) => {
@@ -270,12 +210,15 @@ export default function CycleCountsPage() {
   }
 
   const filteredCycleCounts = cycleCounts.filter(cycleCount => {
-    const matchesSearch = cycleCount.countNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         cycleCount.warehouse.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         cycleCount.notes?.toLowerCase().includes(searchTerm.toLowerCase())
+    const countNumber = cycleCount.countNumber || ''
+    const warehouseName = cycleCount.warehouse?.name || ''
+    const notes = cycleCount.notes || ''
+    const matchesSearch = countNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         warehouseName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         notes.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesStatus = filterStatus === 'all' || cycleCount.status === filterStatus
-    const matchesWarehouse = filterWarehouse === 'all' || cycleCount.warehouse.id === filterWarehouse
+    const matchesWarehouse = filterWarehouse === 'all' || cycleCount.warehouse?.id === filterWarehouse
     
     return matchesSearch && matchesStatus && matchesWarehouse
   })
@@ -304,8 +247,8 @@ export default function CycleCountsPage() {
         <div className="flex items-center">
           <Building2 className="h-4 w-4 text-gray-400 mr-2" />
           <div>
-            <div className="text-sm text-gray-900">{item.warehouse.name}</div>
-            <div className="text-sm text-gray-500">{item.warehouse.code}</div>
+            <div className="text-sm text-gray-900">{item.warehouse?.name || 'N/A'}</div>
+            <div className="text-sm text-gray-500">{item.warehouse?.code || 'N/A'}</div>
           </div>
         </div>
       )
@@ -328,7 +271,7 @@ export default function CycleCountsPage() {
       label: 'Items',
       render: (item) => (
         <div className="text-center">
-          <div className="text-sm font-medium text-gray-900">{item.lines.length}</div>
+          <div className="text-sm font-medium text-gray-900">{item.lines?.length || 0}</div>
           <div className="text-xs text-gray-500">products</div>
         </div>
       )
@@ -337,8 +280,8 @@ export default function CycleCountsPage() {
       key: 'impact',
       label: 'Impact',
       render: (item) => {
-        const totalDifference = item.lines.reduce((sum, line) => sum + (line.difference || 0), 0)
-        const totalCost = item.lines.reduce((sum, line) => sum + (line.totalCost || 0), 0)
+        const totalDifference = (item.lines || []).reduce((sum, line) => sum + (line.difference || 0), 0)
+        const totalCost = (item.lines || []).reduce((sum, line) => sum + (line.totalCost || 0), 0)
         return (
           <div className="text-center">
             <div className={`text-sm font-medium ${totalDifference > 0 ? 'text-green-600' : totalDifference < 0 ? 'text-red-600' : 'text-gray-600'}`}>
@@ -365,8 +308,8 @@ export default function CycleCountsPage() {
       label: 'Created By',
       render: (item) => (
         <div className="text-center">
-          <div className="text-sm text-gray-900">{item.user.firstName} {item.user.lastName}</div>
-          <div className="text-xs text-gray-500">{item.user.email}</div>
+          <div className="text-sm text-gray-900">{item.user?.firstName || 'Unknown'} {item.user?.lastName || ''}</div>
+          <div className="text-xs text-gray-500">{item.user?.email || 'N/A'}</div>
         </div>
       )
     },
@@ -503,6 +446,8 @@ export default function CycleCountsPage() {
             >
               <option value="all">All Status</option>
               <option value="draft">Draft</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
@@ -589,8 +534,8 @@ export default function CycleCountsPage() {
       {viewMode === 'grid' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCycleCounts.map((cycleCount) => {
-            const totalDifference = cycleCount.lines.reduce((sum, line) => sum + (line.difference || 0), 0)
-            const totalCost = cycleCount.lines.reduce((sum, line) => sum + (line.totalCost || 0), 0)
+            const totalDifference = (cycleCount.lines || []).reduce((sum, line) => sum + (line.difference || 0), 0)
+            const totalCost = (cycleCount.lines || []).reduce((sum, line) => sum + (line.totalCost || 0), 0)
             
             return (
               <div key={cycleCount.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
@@ -612,7 +557,7 @@ export default function CycleCountsPage() {
                 <div className="space-y-3 mb-4">
                   <div className="flex items-center text-sm text-gray-600">
                     <Building2 className="h-4 w-4 mr-2" />
-                    <span>{cycleCount.warehouse.name}</span>
+                    <span>{cycleCount.warehouse?.name || 'N/A'}</span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <MapPinIcon className="h-4 w-4 mr-2" />
@@ -620,7 +565,7 @@ export default function CycleCountsPage() {
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <Package className="h-4 w-4 mr-2" />
-                    <span>{cycleCount.lines.length} items</span>
+                    <span>{(cycleCount.lines?.length || 0)} items</span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <ClipboardList className="h-4 w-4 mr-2" />

@@ -1,0 +1,2025 @@
+{
+	"info": {
+		"_postman_id": "hrm-system-collection",
+		"name": "HRM System - Complete API Collection",
+		"description": "Complete Postman collection for all HRM system modules including Employee Management, Attendance, Leave, Payroll, Documents, and Shifts",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "hrm-system"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "Login to get session token"
+					}
+				},
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"John Doe\",\n  \"role\": \"USER\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Employee Management",
+			"item": [
+				{
+					"name": "Get All Employees",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/organization/employees",
+							"host": ["{{base_url}}"],
+							"path": ["api", "organization", "employees"]
+						},
+						"description": "Get list of all employees (HR only)"
+					}
+				},
+				{
+					"name": "Create Employee",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"employeeId\": \"EMP001\",\n  \"name\": \"John Doe\",\n  \"idCardNumber\": \"123456789\",\n  \"dob\": \"1990-01-01\",\n  \"gender\": \"MALE\",\n  \"contactNumber\": \"+1234567890\",\n  \"address\": \"123 Main St\",\n  \"dateOfJoining\": \"2024-01-01\",\n  \"department\": \"IT\",\n  \"designation\": \"Software Engineer\",\n  \"salary\": 50000,\n  \"emergencyContact\": {\n    \"name\": \"Jane Doe\",\n    \"relationship\": \"Spouse\",\n    \"phone\": \"+1234567891\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/organization/employees",
+							"host": ["{{base_url}}"],
+							"path": ["api", "organization", "employees"]
+						},
+						"description": "Create a new employee (HR only). Returns employee with credentials."
+					}
+				},
+				{
+					"name": "Get Employee by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/organization/employees/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "organization", "employees", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "employee-id-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Employee",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"John Doe Updated\",\n  \"designation\": \"Senior Software Engineer\",\n  \"salary\": 60000\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/organization/employees/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "organization", "employees", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "employee-id-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Generate Employee Credentials",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/organization/employees/:id/credentials",
+							"host": ["{{base_url}}"],
+							"path": ["api", "organization", "employees", ":id", "credentials"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "employee-id-here"
+								}
+							]
+						},
+						"description": "Generate or regenerate login credentials for an employee"
+					}
+				}
+			]
+		},
+		{
+			"name": "Attendance Management",
+			"item": [
+				{
+					"name": "Check In",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"timestamp\": \"2024-01-15T09:00:00Z\",\n  \"location\": \"Office Main Gate\",\n  \"deviceId\": \"device-123\",\n  \"notes\": \"Regular check-in\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/hrm/attendance/check-in",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "attendance", "check-in"]
+						},
+						"description": "Employee check-in (Employee only)"
+					}
+				},
+				{
+					"name": "Check Out",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"timestamp\": \"2024-01-15T18:00:00Z\",\n  \"location\": \"Office Main Gate\",\n  \"deviceId\": \"device-123\",\n  \"notes\": \"Regular check-out\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/hrm/attendance/check-out",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "attendance", "check-out"]
+						},
+						"description": "Employee check-out (Employee only)"
+					}
+				},
+				{
+					"name": "Get My Attendance",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/hrm/attendance/my-attendance?startDate=2024-01-01&endDate=2024-01-31",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "attendance", "my-attendance"],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "endDate",
+									"value": "2024-01-31"
+								}
+							]
+						},
+						"description": "Get own attendance records with summary (Employee only)"
+					}
+				},
+				{
+					"name": "Get All Attendance (HR)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/hrm/attendance?employeeId=emp-id&startDate=2024-01-01&endDate=2024-01-31&status=PRESENT",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "attendance"],
+							"query": [
+								{
+									"key": "employeeId",
+									"value": "emp-id",
+									"description": "Optional: Filter by employee"
+								},
+								{
+									"key": "startDate",
+									"value": "2024-01-01",
+									"description": "Optional: Start date filter"
+								},
+								{
+									"key": "endDate",
+									"value": "2024-01-31",
+									"description": "Optional: End date filter"
+								},
+								{
+									"key": "status",
+									"value": "PRESENT",
+									"description": "Optional: Filter by status (PRESENT, ABSENT, LATE, HALF_DAY, LEAVE)"
+								}
+							]
+						},
+						"description": "Get all attendance records (HR only)"
+					}
+				},
+				{
+					"name": "Request Attendance Correction",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"date\": \"2024-01-15\",\n  \"requestedCheckIn\": \"2024-01-15T09:00:00Z\",\n  \"requestedCheckOut\": \"2024-01-15T18:00:00Z\",\n  \"reason\": \"Forgot to check in/out\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/hrm/attendance/corrections",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "attendance", "corrections"]
+						},
+						"description": "Request attendance correction (Employee only)"
+					}
+				},
+				{
+					"name": "Get Attendance Corrections",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/hrm/attendance/corrections",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "attendance", "corrections"]
+						},
+						"description": "Get attendance correction requests (filtered by role)"
+					}
+				},
+				{
+					"name": "Approve Attendance Correction",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reviewNotes\": \"Approved - Valid reason provided\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/hrm/attendance/corrections/:id/approve",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "attendance", "corrections", ":id", "approve"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "correction-id-here"
+								}
+							]
+						},
+						"description": "Approve attendance correction (HR only)"
+					}
+				},
+				{
+					"name": "Reject Attendance Correction",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reviewNotes\": \"Rejected - Insufficient reason\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/hrm/attendance/corrections/:id/reject",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "attendance", "corrections", ":id", "reject"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "correction-id-here"
+								}
+							]
+						},
+						"description": "Reject attendance correction (HR only)"
+					}
+				}
+			]
+		},
+		{
+			"name": "Leave Management",
+			"item": [
+				{
+					"name": "Leave Types",
+					"item": [
+						{
+							"name": "Get All Leave Types",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/leave/types?isActive=true",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "leave", "types"],
+									"query": [
+										{
+											"key": "isActive",
+											"value": "true",
+											"description": "Optional: Filter by active status"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Create Leave Type",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Casual Leave\",\n  \"code\": \"CL\",\n  \"description\": \"Casual leave for personal reasons\",\n  \"isPaid\": true,\n  \"requiresApproval\": true,\n  \"maxConsecutiveDays\": 5,\n  \"requiresMedicalCertificate\": false\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/leave/types",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "leave", "types"]
+								},
+								"description": "Create a new leave type (HR only)"
+							}
+						},
+						{
+							"name": "Get Leave Type by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/leave/types/:id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "leave", "types", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "leave-type-id-here"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Update Leave Type",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Casual Leave Updated\",\n  \"isActive\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/leave/types/:id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "leave", "types", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "leave-type-id-here"
+										}
+									]
+								},
+								"description": "Update leave type (HR only)"
+							}
+						}
+					]
+				},
+				{
+					"name": "Leave Policies",
+					"item": [
+						{
+							"name": "Get All Leave Policies",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/leave/policies?leaveTypeId=type-id&isActive=true",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "leave", "policies"],
+									"query": [
+										{
+											"key": "leaveTypeId",
+											"value": "type-id",
+											"description": "Optional: Filter by leave type"
+										},
+										{
+											"key": "isActive",
+											"value": "true",
+											"description": "Optional: Filter by active status"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Create Leave Policy",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"leaveTypeId\": \"leave-type-id\",\n  \"name\": \"Monthly Casual Leave Policy\",\n  \"accrualType\": \"MONTHLY\",\n  \"accrualAmount\": 1.5,\n  \"accrualFrequency\": 1,\n  \"maxBalance\": 12,\n  \"allowNegativeBalance\": false,\n  \"carryForwardEnabled\": true,\n  \"carryForwardLimit\": 5,\n  \"carryForwardExpiryMonths\": 12,\n  \"encashmentEnabled\": false,\n  \"effectiveFrom\": \"2024-01-01\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/leave/policies",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "leave", "policies"]
+								},
+								"description": "Create a new leave policy (HR only). Accrual types: MONTHLY, YEARLY, CUSTOM, NONE"
+							}
+						},
+						{
+							"name": "Get Leave Policy by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/leave/policies/:id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "leave", "policies", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "policy-id-here"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Update Leave Policy",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Policy Name\",\n  \"maxBalance\": 15\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/leave/policies/:id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "leave", "policies", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "policy-id-here"
+										}
+									]
+								},
+								"description": "Update leave policy (HR only)"
+							}
+						},
+						{
+							"name": "Assign Policy to Employee",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"policyId\": \"policy-id\",\n  \"employeeId\": \"employee-id\",\n  \"effectiveFrom\": \"2024-01-01\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/leave/policies/assign",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "leave", "policies", "assign"]
+								},
+								"description": "Assign leave policy to an employee (HR only)"
+							}
+						}
+					]
+				},
+				{
+					"name": "Leave Requests",
+					"item": [
+						{
+							"name": "Get All Leave Requests",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/leave/requests?employeeId=emp-id&status=PENDING&leaveTypeId=type-id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "leave", "requests"],
+									"query": [
+										{
+											"key": "employeeId",
+											"value": "emp-id",
+											"description": "Optional: Filter by employee (HR only)"
+										},
+										{
+											"key": "status",
+											"value": "PENDING",
+											"description": "Optional: Filter by status (PENDING, APPROVED, REJECTED, CANCELLED)"
+										},
+										{
+											"key": "leaveTypeId",
+											"value": "type-id",
+											"description": "Optional: Filter by leave type"
+										}
+									]
+								},
+								"description": "Get leave requests (filtered by role - employees see only their own)"
+							}
+						},
+						{
+							"name": "Create Leave Request",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"leaveTypeId\": \"leave-type-id\",\n  \"startDate\": \"2024-02-01\",\n  \"endDate\": \"2024-02-05\",\n  \"reason\": \"Family vacation\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/leave/requests",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "leave", "requests"]
+								},
+								"description": "Create a new leave request (Employee only)"
+							}
+						},
+						{
+							"name": "Get Leave Request by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/leave/requests/:id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "leave", "requests", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "request-id-here"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Approve Leave Request",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"approvalNotes\": \"Approved - Enjoy your vacation!\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/leave/requests/:id/approve",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "leave", "requests", ":id", "approve"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "request-id-here"
+										}
+									]
+								},
+								"description": "Approve leave request (HR only)"
+							}
+						},
+						{
+							"name": "Reject Leave Request",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"rejectionReason\": \"Insufficient leave balance\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/leave/requests/:id/reject",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "leave", "requests", ":id", "reject"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "request-id-here"
+										}
+									]
+								},
+								"description": "Reject leave request (HR only)"
+							}
+						},
+						{
+							"name": "Cancel Leave Request",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"cancellationReason\": \"Plans changed\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/leave/requests/:id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "leave", "requests", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "request-id-here"
+										}
+									]
+								},
+								"description": "Cancel leave request (Employee can cancel own pending requests, HR can cancel any)"
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Leave Balances",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/hrm/leave/balances?employeeId=emp-id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "leave", "balances"],
+							"query": [
+								{
+									"key": "employeeId",
+									"value": "emp-id",
+									"description": "Optional: Get balances for specific employee (HR only). Employees see only their own."
+								}
+							]
+						},
+						"description": "Get leave balances (filtered by role)"
+					}
+				}
+			]
+		},
+		{
+			"name": "Payroll Management",
+			"item": [
+				{
+					"name": "Salary Structures",
+					"item": [
+						{
+							"name": "Get All Salary Structures",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/salary-structures?employeeId=emp-id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "salary-structures"],
+									"query": [
+										{
+											"key": "employeeId",
+											"value": "emp-id",
+											"description": "Optional: Filter by employee"
+										}
+									]
+								},
+								"description": "Get all salary structures (HR only)"
+							}
+						},
+						{
+							"name": "Create Salary Structure",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"employee-id\",\n  \"effectiveFrom\": \"2024-01-01\",\n  \"effectiveTo\": null,\n  \"components\": [\n    {\n      \"name\": \"Basic Salary\",\n      \"type\": \"ALLOWANCE\",\n      \"calculationType\": \"FIXED\",\n      \"amount\": 50000,\n      \"priority\": 0,\n      \"isTaxable\": true\n    },\n    {\n      \"name\": \"House Allowance\",\n      \"type\": \"ALLOWANCE\",\n      \"calculationType\": \"PERCENTAGE\",\n      \"amount\": 20,\n      \"baseComponentId\": null,\n      \"priority\": 1,\n      \"isTaxable\": true\n    },\n    {\n      \"name\": \"Tax Deduction\",\n      \"type\": \"DEDUCTION\",\n      \"calculationType\": \"PERCENTAGE\",\n      \"amount\": 10,\n      \"priority\": 2,\n      \"isTaxable\": false\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/salary-structures",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "salary-structures"]
+								},
+								"description": "Create salary structure (HR only). Types: ALLOWANCE, DEDUCTION. Calculation types: FIXED, PERCENTAGE"
+							}
+						},
+						{
+							"name": "Get Salary Structure by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/salary-structures/:id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "salary-structures", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "structure-id-here"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Update Salary Structure",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"effectiveTo\": \"2024-12-31\",\n  \"isActive\": false\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/salary-structures/:id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "salary-structures", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "structure-id-here"
+										}
+									]
+								},
+								"description": "Update salary structure (HR only)"
+							}
+						},
+						{
+							"name": "Delete Salary Structure",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/salary-structures/:id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "salary-structures", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "structure-id-here"
+										}
+									]
+								},
+								"description": "Delete salary structure (HR only). Cannot delete if used in finalized payroll."
+							}
+						}
+					]
+				},
+				{
+					"name": "Payroll Periods",
+					"item": [
+						{
+							"name": "Get All Payroll Periods",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/periods",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "periods"]
+								},
+								"description": "Get all payroll periods (HR only)"
+							}
+						},
+						{
+							"name": "Create Payroll Period",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"periodName\": \"January 2024\",\n  \"periodStart\": \"2024-01-01\",\n  \"periodEnd\": \"2024-01-31\",\n  \"notes\": \"Monthly payroll for January\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/periods",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "periods"]
+								},
+								"description": "Create a new payroll period (HR only)"
+							}
+						},
+						{
+							"name": "Get Payroll Period by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/periods/:id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "periods", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "period-id-here"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Update Payroll Period",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"periodName\": \"January 2024 Updated\",\n  \"notes\": \"Updated notes\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/periods/:id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "periods", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "period-id-here"
+										}
+									]
+								},
+								"description": "Update payroll period (HR only). Cannot update if finalized."
+							}
+						},
+						{
+							"name": "Lock Attendance for Period",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/periods/:id/lock-attendance",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "periods", ":id", "lock-attendance"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "period-id-here"
+										}
+									]
+								},
+								"description": "Lock attendance for payroll period (HR only). Required before generating payroll."
+							}
+						},
+						{
+							"name": "Finalize Payroll Period",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/periods/:id/finalize",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "periods", ":id", "finalize"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "period-id-here"
+										}
+									]
+								},
+								"description": "Finalize payroll period (HR only). Finalized periods cannot be modified."
+							}
+						},
+						{
+							"name": "Mark Period as Paid",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/periods/:id/mark-paid",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "periods", ":id", "mark-paid"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "period-id-here"
+										}
+									]
+								},
+								"description": "Mark payroll period as paid (HR only)"
+							}
+						},
+						{
+							"name": "Get Period Summary",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/periods/:id/summary",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "periods", ":id", "summary"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "period-id-here"
+										}
+									]
+								},
+								"description": "Get payroll period summary statistics (HR only)"
+							}
+						}
+					]
+				},
+				{
+					"name": "Payroll Generation",
+					"item": [
+						{
+							"name": "Generate Payroll",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"payrollPeriodId\": \"period-id\",\n  \"employeeIds\": [\"emp-id-1\", \"emp-id-2\"]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/generate",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "generate"]
+								},
+								"description": "Generate payroll for a period (HR only). Omit employeeIds to generate for all employees."
+							}
+						}
+					]
+				},
+				{
+					"name": "Payroll Records",
+					"item": [
+						{
+							"name": "Get All Payroll Records",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/records?employeeId=emp-id&payrollPeriodId=period-id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "records"],
+									"query": [
+										{
+											"key": "employeeId",
+											"value": "emp-id",
+											"description": "Optional: Filter by employee (HR only). Employees see only their own."
+										},
+										{
+											"key": "payrollPeriodId",
+											"value": "period-id",
+											"description": "Optional: Filter by payroll period"
+										}
+									]
+								},
+								"description": "Get payroll records (filtered by role)"
+							}
+						},
+						{
+							"name": "Get Payroll Record by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/records/:id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "records", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "record-id-here"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Employee Payroll History",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/records/employee/:employeeId",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "records", "employee", ":employeeId"],
+									"variable": [
+										{
+											"key": "employeeId",
+											"value": "employee-id-here"
+										}
+									]
+								},
+								"description": "Get payroll history for a specific employee"
+							}
+						}
+					]
+				},
+				{
+					"name": "Payslips",
+					"item": [
+						{
+							"name": "Get Payslip (JSON)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/payslips/:recordId",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "payslips", ":recordId"],
+									"variable": [
+										{
+											"key": "recordId",
+											"value": "record-id-here"
+										}
+									]
+								},
+								"description": "Get payslip data in JSON format"
+							}
+						},
+						{
+							"name": "Get Payslip (Text)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/payslips/:recordId?format=text",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "payslips", ":recordId"],
+									"query": [
+										{
+											"key": "format",
+											"value": "text"
+										}
+									],
+									"variable": [
+										{
+											"key": "recordId",
+											"value": "record-id-here"
+										}
+									]
+								},
+								"description": "Get payslip in text format"
+							}
+						}
+					]
+				},
+				{
+					"name": "Bonuses",
+					"item": [
+						{
+							"name": "Get All Bonuses",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/bonuses",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "bonuses"]
+								},
+								"description": "Get all bonuses (HR only)"
+							}
+						},
+						{
+							"name": "Create Bonus",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"employee-id\",\n  \"name\": \"Performance Bonus\",\n  \"amount\": 5000,\n  \"type\": \"ONE_TIME\",\n  \"notes\": \"Outstanding performance in Q4\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/bonuses",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "bonuses"]
+								},
+								"description": "Create a bonus (HR only). Types: ONE_TIME, PERFORMANCE_BASED"
+							}
+						},
+						{
+							"name": "Approve Bonus",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/bonuses/:id/approve",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "bonuses", ":id", "approve"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "bonus-id-here"
+										}
+									]
+								},
+								"description": "Approve bonus to include in payroll (HR only)"
+							}
+						}
+					]
+				},
+				{
+					"name": "Loans",
+					"item": [
+						{
+							"name": "Get All Loans",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/loans",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "loans"]
+								},
+								"description": "Get all loans (HR only)"
+							}
+						},
+						{
+							"name": "Create Loan",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"employeeId\": \"employee-id\",\n  \"loanNumber\": \"LOAN-001\",\n  \"principalAmount\": 50000,\n  \"interestRate\": 5.0,\n  \"installmentAmount\": 4375,\n  \"totalInstallments\": 12,\n  \"startDate\": \"2024-01-01\",\n  \"notes\": \"Employee loan for personal use\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/loans",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "loans"]
+								},
+								"description": "Create a loan (HR only). System automatically creates installment schedule. End date is calculated automatically."
+							}
+						},
+						{
+							"name": "Get Loan by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/loans/:id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "loans", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "loan-id-here"
+										}
+									]
+								},
+								"description": "Get loan details with installments (HR only)"
+							}
+						},
+						{
+							"name": "Get Loans by Employee",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/payroll/loans?employeeId=emp-id&status=ACTIVE",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "payroll", "loans"],
+									"query": [
+										{
+											"key": "employeeId",
+											"value": "emp-id",
+											"description": "Optional: Filter by employee"
+										},
+										{
+											"key": "status",
+											"value": "ACTIVE",
+											"description": "Optional: Filter by status (ACTIVE, COMPLETED, CANCELLED)"
+										}
+									]
+								},
+								"description": "Get loans with optional filters (HR only)"
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Document Management",
+			"item": [
+				{
+					"name": "Get All Documents",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/hrm/documents?employeeId=emp-id&category=EMPLOYMENT&documentType=CONTRACT",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "documents"],
+							"query": [
+								{
+									"key": "employeeId",
+									"value": "emp-id",
+									"description": "Optional: Filter by employee (HR only). Employees see only their own."
+								},
+								{
+									"key": "category",
+									"value": "EMPLOYMENT",
+									"description": "Optional: Filter by category"
+								},
+								{
+									"key": "documentType",
+									"value": "CONTRACT",
+									"description": "Optional: Filter by document type"
+								}
+							]
+						},
+						"description": "Get all documents (filtered by role)"
+					}
+				},
+				{
+					"name": "Upload Document",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "employeeId",
+									"value": "employee-id",
+									"type": "text"
+								},
+								{
+									"key": "category",
+									"value": "EMPLOYMENT",
+									"type": "text"
+								},
+								{
+									"key": "documentType",
+									"value": "CONTRACT",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Employment contract document",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/hrm/documents/upload",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "documents", "upload"]
+						},
+						"description": "Upload a document (HR only)"
+					}
+				},
+				{
+					"name": "Get Document by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/hrm/documents/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "documents", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "document-id-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Download Document",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/hrm/documents/:id/download",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "documents", ":id", "download"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "document-id-here"
+								}
+							]
+						},
+						"description": "Download document file"
+					}
+				},
+				{
+					"name": "Update Document",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"description\": \"Updated description\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/hrm/documents/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "documents", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "document-id-here"
+								}
+							]
+						},
+						"description": "Update document metadata (HR only)"
+					}
+				},
+				{
+					"name": "Delete Document",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/hrm/documents/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "documents", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "document-id-here"
+								}
+							]
+						},
+						"description": "Delete document (HR only)"
+					}
+				},
+				{
+					"name": "Generate Document",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"templateId\": \"template-id\",\n  \"employeeId\": \"employee-id\",\n  \"data\": {\n    \"customField1\": \"value1\",\n    \"customField2\": \"value2\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/hrm/documents/generate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "documents", "generate"]
+						},
+						"description": "Generate document from template (HR only)"
+					}
+				},
+				{
+					"name": "Document Templates",
+					"item": [
+						{
+							"name": "Get All Templates",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/document-templates",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "document-templates"]
+								},
+								"description": "Get all document templates (HR only)"
+							}
+						},
+						{
+							"name": "Create Template",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Employment Letter Template\",\n  \"category\": \"EMPLOYMENT_CONTRACT\",\n  \"description\": \"Standard employment contract template\",\n  \"content\": \"This is a template with {{employeeName}} and {{dateOfJoining}}\",\n  \"fields\": [\"employeeName\", \"dateOfJoining\", \"salary\"],\n  \"isActive\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/document-templates",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "document-templates"]
+								},
+								"description": "Create a new document template (HR only)"
+							}
+						},
+						{
+							"name": "Get Template by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/document-templates/:id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "document-templates", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "template-id-here"
+										}
+									]
+								},
+								"description": "Get a specific template (HR only)"
+							}
+						},
+						{
+							"name": "Update Template",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Template Name\",\n  \"description\": \"Updated description\",\n  \"isActive\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/hrm/document-templates/:id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "document-templates", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "template-id-here"
+										}
+									]
+								},
+								"description": "Update document template (HR only)"
+							}
+						},
+						{
+							"name": "Delete Template",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/document-templates/:id",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "document-templates", ":id"],
+									"variable": [
+										{
+											"key": "id",
+											"value": "template-id-here"
+										}
+									]
+								},
+								"description": "Delete template (soft delete - sets isActive to false) (HR only)"
+							}
+						},
+						{
+							"name": "Get Template Categories",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "{{session_cookie}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/hrm/document-templates/categories",
+									"host": ["{{base_url}}"],
+									"path": ["api", "hrm", "document-templates", "categories"]
+								},
+								"description": "Get all available template categories"
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Shift Management",
+			"item": [
+				{
+					"name": "Get All Shifts",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/hrm/shifts",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "shifts"]
+						},
+						"description": "Get all active shifts (HR only)"
+					}
+				},
+				{
+					"name": "Create Shift",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Morning Shift\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"18:00\",\n  \"gracePeriodMinutes\": 15,\n  \"breakDurationMinutes\": 60,\n  \"halfDayThresholdHours\": 4.0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/hrm/shifts",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "shifts"]
+						},
+						"description": "Create a new shift (HR only). Time format: HH:mm (24-hour format)"
+					}
+				},
+				{
+					"name": "Assign Shift to Employee",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "{{session_cookie}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"employeeId\": \"employee-id\",\n  \"shiftId\": \"shift-id\",\n  \"effectiveFrom\": \"2024-01-01\",\n  \"effectiveTo\": null\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/hrm/shifts/assign",
+							"host": ["{{base_url}}"],
+							"path": ["api", "hrm", "shifts", "assign"]
+						},
+						"description": "Assign shift to employee (HR only). Previous active assignments are automatically deactivated."
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "session_cookie",
+			"value": "",
+			"type": "string",
+			"description": "Session cookie from login. Format: next-auth.session-token=YOUR_TOKEN_HERE"
+		}
+	]
+}
