@@ -15,10 +15,12 @@ export async function GET(req) {
 
     const currentUser = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: {
-        employee: true
-      },
-      select: { role: true, employee: { select: { id: true } } }
+      select: { 
+        role: true, 
+        employee: { 
+          select: { id: true } 
+        } 
+      }
     })
 
     if (!currentUser) {

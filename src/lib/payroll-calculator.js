@@ -44,7 +44,7 @@ export async function calculatePayroll({ employeeId, payrollPeriodId, calculated
             ]
           },
           include: {
-            components: {
+            salaryComponents: {
               where: { isActive: true },
               orderBy: { priority: 'asc' }
             }
@@ -59,11 +59,29 @@ export async function calculatePayroll({ employeeId, payrollPeriodId, calculated
       throw new Error('Employee not found')
     }
 
-    if (!employee.salaryStructures || employee.salaryStructures.length === 0) {
-      throw new Error('No active salary structure found for employee')
+    let salaryStructure = employee.salaryStructures?.[0]
+    if (!salaryStructure) {
+      if (!employee.salary || Number(employee.salary) <= 0) {
+        throw new Error('No active salary structure found and employee salary is not set')
+      }
+      // Fallback: allow HR to set monthly salary directly on employee profile.
+      salaryStructure = {
+        id: `employee-salary-${employee.id}`,
+        salaryComponents: [
+          {
+            id: `basic-${employee.id}`,
+            name: 'Basic Salary',
+            type: 'ALLOWANCE',
+            calculationType: 'FIXED',
+            amount: employee.salary,
+            baseComponentId: null,
+            isTaxable: true,
+            isActive: true,
+            priority: 1
+          }
+        ]
+      }
     }
-
-    const salaryStructure = employee.salaryStructures[0]
 
     // 3. Get attendance data (only locked records)
     const attendanceData = await getAttendanceData(employeeId, payrollPeriod.periodStart, payrollPeriod.periodEnd)
@@ -101,8 +119,23 @@ export async function calculatePayroll({ employeeId, payrollPeriodId, calculated
     // 8. Get approved bonuses
     const bonuses = await getApprovedBonuses(employeeId, payrollPeriodId)
 
+    // 8.5. Apply manual additions from HR
+    const manualAdditions = await getManualSalaryAdditions(employeeId, payrollPeriodId)
+    const allAllowanceComponents = [
+      ...allowancesCalculation.components,
+      ...manualAdditions.items.map((item) => ({
+        name: `Manual Addition: ${item.reason}`,
+        calculationType: 'FIXED',
+        baseAmount: null,
+        amount: Number(item.amount),
+        isTaxable: false,
+        priority: 996
+      }))
+    ]
+    const totalAllowances = allowancesCalculation.totalAllowances + manualAdditions.totalAmount
+
     // 9. Calculate final amounts
-    const grossSalary = baseSalaryCalculation.adjustedBaseSalary + allowancesCalculation.totalAllowances + bonuses.totalAmount
+    const grossSalary = baseSalaryCalculation.adjustedBaseSalary + totalAllowances + bonuses.totalAmount
     const totalDeductions = deductionsCalculation.totalDeductions
     const netSalary = grossSalary - totalDeductions
 
@@ -115,12 +148,12 @@ export async function calculatePayroll({ employeeId, payrollPeriodId, calculated
         unpaidLeaveDeduction: Number(baseSalaryCalculation.unpaidLeaveDeduction),
         calculation: baseSalaryCalculation.calculation
       },
-      allowances: allowancesCalculation.components,
+      allowances: allAllowanceComponents,
       deductions: deductionsCalculation.components,
       bonuses: bonuses.components,
       totals: {
         grossSalary: Number(grossSalary),
-        totalAllowances: Number(allowancesCalculation.totalAllowances),
+        totalAllowances: Number(totalAllowances),
         totalDeductions: Number(totalDeductions),
         netSalary: Number(netSalary)
       }
@@ -142,14 +175,14 @@ export async function calculatePayroll({ employeeId, payrollPeriodId, calculated
       payrollPeriodId,
       salaryStructureId: salaryStructure.id,
       grossSalary,
-      totalAllowances: allowancesCalculation.totalAllowances,
+      totalAllowances,
       totalDeductions,
       netSalary,
       calculationBreakdown: serializeForJson(calculationBreakdown),
       attendanceSummary: serializeForJson(attendanceData.summary),
       leaveSummary: serializeForJson(leaveData.summary),
       components: [
-        ...allowancesCalculation.components.map(c => ({
+        ...allAllowanceComponents.map(c => ({
           componentName: c.name,
           componentType: 'ALLOWANCE',
           calculationType: c.calculationType,
@@ -288,13 +321,13 @@ async function getLeaveData(employeeId, periodStart, periodEnd) {
 function calculateBaseSalary({ employee, salaryStructure, payrollPeriod, attendanceData, leaveData }) {
   // Get base salary from first allowance component (typically basic salary)
   // If no component with "basic" in name, use the first allowance component
-  let basicComponent = salaryStructure.components.find(c => 
+  let basicComponent = salaryStructure.salaryComponents.find(c => 
     c.type === 'ALLOWANCE' && c.name.toLowerCase().includes('basic')
   )
 
   // Fallback to first allowance component if no "basic" found
   if (!basicComponent) {
-    basicComponent = salaryStructure.components.find(c => c.type === 'ALLOWANCE')
+    basicComponent = salaryStructure.salaryComponents.find(c => c.type === 'ALLOWANCE')
   }
 
   if (!basicComponent) {
@@ -360,7 +393,7 @@ function calculateBaseSalary({ employee, salaryStructure, payrollPeriod, attenda
  * Calculate allowances
  */
 function calculateAllowances({ salaryStructure, baseSalary, attendanceData, leaveData }) {
-  const allowanceComponents = salaryStructure.components.filter(c => 
+  const allowanceComponents = salaryStructure.salaryComponents.filter(c => 
     c.type === 'ALLOWANCE' && !c.name.toLowerCase().includes('basic')
   )
 
@@ -380,7 +413,7 @@ function calculateAllowances({ salaryStructure, baseSalary, attendanceData, leav
         amount = (baseSalary * Number(component.amount)) / 100
       } else {
         // Find base component
-        const baseComponent = salaryStructure.components.find(c => c.id === component.baseComponentId)
+        const baseComponent = salaryStructure.salaryComponents.find(c => c.id === component.baseComponentId)
         if (baseComponent) {
           baseAmount = Number(baseComponent.amount)
           amount = (baseAmount * Number(component.amount)) / 100
@@ -422,7 +455,7 @@ function calculateAllowances({ salaryStructure, baseSalary, attendanceData, leav
  * Calculate deductions
  */
 async function calculateDeductions({ employeeId, salaryStructure, baseSalary, grossSalary, payrollPeriod, attendanceData }) {
-  const deductionComponents = salaryStructure.components.filter(c => c.type === 'DEDUCTION')
+  const deductionComponents = salaryStructure.salaryComponents.filter(c => c.type === 'DEDUCTION')
 
   const components = []
   let totalDeductions = 0
@@ -440,7 +473,7 @@ async function calculateDeductions({ employeeId, salaryStructure, baseSalary, gr
         amount = (grossSalary * Number(component.amount)) / 100
       } else {
         // Find base component
-        const baseComponent = salaryStructure.components.find(c => c.id === component.baseComponentId)
+        const baseComponent = salaryStructure.salaryComponents.find(c => c.id === component.baseComponentId)
         if (baseComponent) {
           baseAmount = Number(baseComponent.amount)
           amount = (baseAmount * Number(component.amount)) / 100
@@ -472,10 +505,96 @@ async function calculateDeductions({ employeeId, salaryStructure, baseSalary, gr
     totalDeductions += loanDeductions.totalAmount
   }
 
+  // Add automatic absent-day salary deduction
+  const absentDays = Number(attendanceData?.summary?.absentDays || 0)
+  if (absentDays > 0) {
+    const periodStart = new Date(payrollPeriod.periodStart)
+    const periodEnd = new Date(payrollPeriod.periodEnd)
+    const totalWorkingDays = Math.max(1, countWorkingDays(periodStart, periodEnd))
+    const dailyRate = Number(baseSalary) / totalWorkingDays
+    const absentDeduction = dailyRate * absentDays
+
+    components.push({
+      name: `Absent Deduction (${absentDays} days)`,
+      calculationType: 'FIXED',
+      baseAmount: Number(dailyRate),
+      amount: absentDeduction,
+      priority: 995
+    })
+    totalDeductions += absentDeduction
+  }
+
+  // Add HR manual salary deductions (hardcoded cuts with reason)
+  const manualDeductions = await getManualSalaryDeductions(employeeId, payrollPeriod.id)
+  if (manualDeductions.totalAmount > 0) {
+    for (const item of manualDeductions.items) {
+      components.push({
+        name: `Manual Deduction: ${item.reason}`,
+        calculationType: 'FIXED',
+        baseAmount: null,
+        amount: item.amount,
+        priority: 996
+      })
+    }
+    totalDeductions += manualDeductions.totalAmount
+  }
+
   return {
     components,
     totalDeductions
   }
+}
+
+async function getManualSalaryDeductions(employeeId, payrollPeriodId) {
+  const logs = await prisma.payrollAuditLog.findMany({
+    where: {
+      OR: [{ action: 'MANUAL_DEDUCTION' }, { action: 'MANUAL_ADJUSTMENT' }],
+      payrollPeriodId,
+      employeeId
+    },
+    orderBy: { createdAt: 'asc' }
+  })
+
+  const items = logs
+    .map((log) => {
+      const details = log.details || {}
+      const amount = Number(details.amount || 0)
+      const reason = String(details.reason || '').trim()
+      const isActive = details.isActive !== false
+      const type = String(details.type || 'DEDUCTION').toUpperCase()
+      if (!isActive || !reason || !(amount > 0) || type !== 'DEDUCTION') return null
+      return { amount, reason }
+    })
+    .filter(Boolean)
+
+  const totalAmount = items.reduce((sum, item) => sum + Number(item.amount), 0)
+  return { items, totalAmount }
+}
+
+async function getManualSalaryAdditions(employeeId, payrollPeriodId) {
+  const logs = await prisma.payrollAuditLog.findMany({
+    where: {
+      OR: [{ action: 'MANUAL_ADDITION' }, { action: 'MANUAL_ADJUSTMENT' }],
+      payrollPeriodId,
+      employeeId
+    },
+    orderBy: { createdAt: 'asc' }
+  })
+
+  const items = logs
+    .map((log) => {
+      const details = log.details || {}
+      const amount = Number(details.amount || 0)
+      const reason = String(details.reason || '').trim()
+      const isActive = details.isActive !== false
+      const type = String(details.type || 'ADDITION').toUpperCase()
+      if (!isActive || !reason || !(amount > 0) || type !== 'ADDITION') return null
+      return { amount, reason }
+    })
+    .filter(Boolean)
+
+  const totalAmount = items.reduce((sum, item) => sum + Number(item.amount), 0)
+  return { items, totalAmount }
 }
 
 /**

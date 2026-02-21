@@ -5,7 +5,7 @@
  * These templates use placeholders like {{fieldName}} that will be replaced with actual values
  */
 
-// Base HTML template wrapper with styling
+// Base HTML template wrapper with colorful styling
 const baseTemplate = (content) => `
 <!DOCTYPE html>
 <html>
@@ -18,88 +18,164 @@ const baseTemplate = (content) => `
       box-sizing: border-box;
     }
     body {
-      font-family: 'Times New Roman', serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       font-size: 12pt;
-      line-height: 1.6;
-      color: #333;
+      line-height: 1.8;
+      color: #2d3748;
       padding: 40px;
-      background: #fff;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+    }
+    .document-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      overflow: hidden;
     }
     .header {
       text-align: center;
       margin-bottom: 30px;
-      border-bottom: 2px solid #333;
-      padding-bottom: 20px;
+      padding: 30px 40px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-bottom: 4px solid #5a67d8;
     }
     .company-name {
-      font-size: 18pt;
+      font-size: 24pt;
       font-weight: bold;
-      margin-bottom: 5px;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+      letter-spacing: 1px;
     }
     .company-address {
-      font-size: 10pt;
-      color: #666;
+      font-size: 11pt;
+      color: rgba(255, 255, 255, 0.95);
+      font-weight: 300;
     }
     .document-title {
       text-align: center;
-      font-size: 16pt;
+      font-size: 20pt;
       font-weight: bold;
-      margin: 30px 0;
+      margin: 40px 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 2px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     }
     .content {
-      margin: 20px 0;
+      margin: 30px 40px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 5px solid #667eea;
     }
     .content p {
-      margin-bottom: 12px;
+      margin-bottom: 15px;
       text-align: justify;
+      color: #2d3748;
+    }
+    .content strong {
+      color: #667eea;
+      font-weight: 600;
     }
     .signature-section {
-      margin-top: 50px;
+      margin-top: 60px;
+      padding: 30px 40px;
       display: flex;
       justify-content: space-between;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+      border-top: 3px solid #667eea;
     }
     .signature-box {
       width: 45%;
+      text-align: center;
     }
     .signature-line {
-      border-top: 1px solid #333;
-      margin-top: 50px;
-      padding-top: 5px;
+      border-top: 2px solid #667eea;
+      margin-top: 60px;
+      padding-top: 10px;
       text-align: center;
-      font-size: 10pt;
+      font-size: 11pt;
+      font-weight: 600;
+      color: #4a5568;
     }
     .date {
       text-align: right;
-      margin-top: 20px;
+      margin: 20px 40px;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+      border-radius: 6px;
+      display: inline-block;
+      float: right;
+      font-weight: 600;
+      color: #2d3748;
     }
     .footer {
       margin-top: 30px;
+      padding: 20px 40px;
       text-align: center;
       font-size: 9pt;
-      color: #666;
-      border-top: 1px solid #ddd;
-      padding-top: 10px;
+      color: #718096;
+      background: linear-gradient(135deg, #e8ecf1 0%, #d1d9e0 100%);
+      border-top: 2px solid #cbd5e0;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin: 15px 0;
+      margin: 20px 0;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
     table td {
-      padding: 8px;
-      border: 1px solid #ddd;
+      padding: 12px 15px;
+      border: 1px solid #e2e8f0;
     }
     table td:first-child {
       font-weight: bold;
-      width: 30%;
-      background: #f5f5f5;
+      width: 35%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    table tr:nth-child(even) td:not(:first-child) {
+      background: #f7fafc;
+    }
+    table tr:hover td:not(:first-child) {
+      background: #edf2f7;
+    }
+    .highlight-box {
+      background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      border-left: 4px solid #f39c12;
+    }
+    .info-box {
+      background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      border-left: 4px solid #00b894;
+    }
+    .warning-box {
+      background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      border-left: 4px solid #e17055;
     }
   </style>
 </head>
 <body>
-  ${content}
+  <div class="document-container">
+    ${content}
+  </div>
 </body>
 </html>
 `

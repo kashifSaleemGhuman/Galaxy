@@ -5,8 +5,8 @@
  * This ensures data consistency and idempotency
  */
 
-const { prisma } = require('@/lib/db')
-const { calculateDailyAttendance, getShiftForDate } = require('@/lib/attendance-calculator')
+import { prisma } from '@/lib/db'
+import { calculateDailyAttendance, getShiftForDate } from '@/lib/attendance-calculator'
 
 /**
  * Recalculate daily attendance for an employee on a specific date

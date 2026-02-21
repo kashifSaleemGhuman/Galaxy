@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react'
 import Breadcrumbs from '@/components/ui/Breadcrumbs'
 import BackButton from '@/components/ui/BackButton'
 import { toast } from '@/components/ui/Toast'
-import { DocumentArrowDownIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { DocumentArrowDownIcon, EyeIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 export default function MyPayrollPage() {
@@ -185,6 +185,15 @@ export default function MyPayrollPage() {
                           >
                             <EyeIcon className="h-5 w-5" />
                           </button>
+                          {record.status === 'FINALIZED' || record.status === 'PAID' ? (
+                            <button
+                              onClick={() => router.push(`/dashboard/hrm/my-payroll/${record.id}/slip`)}
+                              className="text-indigo-600 hover:text-indigo-900"
+                              title="View Payslip"
+                            >
+                              <DocumentTextIcon className="h-5 w-5" />
+                            </button>
+                          ) : null}
                           {record.status === 'FINALIZED' || record.status === 'PAID' ? (
                             <button
                               onClick={() => handleDownloadPayslip(

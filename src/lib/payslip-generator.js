@@ -35,6 +35,10 @@ export function generatePayslipData(payrollRecord, companyInfo = {}) {
       address: companyInfo.address || '',
       logo: companyInfo.logo || null
     },
+    theme: {
+      themeColor: companyInfo.themeColor || '#1d4ed8',
+      accentColor: companyInfo.accentColor || '#0f172a'
+    },
     
     // Employee Information
     employee: {
@@ -100,7 +104,8 @@ export function generatePayslipData(payrollRecord, companyInfo = {}) {
       generatedAt: new Date(),
       payrollRecordId: payrollRecord.id,
       status: payrollRecord.status
-    }
+    },
+    footerNote: companyInfo.footerNote || 'This is a system-generated payslip.'
   }
 
   return payslip
@@ -165,6 +170,7 @@ export function formatPayslipAsText(payslipData) {
   lines.push(`  Overtime Hours: ${payslipData.attendance.overtimeHours.toFixed(2)}`)
   lines.push('')
   lines.push('Generated: ' + new Date().toLocaleString())
+  lines.push(payslipData.footerNote || 'This is a system-generated payslip.')
 
   return lines.join('\n')
 }

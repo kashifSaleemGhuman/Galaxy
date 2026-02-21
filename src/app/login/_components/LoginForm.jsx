@@ -43,6 +43,7 @@ export default function LoginForm() {
   const demoLogins = [
     { email: 'admin@galaxy.com', password: 'admin123', label: 'Login as Admin' },
     { email: 'manager@galaxy.com', password: 'manager123', label: 'Login as Manager' },
+    { email: 'hrmanager@galaxy.com', password: 'hrmanager123', label: 'Login as HR Manager' },
     { email: 'user@galaxy.com', password: 'user123', label: 'Login as User' }
   ];
 

@@ -1,3 +1,21 @@
+-- Ensure Tenant base table exists before leave module tables are created.
+-- Historical migration chain in this repo assumes Tenant may pre-exist; shadow DB does not.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Tenant') THEN
+        CREATE TABLE "Tenant" (
+            "id" TEXT NOT NULL,
+            "name" TEXT NOT NULL,
+            "domain" TEXT,
+            "settings" JSONB NOT NULL DEFAULT '{}'::jsonb,
+            "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" TIMESTAMP(3) NOT NULL,
+            CONSTRAINT "Tenant_pkey" PRIMARY KEY ("id")
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS "Tenant_domain_key" ON "Tenant"("domain");
+    END IF;
+END $$;
+
 -- CreateTable (only if Tenant table exists)
 DO $$
 BEGIN

@@ -27,7 +27,9 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url)
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
-    const limit = parseInt(searchParams.get('limit') || '30')
+    const limit = parseInt(searchParams.get('limit') || '30', 10)
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
+    const pageSize = Math.min(100, Math.max(5, parseInt(searchParams.get('pageSize') || String(limit), 10)))
 
     // Build date range
     const today = new Date()
@@ -39,7 +41,17 @@ export async function GET(req) {
     const queryEnd = endDate ? new Date(endDate) : defaultEnd
 
     // Get daily attendance records
-    const attendance = await prisma.dailyAttendance.findMany({
+    const [total, attendance] = await Promise.all([
+      prisma.dailyAttendance.count({
+        where: {
+          employeeId: currentUser.employee.id,
+          date: {
+            gte: queryStart,
+            lte: queryEnd
+          }
+        }
+      }),
+      prisma.dailyAttendance.findMany({
       where: {
         employeeId: currentUser.employee.id,
         date: {
@@ -59,8 +71,11 @@ export async function GET(req) {
       },
       orderBy: {
         date: 'desc'
-      }
-    })
+      },
+      take: pageSize,
+      skip: (page - 1) * pageSize
+      })
+    ])
 
     // Get today's events for real-time status
     const todayStart = new Date()
@@ -82,8 +97,16 @@ export async function GET(req) {
     return NextResponse.json({
       attendance,
       todayEvents,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+        hasNext: page * pageSize < total,
+        hasPrev: page > 1
+      },
       summary: {
-        totalDays: attendance.length,
+        totalDays: total,
         present: attendance.filter(a => a.status === 'PRESENT').length,
         late: attendance.filter(a => a.status === 'LATE').length,
         absent: attendance.filter(a => a.status === 'ABSENT').length,

@@ -54,15 +54,18 @@ export async function GET(request) {
 
     // Build where clause
     const where = permission.isSuperAdmin ? {} : {
-      role: { not: ROLES.SUPER_ADMIN.toLowerCase() }
+      role: { notIn: [ROLES.SUPER_ADMIN, ROLES.SUPER_ADMIN.toLowerCase()] }
     };
 
     // Add role filter if provided
     // Database stores roles in lowercase (e.g., 'warehouse_operator')
     // but ROLES constants are uppercase (e.g., 'WAREHOUSE_OPERATOR')
     if (roleFilter) {
-      // Convert filter to lowercase to match database format
-      where.role = roleFilter.toLowerCase();
+      // Match role regardless of existing DB casing.
+      where.role = {
+        equals: roleFilter,
+        mode: 'insensitive'
+      };
     }
 
     const users = await prisma.user.findMany({
@@ -177,7 +180,8 @@ export async function PUT(req) {
     }
 
     // Non-super admin users can't modify super admin accounts
-    if (!permission.isSuperAdmin && targetUser.role === ROLES.SUPER_ADMIN) {
+    const targetUserRole = (targetUser.role || '').toUpperCase();
+    if (!permission.isSuperAdmin && targetUserRole === ROLES.SUPER_ADMIN) {
       return NextResponse.json({ error: 'Insufficient permissions to modify super admin' }, { status: 403 });
     }
 

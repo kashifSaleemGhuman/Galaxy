@@ -22,6 +22,9 @@ export default function ManageAttendancePage() {
     endDate: new Date().toISOString().split('T')[0],
     status: ''
   })
+  const [page, setPage] = useState(1)
+  const [pageSize] = useState(30)
+  const [pagination, setPagination] = useState(null)
 
   const isHRManager = session?.user?.role === ROLES.HR_MANAGER
   const isSuperAdmin = session?.user?.role === ROLES.SUPER_ADMIN
@@ -36,8 +39,15 @@ export default function ManageAttendancePage() {
 
   useEffect(() => {
     fetchEmployees()
+  }, [])
+
+  useEffect(() => {
+    setPage(1)
+  }, [filters.employeeId, filters.startDate, filters.endDate, filters.status])
+
+  useEffect(() => {
     fetchAttendance()
-  }, [filters])
+  }, [filters, page, pageSize])
 
   const fetchEmployees = async () => {
     try {
@@ -60,12 +70,15 @@ export default function ManageAttendancePage() {
       if (filters.startDate) params.append('startDate', filters.startDate)
       if (filters.endDate) params.append('endDate', filters.endDate)
       if (filters.status) params.append('status', filters.status)
+      params.append('page', String(page))
+      params.append('pageSize', String(pageSize))
       url += params.toString()
 
       const res = await fetch(url)
       if (!res.ok) throw new Error('Failed to fetch attendance')
       const data = await res.json()
-      setAttendance(data)
+      setAttendance(data.items || [])
+      setPagination(data.pagination || null)
     } catch (error) {
       console.error(error)
       toast({
@@ -266,6 +279,30 @@ export default function ManageAttendancePage() {
           </div>
         )}
       </div>
+
+      {pagination?.totalPages > 1 && (
+        <div className="flex items-center justify-between px-1">
+          <div className="text-sm text-gray-600">
+            Page {pagination.page} of {pagination.totalPages} ({pagination.total} records)
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={!pagination.hasPrev}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setPage((prev) => prev + 1)}
+              disabled={!pagination.hasNext}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

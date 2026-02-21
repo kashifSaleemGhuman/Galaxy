@@ -47,7 +47,7 @@ export async function GET(req) {
             name: true
           }
         },
-        components: {
+        salaryComponents: {
           where: { isActive: true },
           orderBy: { priority: 'asc' }
         }
@@ -123,7 +123,7 @@ export async function POST(req) {
         effectiveTo: effectiveTo ? new Date(effectiveTo) : null,
         isActive: true,
         createdBy: currentUser.id,
-        components: {
+        salaryComponents: {
           create: components.map(comp => ({
             name: comp.name,
             type: comp.type,
@@ -137,7 +137,7 @@ export async function POST(req) {
         }
       },
       include: {
-        components: true
+        salaryComponents: true
       }
     })
 

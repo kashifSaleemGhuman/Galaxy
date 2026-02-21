@@ -13,6 +13,8 @@ import {
   CalendarIcon, 
   CurrencyDollarIcon,
   DocumentTextIcon,
+  AdjustmentsHorizontalIcon,
+  SwatchIcon,
   LockClosedIcon,
   CheckCircleIcon,
   ClockIcon
@@ -100,6 +102,20 @@ export default function PayrollPage() {
           </div>
         </div>
         <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => router.push('/dashboard/hrm/payroll/manual-deductions')}
+          >
+            <AdjustmentsHorizontalIcon className="h-4 w-4 mr-2" />
+            Manual Adjustments
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => router.push('/dashboard/hrm/payroll/payslip-settings')}
+          >
+            <SwatchIcon className="h-4 w-4 mr-2" />
+            Payslip Settings
+          </Button>
           <Button 
             variant="outline" 
             onClick={() => router.push('/dashboard/hrm/payroll/salary-structures')}

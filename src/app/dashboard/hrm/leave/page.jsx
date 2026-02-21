@@ -157,10 +157,13 @@ export default function LeavePage() {
               <div>
                 <div className="text-sm text-gray-500">{balance.leaveTypeName}</div>
                 <div className="text-2xl font-bold text-gray-900 mt-1">
-                  {balance.currentBalance.toFixed(1)}
+                  {Number(balance.remainingDays ?? balance.currentBalance ?? 0).toFixed(1)}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {balance.isPaid ? 'Paid Leave' : 'Unpaid Leave'}
+                  {balance.isPaid ? 'Paid Leave' : 'Unpaid Leave'} • Remaining
+                </div>
+                <div className="text-xs text-gray-600 mt-2">
+                  Allocated: {Number(balance.allocatedDays ?? 0).toFixed(1)} | Used: {Number(balance.usedDays ?? 0).toFixed(1)} | Pending: {Number(balance.pendingDays ?? 0).toFixed(1)}
                 </div>
               </div>
               <CalendarIcon className="h-8 w-8 text-blue-500" />

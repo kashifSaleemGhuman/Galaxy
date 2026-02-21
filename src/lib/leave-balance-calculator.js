@@ -133,6 +133,108 @@ export async function getCurrentLeaveBalance(employeeId, leaveTypeId) {
 }
 
 /**
+ * Get simple quota-style stats for one leave type.
+ * This powers an easy-to-understand model for employees:
+ * allocated, used, pending, remaining.
+ */
+export async function getLeaveTypeQuotaStats(employeeId, leaveTypeId, asOfDate = new Date()) {
+  const now = new Date(asOfDate)
+  const yearStart = new Date(now.getFullYear(), 0, 1)
+  const yearEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999)
+
+  const assignment = await prisma.leavePolicyAssignment.findFirst({
+    where: {
+      employeeId,
+      isActive: true,
+      effectiveFrom: { lte: now },
+      OR: [{ effectiveTo: null }, { effectiveTo: { gte: now } }],
+      policy: {
+        leaveTypeId,
+        isActive: true
+      }
+    },
+    include: {
+      policy: {
+        include: {
+          leaveType: true
+        }
+      }
+    },
+    orderBy: {
+      effectiveFrom: 'desc'
+    }
+  })
+
+  if (!assignment) {
+    return {
+      leaveTypeId,
+      leaveTypeName: null,
+      leaveTypeCode: null,
+      isPaid: true,
+      policyName: null,
+      allocatedDays: 0,
+      usedDays: 0,
+      pendingDays: 0,
+      remainingDays: 0,
+      remainingAfterPendingDays: 0,
+      allowNegativeBalance: false,
+      currentBalance: 0
+    }
+  }
+
+  const [usedAgg, pendingAgg] = await Promise.all([
+    prisma.leaveRequest.aggregate({
+      where: {
+        employeeId,
+        leaveTypeId,
+        status: 'APPROVED',
+        startDate: { lte: yearEnd },
+        endDate: { gte: yearStart }
+      },
+      _sum: { days: true }
+    }),
+    prisma.leaveRequest.aggregate({
+      where: {
+        employeeId,
+        leaveTypeId,
+        status: 'PENDING',
+        startDate: { lte: yearEnd },
+        endDate: { gte: yearStart }
+      },
+      _sum: { days: true }
+    })
+  ])
+
+  const allocatedDays = Number(
+    assignment.policy.maxBalance ?? assignment.policy.accrualAmount ?? 0
+  )
+  const usedDays = Number(usedAgg._sum.days ?? 0)
+  const pendingDays = Number(pendingAgg._sum.days ?? 0)
+  const remainingDays = assignment.policy.allowNegativeBalance
+    ? allocatedDays - usedDays
+    : Math.max(0, allocatedDays - usedDays)
+  const remainingAfterPendingDays = assignment.policy.allowNegativeBalance
+    ? allocatedDays - usedDays - pendingDays
+    : Math.max(0, allocatedDays - usedDays - pendingDays)
+
+  return {
+    leaveTypeId,
+    leaveTypeName: assignment.policy.leaveType.name,
+    leaveTypeCode: assignment.policy.leaveType.code,
+    isPaid: assignment.policy.leaveType.isPaid,
+    policyName: assignment.policy.name,
+    allocatedDays,
+    usedDays,
+    pendingDays,
+    remainingDays,
+    remainingAfterPendingDays,
+    allowNegativeBalance: assignment.policy.allowNegativeBalance,
+    // Keep backward compatibility for existing UI using currentBalance
+    currentBalance: remainingDays
+  }
+}
+
+/**
  * Recalculate leave balance for a period
  * @param {string} employeeId - Employee ID
  * @param {string} leaveTypeId - Leave type ID
@@ -349,12 +451,14 @@ function calculateDaysInRange(startDate, endDate) {
  */
 export async function getLeaveBalanceSummary(employeeId) {
   try {
-    // Get all leave types with active policies for this employee
+    const today = new Date()
+    // Get active assignments and keep most-recent assignment per leave type.
     const policyAssignments = await prisma.leavePolicyAssignment.findMany({
       where: {
         employeeId,
         isActive: true,
-        effectiveTo: null // Current assignments only
+        effectiveFrom: { lte: today },
+        OR: [{ effectiveTo: null }, { effectiveTo: { gte: today } }]
       },
       include: {
         policy: {
@@ -362,28 +466,29 @@ export async function getLeaveBalanceSummary(employeeId) {
             leaveType: true
           }
         }
+      },
+      orderBy: {
+        effectiveFrom: 'desc'
       }
     })
 
-    const balances = await Promise.all(
-      policyAssignments.map(async (assignment) => {
-        const balance = await getCurrentLeaveBalance(
-          employeeId,
-          assignment.policy.leaveTypeId
-        )
+    const uniqueLeaveTypeIds = []
+    const seen = new Set()
+    for (const assignment of policyAssignments) {
+      const ltId = assignment.policy.leaveTypeId
+      if (!seen.has(ltId)) {
+        seen.add(ltId)
+        uniqueLeaveTypeIds.push(ltId)
+      }
+    }
 
-        return {
-          leaveTypeId: assignment.policy.leaveTypeId,
-          leaveTypeName: assignment.policy.leaveType.name,
-          leaveTypeCode: assignment.policy.leaveType.code,
-          isPaid: assignment.policy.leaveType.isPaid,
-          currentBalance: balance,
-          policyName: assignment.policy.name
-        }
-      })
+    const summaries = await Promise.all(
+      uniqueLeaveTypeIds.map((leaveTypeId) =>
+        getLeaveTypeQuotaStats(employeeId, leaveTypeId, today)
+      )
     )
 
-    return balances
+    return summaries
   } catch (error) {
     console.error('Error getting leave balance summary:', error)
     return []

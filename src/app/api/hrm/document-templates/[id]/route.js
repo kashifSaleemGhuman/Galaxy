@@ -30,8 +30,11 @@ export async function GET(req, { params }) {
       return new NextResponse('Forbidden: Insufficient permissions', { status: 403 })
     }
 
+    // Await params if it's a Promise (Next.js 15+)
+    const resolvedParams = await params
+
     const template = await prisma.documentTemplate.findUnique({
-      where: { id: params.id }
+      where: { id: resolvedParams.id }
     })
 
     if (!template) {
@@ -71,11 +74,14 @@ export async function PUT(req, { params }) {
       return new NextResponse('Forbidden: Insufficient permissions', { status: 403 })
     }
 
+    // Await params if it's a Promise (Next.js 15+)
+    const resolvedParams = await params
+
     const body = await req.json()
     const { name, category, description, content, fields, isActive } = body
 
     const template = await prisma.documentTemplate.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: {
         ...(name && { name }),
         ...(category && { category }),
@@ -119,9 +125,12 @@ export async function DELETE(req, { params }) {
       return new NextResponse('Forbidden: Insufficient permissions', { status: 403 })
     }
 
+    // Await params if it's a Promise (Next.js 15+)
+    const resolvedParams = await params
+
     // Soft delete by setting isActive to false
     const template = await prisma.documentTemplate.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: { isActive: false }
     })
 

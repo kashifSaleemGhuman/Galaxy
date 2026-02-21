@@ -1,0 +1,1185 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Tenant model for multi-tenancy support
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  domain    String?  @unique
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users         User[]
+  vendors       Vendor[]
+  products      Product[]
+  warehouses    Warehouse[]
+  employees     Employee[]
+  organizations Organization[]
+  documents     Document[]
+  machines      Machine[]
+  permits       Permit[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  password     String // Hashed password
+  role         String // SUPER_ADMIN, ADMIN, PURCHASE_MANAGER, etc.
+  tenantId     String? // Optional for backward compatibility
+  isFirstLogin Boolean  @default(true)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Tenant relation
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  // Audit trail
+  passwordHistory PasswordHistory[]
+  auditLogs       AuditLog[]
+
+  // RFQ Relations
+  createdRfqs             RFQ[]
+  approvedRfqs            RFQ[]                    @relation("RFQApprovals")
+  rfqApprovals            RFQApproval[]
+  createdSalesQuotations  SalesQuotation[]         @relation("SalesQuotationCreator")
+  approvedSalesQuotations SalesQuotation[]         @relation("SalesQuotationApprover")
+  salesQuotationApprovals SalesQuotationApproval[]
+  createdSalesOrders      SalesOrder[]             @relation("SalesOrderCreator")
+
+  // Warehouse Relations
+  managedWarehouses Warehouse[] @relation("WarehouseManagers")
+
+  // Stock Movement Request Relations
+  requestedMovements StockMovementRequest[] @relation("RequestedMovements")
+  approvedMovements  StockMovementRequest[] @relation("ApprovedMovements")
+  rejectedMovements  StockMovementRequest[] @relation("RejectedMovements")
+
+  // Employee relation (one-to-one)
+  employee Employee?
+}
+
+// Role model for permission management
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  permissions Json // JSON object containing role permissions
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Keep track of password changes
+model PasswordHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  password  String // Hashed password
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+// Audit logging
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String // LOGIN, PASSWORD_CHANGE, etc.
+  details   String? // Additional information
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+// Vendor model
+model Vendor {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  address   String?
+  tenantId  String? // Optional for backward compatibility
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Tenant relation
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  // Relations
+  rfqs           RFQ[]
+  vendorProducts VendorProduct[]
+}
+
+// Vendor-Product relationship (many-to-many with additional fields)
+model VendorProduct {
+  id        String   @id @default(cuid())
+  vendorId  String
+  productId String
+  price     Decimal? // Optional price for this vendor-product combination
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  vendor  Vendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorId, productId])
+  @@index([vendorId])
+  @@index([productId])
+}
+
+// Product model
+model Product {
+  id                    String   @id @default(cuid())
+  name                  String
+  description           String?
+  category              String?
+  unit                  String // pcs, kg, m, etc.
+  attributes            Json     @default("{}")
+  traceabilityQuestions Json     @default("[]")
+  tenantId              String? // Optional for backward compatibility
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Tenant relation
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  // Relations
+  rfqItems              RFQItem[]
+  poLines               POLine[]
+  incomingShipmentLines IncomingShipmentLine[]
+  inventoryItems        InventoryItem[]
+  stockMovements        StockMovement[]
+  vendorProducts        VendorProduct[]
+  movementRequests      StockMovementRequest[]
+  salesQuotationItems   SalesQuotationItem[]
+  salesOrderItems       SalesOrderItem[]
+}
+
+// RFQ (Request for Quotation) model
+model RFQ {
+  id          String @id @default(cuid())
+  rfqNumber   String @unique
+  vendorId    String
+  vendor      Vendor @relation(fields: [vendorId], references: [id])
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  // RFQ Details
+  orderDeadline DateTime
+  sentDate      DateTime?
+  status        String    @default("draft") // draft, sent, received, approved, rejected, cancelled
+
+  // Vendor Quote Details
+  vendorPrice      Decimal?
+  expectedDelivery DateTime?
+  vendorNotes      String?
+
+  // Approval Details
+  approvedById    String?
+  approvedBy      User?     @relation("RFQApprovals", fields: [approvedById], references: [id])
+  approvedAt      DateTime?
+  rejectionReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  items     RFQItem[]
+  approvals RFQApproval[]
+}
+
+// RFQ Items (Products in RFQ)
+model RFQItem {
+  id        String  @id @default(cuid())
+  rfqId     String
+  rfq       RFQ     @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  unit      String
+
+  // Vendor Quote Details (per item)
+  unitPrice            Decimal?
+  expectedDeliveryDate DateTime?
+  traceabilityAnswers  Json      @default("[]")
+  customFieldAnswers   Json      @default("{}")
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+// RFQ Approval tracking
+model RFQApproval {
+  id         String   @id @default(cuid())
+  rfqId      String
+  rfq        RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  approvedBy String
+  approver   User     @relation(fields: [approvedBy], references: [id])
+  status     String // pending, approved, rejected
+  comments   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// Supplier model (legacy table mapping)
+model Supplier {
+  supplierId  String  @id @map("supplier_id")
+  name        String
+  contactInfo String? @map("contact_info")
+  email       String
+  phone       String?
+
+  // Relations
+  purchaseOrders PurchaseOrder[]
+
+  @@map("Supplier")
+}
+
+// Purchase Order model
+model PurchaseOrder {
+  poId        String    @id @map("po_id")
+  rfqId       String?   @map("rfq_id")
+  supplierId  String    @map("supplier_id")
+  dateCreated DateTime  @default(now()) @map("date_created")
+  status      String    @default("draft") // draft, sent, confirmed, approved, received, cancelled
+  approvedAt  DateTime?
+  approvedBy  String?
+
+  // Relations
+  supplier          Supplier           @relation(fields: [supplierId], references: [supplierId])
+  lines             POLine[]
+  goodsReceipts     GoodsReceipt[]
+  vendorBills       VendorBill[]
+  incomingShipments IncomingShipment[]
+
+  @@map("PurchaseOrder")
+}
+
+// Purchase Order Line model
+model POLine {
+  poLineId         String  @id @map("po_line_id")
+  poId             String  @map("po_id")
+  productId        String  @map("product_id")
+  quantityOrdered  Int     @map("quantity_ordered")
+  quantityReceived Int     @default(0) @map("quantity_received")
+  price            Decimal
+
+  // Relations
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
+  product       Product       @relation(fields: [productId], references: [id])
+
+  @@map("POLine")
+}
+
+// Goods Receipt model
+model GoodsReceipt {
+  receiptId    String   @id @map("receipt_id")
+  poId         String   @map("po_id")
+  dateReceived DateTime @map("date_received")
+  status       String // pending, confirmed, rejected
+
+  // Relations
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
+}
+
+// Vendor Bill model
+model VendorBill {
+  billId     String   @id @map("bill_id")
+  poId       String   @map("po_id")
+  dateBilled DateTime @map("date_billed")
+  amount     Decimal
+  status     String // pending, paid, overdue
+
+  // Relations
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [poId])
+}
+
+// Warehouse model
+model Warehouse {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  address   String?
+  tenantId  String? // Optional for backward compatibility
+  managerId String? // Warehouse manager/operator user ID
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Tenant relation
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  // Manager relation
+  manager User? @relation("WarehouseManagers", fields: [managerId], references: [id])
+
+  // Relations
+  incomingShipments         IncomingShipment[]
+  inventoryItems            InventoryItem[]
+  stockMovements            StockMovement[]
+  locations                 Location[]
+  movementRequests          StockMovementRequest[] @relation("FromWarehouseTransfers")
+  movementRequestsTo        StockMovementRequest[] @relation("ToWarehouseTransfers")
+  movementRequestsWarehouse StockMovementRequest[] @relation("WarehouseMovements")
+  salesOrders               SalesOrder[]
+}
+
+// Location model (storage locations within a warehouse)
+model Location {
+  id          String   @id @default(cuid())
+  warehouseId String
+  code        String // Location code (e.g., A-01-01)
+  name        String? // Optional location name
+  description String? // Optional description
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  warehouse        Warehouse              @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  inventoryItems   InventoryItem[]        @relation("LocationInventoryItems")
+  stockMovements   StockMovement[]
+  movementRequests StockMovementRequest[]
+
+  @@unique([warehouseId, code])
+  @@map("Location")
+}
+
+// Incoming Shipment model
+model IncomingShipment {
+  id             String    @id @default(cuid())
+  shipmentNumber String    @unique
+  poId           String    @map("po_id")
+  warehouseId    String?   @map("warehouse_id")
+  status         String    @default("pending") // pending, assigned, received, processed, rejected
+  assignedAt     DateTime?
+  assignedBy     String?
+  receivedAt     DateTime?
+  processedAt    DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  purchaseOrder  PurchaseOrder          @relation(fields: [poId], references: [poId])
+  warehouse      Warehouse?             @relation(fields: [warehouseId], references: [id])
+  lines          IncomingShipmentLine[]
+  stockMovements StockMovement[]
+}
+
+// Incoming Shipment Line model
+model IncomingShipmentLine {
+  id               String   @id @default(cuid())
+  shipmentId       String   @map("shipment_id")
+  productId        String   @map("product_id")
+  quantityExpected Int      @map("quantity_expected")
+  quantityReceived Int      @default(0) @map("quantity_received")
+  quantityAccepted Int      @default(0) @map("quantity_accepted")
+  quantityRejected Int      @default(0) @map("quantity_rejected")
+  unitPrice        Decimal  @map("unit_price")
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  shipment IncomingShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  product  Product          @relation(fields: [productId], references: [id])
+}
+
+// Inventory Item model
+model InventoryItem {
+  id          String   @id @default(cuid())
+  productId   String   @map("product_id")
+  warehouseId String   @map("warehouse_id")
+  locationId  String?  @map("location_id") // Optional location within warehouse
+  quantity    Int      @default(0)
+  reserved    Int      @default(0)
+  available   Int      @default(0)
+  minLevel    Int      @default(0)
+  maxLevel    Int      @default(0)
+  location    String? // Legacy field - kept for backward compatibility
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  product           Product         @relation(fields: [productId], references: [id])
+  warehouse         Warehouse       @relation(fields: [warehouseId], references: [id])
+  warehouseLocation Location?       @relation("LocationInventoryItems", fields: [locationId], references: [id])
+  stockMovements    StockMovement[]
+
+  @@unique([productId, warehouseId])
+}
+
+// Stock Movement model
+model StockMovement {
+  id          String   @id @default(cuid())
+  productId   String   @map("product_id")
+  warehouseId String   @map("warehouse_id")
+  shipmentId  String?  @map("shipment_id")
+  locationId  String?  @map("location_id")
+  type        String // in, out, transfer, adjustment
+  quantity    Int
+  reason      String?
+  reference   String? // PO, SO, etc.
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  requestId   String?  @map("request_id")
+
+  // Relations
+  product       Product               @relation(fields: [productId], references: [id])
+  warehouse     Warehouse             @relation(fields: [warehouseId], references: [id])
+  shipment      IncomingShipment?     @relation(fields: [shipmentId], references: [id])
+  location      Location?             @relation(fields: [locationId], references: [id])
+  inventoryItem InventoryItem         @relation(fields: [productId, warehouseId], references: [productId, warehouseId])
+  request       StockMovementRequest? @relation(fields: [requestId], references: [id])
+}
+
+// Stock Movement Request model (for approval workflow)
+model StockMovementRequest {
+  id          String @id @default(cuid())
+  requestType String @map("request_type") // 'movement', 'transfer', 'adjustment', 'cycle_count'
+  status      String @default("pending") // pending, approved, rejected
+  requestData Json   @map("request_data") // Stores the full request data (productId, warehouseId, quantity, etc.)
+
+  // For movement requests
+  productId   String? @map("product_id")
+  warehouseId String? @map("warehouse_id")
+  locationId  String? @map("location_id")
+  type        String? // in, out
+  quantity    Int?
+  reason      String?
+  reference   String?
+
+  // For transfer requests
+  fromWarehouseId String? @map("from_warehouse_id")
+  toWarehouseId   String? @map("to_warehouse_id")
+  transferLines   Json?   @map("transfer_lines")
+
+  // For adjustment requests
+  adjustmentLines Json? @map("adjustment_lines")
+
+  // Approval tracking
+  requestedBy     String    @map("requested_by")
+  requestedAt     DateTime  @default(now()) @map("requested_at")
+  approvedBy      String?   @map("approved_by")
+  approvedAt      DateTime? @map("approved_at")
+  rejectedBy      String?   @map("rejected_by")
+  rejectedAt      DateTime? @map("rejected_at")
+  rejectionReason String?   @map("rejection_reason")
+  notes           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  requester     User            @relation("RequestedMovements", fields: [requestedBy], references: [id])
+  approver      User?           @relation("ApprovedMovements", fields: [approvedBy], references: [id])
+  rejecter      User?           @relation("RejectedMovements", fields: [rejectedBy], references: [id])
+  product       Product?        @relation(fields: [productId], references: [id])
+  warehouse     Warehouse?      @relation("WarehouseMovements", fields: [warehouseId], references: [id])
+  fromWarehouse Warehouse?      @relation("FromWarehouseTransfers", fields: [fromWarehouseId], references: [id])
+  toWarehouse   Warehouse?      @relation("ToWarehouseTransfers", fields: [toWarehouseId], references: [id])
+  location      Location?       @relation(fields: [locationId], references: [id])
+  movements     StockMovement[]
+
+  @@index([status])
+  @@index([requestedBy])
+  @@index([requestType])
+}
+
+// Organization model (company information)
+model Organization {
+  id                  String    @id @default(cuid())
+  companyName         String
+  companyLogo         String? // Path to the logo file or Base64
+  shortName           String?
+  address             String?
+  factoryContactNo    String?
+  email               String?
+  fullAddress         String?
+  auditDate           DateTime?
+  internalAuditorName String?
+  dataFrom            DateTime?
+  tenantId            String? // Optional for backward compatibility
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Tenant relation
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+}
+
+// Document model (document management)
+model Document {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  docNo       String?
+  revDate     String?
+  description String?
+  tenantId    String? // Optional for backward compatibility
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Tenant relation
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  // Relations
+  content   DocumentContent?
+  revisions DocumentRevision[]
+}
+
+// Document Content - stores the actual content of documents
+model DocumentContent {
+  id           String   @id @default(cuid())
+  documentId   String   @unique
+  documentName String // Document name (denormalized for quick access)
+  content      Json // JSON structure containing all document sections/content
+  revisionNo   Int      @default(1) // Current revision number
+  revisionDate DateTime @default(now()) // Current revision date
+  lastEditedBy String? // User who last edited
+  lastEditedAt DateTime @default(now())
+
+  // Relations
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([documentName])
+}
+
+// Document Revision History - tracks all revisions
+model DocumentRevision {
+  id                String   @id @default(cuid())
+  documentId        String
+  documentName      String // Document name (denormalized)
+  revisionNo        Int // Revision number
+  revisionDate      DateTime // Date of this revision
+  content           Json // Content at this revision
+  editedBy          String? // User who made this revision
+  changeDescription String? // Description of changes made
+
+  // Relations
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([documentId, revisionNo])
+  @@index([documentId])
+  @@index([documentName])
+}
+
+// Employee model (HRM module)
+model Employee {
+  id               String    @id @default(cuid())
+  employeeId       String    @unique
+  idCardNumber     String?
+  name             String
+  photo            String?
+  parentName       String? // Father/Mother
+  dob              DateTime?
+  address          String?
+  gender           String?
+  contactNumber    String?
+  emergencyContact String?
+  dateOfJoining    DateTime?
+  department       String?
+  lastEmployment   String?
+  process          String?
+  designation      String?
+  salary           Decimal?
+  dateOfLeaving    DateTime?
+  shift            String?
+  secondaryJob     String?
+  tenantId         String? // Optional for backward compatibility
+
+  // Certifications/Roles
+  isFirstAider         Boolean @default(false)
+  isEmergencyResponder Boolean @default(false)
+  isFirefighter        Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Tenant relation
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  // User relation (one-to-one)
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id])
+}
+
+// Machine model (equipment management)
+model Machine {
+  id                String  @id @default(cuid())
+  serialNumber      String?
+  machineId         String  @unique
+  name              String
+  quantity          Int     @default(1)
+  motorDetails      String?
+  powerRating       String?
+  airPressure       String?
+  modelNumber       String?
+  manufacturingYear String?
+  length            String?
+  width             String?
+  height            String?
+  steamTemp         String?
+  steamConsumption  String?
+  electricityRating String?
+  operationType     String?
+  department        String?
+  status            String? // "in_use", "under_maintenance", "out_of_order"
+  remarks           String?
+  tenantId          String? // Optional for backward compatibility
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Tenant relation
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+}
+
+// Permit model (compliance and permits)
+model Permit {
+  id                    String    @id @default(cuid())
+  title                 String    @unique
+  authorizedNumber      String?
+  issuingAuthority      String?
+  dateOfIssue           DateTime?
+  dateOfExpiry          DateTime?
+  renewalSubmissionDate DateTime?
+  reportingFrequency    String?
+  lastReportDate        DateTime?
+  responsiblePerson     String?
+  tenantId              String? // Optional for backward compatibility
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Tenant relation
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+}
+
+// Incoming Traceability Models
+
+// Supplier Leather Warehouse - tracks warehouses where suppliers store leather
+model SupplierLeatherWarehouse {
+  id            String   @id @default(cuid())
+  warehouseName String   @unique // Warehouse name/identifier
+  supplierId    String? // Reference to Supplier (optional)
+  supplierName  String? // Supplier name (denormalized, optional)
+  location      String? // Warehouse location/address
+  region        String? // Region
+  lwgCertified  Boolean  @default(false) // Whether warehouse is LWG certified
+  capacity      Decimal? // Storage capacity
+  capacityUnit  String? // Unit for capacity (e.g., kg, m²)
+  contactPerson String? // Contact person at warehouse
+  contactPhone  String? // Contact phone
+  contactEmail  String? // Contact email
+  notes         String?
+  status        String   @default("active") // active, inactive
+
+  // Relations
+  igps InwardGatePass[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supplierId])
+  @@index([warehouseName])
+  @@index([status])
+}
+
+// Inward Gate Pass (IGP) - tracks incoming material from suppliers
+model InwardGatePass {
+  id              String   @id @default(cuid())
+  igpNumber       String   @unique // IGP number
+  supplierId      String // Reference to Supplier
+  supplierName    String // Supplier name (denormalized for quick access)
+  warehouseId     String? // Reference to Supplier Leather Warehouse
+  warehouseName   String? // Warehouse name (denormalized)
+  region          String? // Region of origin
+  deliveryDate    DateTime // Date when material arrived at tannery
+  truckLoadNumber String? // Truck load identifier
+  batchNumber     String? // Batch number from supplier
+  lwgCertified    Boolean  @default(false) // Whether supplier is LWG certified
+  notes           String?
+  status          String   @default("pending") // pending, received, processed
+
+  // Relations
+  warehouse  SupplierLeatherWarehouse? @relation(fields: [warehouseId], references: [id])
+  rawBatches RawBatch[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supplierId])
+  @@index([warehouseId])
+  @@index([igpNumber])
+}
+
+// Raw Batch - tracks raw leather batches
+model RawBatch {
+  id           String   @id @default(cuid())
+  batchCode    String   @unique // Format: 0001, 0002, etc.
+  igpId        String // Reference to IGP
+  supplierId   String // Supplier reference
+  supplierName String // Supplier name
+  region       String? // Region
+  receivedDate DateTime // Date received at tannery
+  quantity     Decimal? // Quantity (weight or pieces)
+  unit         String? // Unit of measurement
+  status       String   @default("pending") // pending, tanned, in_process
+
+  // Relations
+  igp            InwardGatePass @relation(fields: [igpId], references: [id])
+  wetBlueBatches WetBlueBatch[]
+  jobCards       JobCard[]
+  batchCards     BatchCard[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([batchCode])
+  @@index([igpId])
+}
+
+// Wet Blue Batch - tracks wet blue batches
+model WetBlueBatch {
+  id           String   @id @default(cuid())
+  wbCode       String   @unique // Format: 10000, 10001, etc. (W/B Code)
+  rawBatchId   String // Reference to raw batch
+  rawBatchCode String // Raw batch code (denormalized)
+  receivedDate DateTime // Date when wet blue was created
+  quantity     Decimal? // Quantity
+  unit         String? // Unit of measurement
+  status       String   @default("pending") // pending, sorted, measured, graded
+
+  // Relations
+  rawBatch         RawBatch          @relation(fields: [rawBatchId], references: [id])
+  reTanningBatches ReTanningBatch[]
+  gradeAssortments GradeAssortment[]
+  jobCards         JobCard[]
+  batchCards       BatchCard[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([wbCode])
+  @@index([rawBatchId])
+}
+
+// Grade Assortment - tracks grading of wet blue
+model GradeAssortment {
+  id            String   @id @default(cuid())
+  wbBatchId     String // Reference to wet blue batch
+  wbCode        String // W/B Code (denormalized)
+  grade         String // Grade: 1,2,3,4,5 (A Grade), 6,7 (B Grade), 8,9 (C Grade)
+  gradeCategory String? // A, B, or C Grade
+  quantity      Decimal? // Quantity for this grade
+  unit          String? // Unit of measurement
+  notes         String?
+
+  // Relations
+  wbBatch WetBlueBatch @relation(fields: [wbBatchId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([wbBatchId])
+  @@index([grade])
+}
+
+// Re-tanning Batch - tracks re-tanning process
+model ReTanningBatch {
+  id             String   @id @default(cuid())
+  rtCode         String   @unique // Format: RKRCRT00102 (Re-tannage - batch code - month)
+  wbBatchId      String // Reference to wet blue batch
+  wbCode         String // W/B Code (denormalized)
+  rawBatchId     String? // Reference to original raw batch (for traceability)
+  rawBatchCode   String? // Raw batch code (denormalized)
+  receivedDate   DateTime // Date when re-tanning started
+  quantity       Decimal? // Quantity
+  unit           String? // Unit of measurement
+  recipe         String? // Recipe used
+  technicianId   String? // Technician in charge
+  technicianName String? // Technician name (denormalized)
+  status         String   @default("pending") // pending, in_process, completed
+
+  // Relations
+  wbBatch         WetBlueBatch           @relation(fields: [wbBatchId], references: [id])
+  finishedBatches FinishedLeatherBatch[]
+  jobCards        JobCard[]
+  batchCards      BatchCard[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([rtCode])
+  @@index([wbBatchId])
+}
+
+// Finished Leather Batch - tracks finished leather
+model FinishedLeatherBatch {
+  id                  String   @id @default(cuid())
+  batchNumber         String   @unique // Batch number for finished leather
+  rtBatchId           String // Reference to re-tanning batch
+  rtCode              String // Re-tanning code (denormalized)
+  wbBatchId           String? // Reference to wet blue batch (for traceability)
+  wbCode              String? // W/B Code (denormalized)
+  rawBatchId          String? // Reference to original raw batch (for traceability)
+  rawBatchCode        String? // Raw batch code (denormalized)
+  completionDate      DateTime // Date when finished
+  quantity            Decimal? // Quantity
+  unit                String? // Unit of measurement
+  thickness           Decimal? // Thickness
+  color               String? // Color
+  weight              Decimal? // Weight
+  pieces              Int? // Number of pieces
+  areaM2              Decimal? // Area in square meters
+  customerOrderNumber String? // Customer order number
+  vendorCode          String? // Vendor code
+  status              String   @default("pending") // pending, completed, dispatched
+
+  // Relations
+  rtBatch             ReTanningBatch       @relation(fields: [rtBatchId], references: [id])
+  jobCards            JobCard[]
+  batchCards          BatchCard[]
+  measurementPackings MeasurementPacking[]
+  dispatches          Dispatch[]
+  deliveries          CustomerDelivery[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([batchNumber])
+  @@index([rtBatchId])
+}
+
+// Job Card - tracks job cards linked to batches
+model JobCard {
+  id              String  @id @default(cuid())
+  jobCardNumber   String  @unique // Job card number
+  rawBatchId      String? // Reference to raw batch
+  wbBatchId       String? // Reference to wet blue batch
+  rtBatchId       String? // Reference to re-tanning batch
+  finishedBatchId String? // Reference to finished leather batch
+
+  // Job card details
+  recipe         String? // Recipe
+  technicianId   String? // Technician in charge
+  technicianName String? // Technician name
+  date           DateTime // Date
+  month          Int? // Month
+  year           Int? // Year
+  notes          String?
+
+  // Relations
+  rawBatch      RawBatch?             @relation(fields: [rawBatchId], references: [id])
+  wbBatch       WetBlueBatch?         @relation(fields: [wbBatchId], references: [id])
+  rtBatch       ReTanningBatch?       @relation(fields: [rtBatchId], references: [id])
+  finishedBatch FinishedLeatherBatch? @relation(fields: [finishedBatchId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([jobCardNumber])
+}
+
+// Batch Card - tracks batch cards at different production stages
+model BatchCard {
+  id              String  @id @default(cuid())
+  cardNumber      String  @unique // Batch card number
+  stage           String // Stage: raw, wet_blue, re_tanning, finished
+  rawBatchId      String? // Reference to raw batch
+  wbBatchId       String? // Reference to wet blue batch
+  rtBatchId       String? // Reference to re-tanning batch
+  finishedBatchId String? // Reference to finished leather batch
+
+  // Batch card details
+  location String? // Current location
+  status   String  @default("active") // active, transferred, completed
+  notes    String?
+
+  // Relations
+  rawBatch      RawBatch?             @relation(fields: [rawBatchId], references: [id])
+  wbBatch       WetBlueBatch?         @relation(fields: [wbBatchId], references: [id])
+  rtBatch       ReTanningBatch?       @relation(fields: [rtBatchId], references: [id])
+  finishedBatch FinishedLeatherBatch? @relation(fields: [finishedBatchId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cardNumber])
+  @@index([stage])
+}
+
+// Production Stage - tracks production stages and movements
+model ProductionStage {
+  id          String  @id @default(cuid())
+  stageName   String // Stage name: RAW, WB_MEASUREMENT, GRADE, RETANNING, CRUST, FINISHED, etc.
+  stageType   String // Type: input, process, output
+  description String? // Description of the stage
+  order       Int // Order in the production flow
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([stageName])
+  @@index([order])
+}
+
+// Outgoing Traceability Models
+
+// Measurement/Packing Record - tracks measurement and packing of finished leather
+model MeasurementPacking {
+  id              String  @id @default(cuid())
+  recordNumber    String  @unique // Record number for measurement/packing
+  finishedBatchId String // Reference to finished leather batch
+  batchNumber     String // Finished batch number (denormalized)
+  rtCode          String? // Re-tanning code (denormalized)
+  wbCode          String? // W/B Code (denormalized)
+  rawBatchCode    String? // Raw batch code (denormalized)
+
+  // Measurement details
+  measurementDate     DateTime // Date of measurement
+  batchNumberMeas     String? // Batch number for measurement
+  customerOrderNumber String? // Customer order number
+  vendorCode          String? // Vendor code
+  thickness           Decimal? // Thickness
+  color               String? // Color
+  weight              Decimal? // Weight
+  pieces              Int? // Number of pieces
+  areaDm2             Decimal? // Area in square decimeters (dm²)
+  areaM2              Decimal? // Area in square meters (m²) - converted from dm²
+
+  // Packing details
+  packedDate    DateTime? // Date when packed
+  packingStatus String    @default("pending") // pending, in_progress, completed
+  packingNotes  String? // Packing notes
+
+  // Quality control
+  qcStatus String? // Quality control status
+  qcNotes  String? // Quality control notes
+  qcDate   DateTime? // Quality control date
+
+  // Status
+  status String @default("pending") // pending, measured, packed, ready_for_dispatch
+
+  // Relations
+  finishedBatch FinishedLeatherBatch @relation(fields: [finishedBatchId], references: [id])
+  dispatches    Dispatch[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([recordNumber])
+  @@index([finishedBatchId])
+  @@index([batchNumber])
+  @@index([customerOrderNumber])
+}
+
+// Dispatch Record - tracks dispatch of finished leather to customers
+model Dispatch {
+  id                   String  @id @default(cuid())
+  dispatchNumber       String  @unique // Dispatch number
+  measurementPackingId String? // Reference to measurement/packing record
+  finishedBatchId      String // Reference to finished leather batch
+  batchNumber          String // Finished batch number (denormalized)
+  rtCode               String? // Re-tanning code (denormalized)
+  wbCode               String? // W/B Code (denormalized)
+  rawBatchCode         String? // Raw batch code (denormalized)
+
+  // Customer information
+  customerId          String? // Reference to customer (if exists in CRM)
+  customerName        String // Customer name
+  customerOrderNumber String? // Customer order number
+  vendorCode          String? // Vendor code
+
+  // Dispatch details
+  dispatchDate    DateTime // Date of dispatch
+  dispatchType    String? // Type: direct, warehouse, etc.
+  vehicleNumber   String? // Vehicle number
+  driverName      String? // Driver name
+  driverPhone     String? // Driver phone
+  destination     String? // Destination address
+  deliveryAddress String? // Delivery address
+
+  // Quantity details
+  quantity Decimal? // Quantity dispatched
+  unit     String? // Unit of measurement
+  pieces   Int? // Number of pieces
+  areaM2   Decimal? // Area in square meters
+
+  // Status
+  status String @default("pending") // pending, dispatched, in_transit, delivered
+
+  // Relations
+  measurementPacking MeasurementPacking?  @relation(fields: [measurementPackingId], references: [id])
+  finishedBatch      FinishedLeatherBatch @relation(fields: [finishedBatchId], references: [id])
+  deliveries         CustomerDelivery[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dispatchNumber])
+  @@index([finishedBatchId])
+  @@index([customerOrderNumber])
+  @@index([dispatchDate])
+}
+
+// Customer Delivery - tracks delivery confirmation to customers
+model CustomerDelivery {
+  id              String @id @default(cuid())
+  deliveryNumber  String @unique // Delivery number
+  dispatchId      String // Reference to dispatch
+  dispatchNumber  String // Dispatch number (denormalized)
+  finishedBatchId String // Reference to finished leather batch
+  batchNumber     String // Finished batch number (denormalized)
+
+  // Customer information
+  customerId          String? // Reference to customer
+  customerName        String // Customer name
+  customerOrderNumber String? // Customer order number
+
+  // Delivery details
+  deliveryDate    DateTime // Date of delivery
+  deliveryStatus  String   @default("pending") // pending, delivered, rejected, partial
+  receivedBy      String? // Name of person who received
+  receivedByPhone String? // Phone of person who received
+  deliveryNotes   String? // Delivery notes
+
+  // Quality feedback
+  qualityStatus String? // Quality status: accepted, rejected, partial
+  qualityNotes  String? // Quality feedback notes
+
+  // Relations
+  dispatch      Dispatch             @relation(fields: [dispatchId], references: [id])
+  finishedBatch FinishedLeatherBatch @relation(fields: [finishedBatchId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([deliveryNumber])
+  @@index([dispatchId])
+  @@index([finishedBatchId])
+  @@index([customerOrderNumber])
+}
+
+// Sales Models
+
+model SalesQuotation {
+  id                  String    @id @default(cuid())
+  quotationNumber     String    @unique
+  validityDate        DateTime
+  status              String    @default("draft") // draft, submitted, approved, rejected, sent
+  customerName        String
+  customerEmail       String
+  customerPhone       String?
+  customerCompanyName String?
+  termsAndConditions  String?
+  totalAmount         Decimal   @default(0)
+  taxAmount           Decimal   @default(0)
+  discountAmount      Decimal   @default(0)
+  freightCharges      Decimal   @default(0)
+  finalNetPrice       Decimal   @default(0)
+  createdById         String
+  approvedById        String?
+  sentAt              DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  createdBy   User                     @relation("SalesQuotationCreator", fields: [createdById], references: [id])
+  approvedBy  User?                    @relation("SalesQuotationApprover", fields: [approvedById], references: [id])
+  items       SalesQuotationItem[]
+  approvals   SalesQuotationApproval[]
+  salesOrders SalesOrder[]
+}
+
+model SalesQuotationItem {
+  id             String   @id @default(cuid())
+  quotationId    String
+  productId      String? // From inventory (can be null if product doesn't exist in system)
+  productName    String
+  quantity       Int
+  exFactoryPrice Decimal
+  taxCharges     Decimal  @default(0)
+  freightCharges Decimal  @default(0)
+  discountAmount Decimal  @default(0)
+  finalNetPrice  Decimal
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  quotation SalesQuotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  product   Product?       @relation(fields: [productId], references: [id])
+}
+
+model SalesQuotationApproval {
+  id          String   @id @default(cuid())
+  quotationId String
+  approvedBy  String
+  status      String // approved, rejected
+  comments    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  quotation SalesQuotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  approver  User           @relation(fields: [approvedBy], references: [id])
+}
+
+model SalesOrder {
+  id                  String   @id @default(cuid())
+  orderNumber         String   @unique
+  quotationId         String? // Optional link to quotation
+  warehouseId         String
+  status              String   @default("pending") // pending, confirmed, shipped, delivered, cancelled
+  customerName        String
+  customerEmail       String
+  customerPhone       String?
+  customerCompanyName String?
+  totalAmount         Decimal  @default(0)
+  taxAmount           Decimal  @default(0)
+  discountAmount      Decimal  @default(0)
+  freightCharges      Decimal  @default(0)
+  finalNetPrice       Decimal  @default(0)
+  createdById         String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  quotation SalesQuotation?  @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  warehouse Warehouse        @relation(fields: [warehouseId], references: [id])
+  createdBy User             @relation("SalesOrderCreator", fields: [createdById], references: [id])
+  items     SalesOrderItem[]
+}
+
+model SalesOrderItem {
+  id             String   @id @default(cuid())
+  orderId        String
+  productId      String? // Optional - for products not in system
+  productName    String
+  quantity       Int
+  exFactoryPrice Decimal
+  taxCharges     Decimal  @default(0)
+  freightCharges Decimal  @default(0)
+  discountAmount Decimal  @default(0)
+  finalNetPrice  Decimal
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  order   SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product?   @relation(fields: [productId], references: [id])
+}

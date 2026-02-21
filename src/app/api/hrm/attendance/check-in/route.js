@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { ROLES } from '@/lib/constants/roles'
 import { validateAttendanceEvent } from '@/lib/attendance-calculator'
 import { recalculateDailyAttendance } from '@/lib/attendance-recalculator'
+import { checkAndSendLateCheckInAlert } from '@/lib/attendance-alerts'
 
 // POST /api/hrm/attendance/check-in - Employee check-in
 export async function POST(req) {
@@ -41,6 +42,21 @@ export async function POST(req) {
 
     // Use provided timestamp or current time
     const eventTimestamp = timestamp ? new Date(timestamp) : new Date()
+
+    const activeShiftAssignment = employee.shifts?.find((assignment) => {
+      const effectiveFrom = assignment.effectiveFrom ? new Date(assignment.effectiveFrom) : null
+      const effectiveTo = assignment.effectiveTo ? new Date(assignment.effectiveTo) : null
+      const startsBefore = !effectiveFrom || effectiveFrom <= eventTimestamp
+      const endsAfter = !effectiveTo || effectiveTo >= eventTimestamp
+      return startsBefore && endsAfter
+    })
+
+    if (!activeShiftAssignment) {
+      return NextResponse.json(
+        { message: 'Shift is not assigned. Please contact HR before clock-in.' },
+        { status: 400 }
+      )
+    }
 
     // Get existing events for today
     const todayStart = new Date(eventTimestamp)
@@ -91,6 +107,11 @@ export async function POST(req) {
 
     // Recalculate daily attendance
     await recalculateDailyAttendance(employee.id, eventTimestamp)
+
+    // Check for late check-in and send alerts (non-blocking)
+    checkAndSendLateCheckInAlert(employee.id, eventTimestamp).catch(err => {
+      console.error('Error sending late check-in alert:', err)
+    })
 
     return NextResponse.json({
       success: true,

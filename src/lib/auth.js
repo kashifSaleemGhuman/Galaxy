@@ -52,9 +52,10 @@ export const authOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        const normalizedRole = String(user.role || '').toUpperCase();
         token.id = user.id
-        token.role = user.role
-        token.permissions = ROLE_PERMISSIONS[user.role] || [];
+        token.role = normalizedRole
+        token.permissions = ROLE_PERMISSIONS[normalizedRole] || [];
         token.userId = user.id;
         token.isFirstLogin = user.isFirstLogin;
         token.email = user.email;
@@ -66,7 +67,7 @@ export const authOptions = {
           console.log('🔐 Auth JWT Callback:', {
             userId: user.id,
             email: user.email,
-            role: user.role,
+            role: normalizedRole,
             permissionsCount: token.permissions?.length || 0,
             hasWarehouseViewAll,
             hasWarehouseShipmentRead,
@@ -81,7 +82,7 @@ export const authOptions = {
           console.log('🔐 Auth JWT Callback:', {
             userId: user.id,
             email: user.email,
-            role: user.role,
+            role: normalizedRole,
             permissionsCount: token.permissions?.length || 0,
             hasWarehouseViewAll,
             hasWarehouseShipmentRead,
@@ -93,7 +94,7 @@ export const authOptions = {
     },
     async session({ session, token }) {
       if (session?.user) {
-        session.user.role = token.role;
+        session.user.role = String(token.role || '').toUpperCase();
         session.user.permissions = token.permissions;
         session.user.id = token.userId || token.id;
         session.user.id = token.userId || token.id;

@@ -1,7 +1,32 @@
 import { PrismaClient } from '@prisma/client';
 import { hash } from 'bcryptjs';
+import crypto from 'crypto';
 
 const prisma = new PrismaClient();
+const ALGORITHM = 'aes-256-gcm';
+
+function getEncryptionKey() {
+  const rawSecret = process.env.EMPLOYEE_CREDENTIALS_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!rawSecret) {
+    throw new Error('Missing EMPLOYEE_CREDENTIALS_SECRET or NEXTAUTH_SECRET');
+  }
+  return crypto.createHash('sha256').update(rawSecret).digest();
+}
+
+function encryptEmployeePassword(password: string) {
+  const key = getEncryptionKey();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  const encrypted = Buffer.concat([cipher.update(password, 'utf8'), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+
+  return {
+    encryptedPassword: encrypted.toString('base64'),
+    iv: iv.toString('base64'),
+    authTag: authTag.toString('base64'),
+    algorithm: ALGORITHM
+  };
+}
 
 async function changeUserPassword(email: string, newPassword: string) {
   try {
@@ -9,7 +34,12 @@ async function changeUserPassword(email: string, newPassword: string) {
 
     // Find user by email
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      include: {
+        employee: {
+          select: { id: true }
+        }
+      }
     });
 
     if (!user) {
@@ -42,6 +72,18 @@ async function changeUserPassword(email: string, newPassword: string) {
           updatedAt: new Date()
         }
       });
+
+      if (user.employee) {
+        const encryptedCredential = encryptEmployeePassword(newPassword);
+        await tx.employeeCredential.upsert({
+          where: { userId: user.id },
+          update: encryptedCredential,
+          create: {
+            userId: user.id,
+            ...encryptedCredential
+          }
+        });
+      }
 
       // Create audit log
       await tx.auditLog.create({

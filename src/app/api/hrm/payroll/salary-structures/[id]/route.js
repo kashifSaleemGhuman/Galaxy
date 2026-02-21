@@ -39,7 +39,7 @@ export async function GET(req, { params }) {
             name: true
           }
         },
-        components: {
+        salaryComponents: {
           orderBy: { priority: 'asc' }
         }
       }
@@ -112,7 +112,7 @@ export async function PUT(req, { params }) {
         effectiveFrom: effectiveFrom ? new Date(effectiveFrom) : undefined,
         effectiveTo: effectiveTo ? new Date(effectiveTo) : undefined,
         ...(components && {
-          components: {
+          salaryComponents: {
             deleteMany: {},
             create: components.map(comp => ({
               name: comp.name,
@@ -128,7 +128,7 @@ export async function PUT(req, { params }) {
         })
       },
       include: {
-        components: true
+        salaryComponents: true
       }
     })
 

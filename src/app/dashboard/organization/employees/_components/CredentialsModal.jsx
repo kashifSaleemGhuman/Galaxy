@@ -152,7 +152,7 @@ export default function CredentialsModal({ employeeId, employeeName, isOpen, onC
                       </Button>
                     </div>
                     <p className="mt-2 text-xs text-yellow-600 bg-yellow-50 p-2 rounded">
-                      ⚠️ Please save this password securely. It will not be shown again.
+                      Keep this password secure. Super admin can retrieve it again from credentials.
                     </p>
                   </div>
                 ) : (

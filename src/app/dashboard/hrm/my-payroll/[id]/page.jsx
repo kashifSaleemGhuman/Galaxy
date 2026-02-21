@@ -7,7 +7,7 @@ import Breadcrumbs from '@/components/ui/Breadcrumbs'
 import BackButton from '@/components/ui/BackButton'
 import { Button } from '@/components/ui/Button'
 import { toast } from '@/components/ui/Toast'
-import { DocumentArrowDownIcon } from '@heroicons/react/24/outline'
+import { DocumentArrowDownIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 export default function MyPayrollRecordPage() {
@@ -136,10 +136,16 @@ export default function MyPayrollRecordPage() {
           </div>
         </div>
         {(record.status === 'FINALIZED' || record.status === 'PAID') && (
-          <Button variant="outline" onClick={handleDownloadPayslip}>
-            <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
-            Download Payslip
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => router.push(`/dashboard/hrm/my-payroll/${params.id}/slip`)}>
+              <DocumentTextIcon className="h-4 w-4 mr-2" />
+              View Payslip
+            </Button>
+            <Button variant="outline" onClick={handleDownloadPayslip}>
+              <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
+              Download Payslip
+            </Button>
+          </div>
         )}
       </div>
 

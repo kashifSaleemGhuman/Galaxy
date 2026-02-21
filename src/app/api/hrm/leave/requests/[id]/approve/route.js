@@ -22,8 +22,26 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { id } = params
-    const body = await request.json()
+    // Await params if it's a Promise (Next.js 15+)
+    const resolvedParams = await params
+    const { id } = resolvedParams
+
+    // Parse body if present, otherwise use defaults
+    let body = {}
+    try {
+      const contentType = request.headers.get('content-type')
+      if (contentType && contentType.includes('application/json')) {
+        const text = await request.text()
+        if (text && text.trim().length > 0) {
+          body = JSON.parse(text)
+        }
+      }
+    } catch (error) {
+      // If body parsing fails, use empty object (body is optional)
+      // This handles cases where request has no body or invalid JSON
+      body = {}
+    }
+
     const { remarks, level = 1 } = body
 
     // Get leave request

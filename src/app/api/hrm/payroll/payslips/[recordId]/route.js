@@ -15,7 +15,7 @@ export async function GET(req, { params }) {
 
     const currentUser = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { role: true, employee: { select: { id: true } } }
+      select: { role: true, tenantId: true, employee: { select: { id: true } } }
     })
 
     if (!currentUser) {
@@ -59,10 +59,23 @@ export async function GET(req, { params }) {
       orderBy: { createdAt: 'desc' }
     })
 
+    let tenantId = currentUser.tenantId
+    if (!tenantId) {
+      const defaultTenant = await prisma.tenant.findFirst({ where: { domain: 'default' } })
+      tenantId = defaultTenant?.id
+    }
+    const tenant = tenantId
+      ? await prisma.tenant.findUnique({ where: { id: tenantId }, select: { settings: true } })
+      : null
+    const payslipSettings = tenant?.settings?.payslip || {}
+
     const companyInfo = organization ? {
-      companyName: organization.companyName,
+      companyName: payslipSettings.companyNameOverride || organization.companyName,
       address: organization.address || organization.fullAddress || '',
-      logo: organization.companyLogo || null
+      logo: payslipSettings.logoUrl || organization.companyLogo || null,
+      themeColor: payslipSettings.themeColor || '#1d4ed8',
+      accentColor: payslipSettings.accentColor || '#0f172a',
+      footerNote: payslipSettings.footerNote || 'This is a system-generated payslip.'
     } : {}
 
     // Generate payslip data

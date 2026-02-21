@@ -146,6 +146,10 @@ export default function DocumentsPage() {
               <DocumentTextIcon className="h-4 w-4 mr-2" />
               Generate Document
             </Button>
+            <Button onClick={() => router.push('/dashboard/hrm/documents/templates')} variant="outline">
+              <DocumentTextIcon className="h-4 w-4 mr-2" />
+              Manage Templates
+            </Button>
             <Button onClick={() => router.push('/dashboard/hrm/documents/upload')} variant="outline">
               <PlusIcon className="h-4 w-4 mr-2" />
               Upload Document

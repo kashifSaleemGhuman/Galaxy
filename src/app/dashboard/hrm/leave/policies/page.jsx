@@ -23,16 +23,8 @@ export default function LeavePoliciesPage() {
   const [formData, setFormData] = useState({
     leaveTypeId: '',
     name: '',
-    accrualType: 'MONTHLY',
-    accrualAmount: '',
-    accrualFrequency: '',
-    maxBalance: '',
+    annualQuotaDays: '',
     allowNegativeBalance: false,
-    carryForwardEnabled: false,
-    carryForwardLimit: '',
-    carryForwardExpiryMonths: '',
-    encashmentEnabled: false,
-    encashmentLimit: '',
     effectiveFrom: new Date().toISOString().split('T')[0]
   })
   const [assignData, setAssignData] = useState({
@@ -156,7 +148,7 @@ export default function LeavePoliciesPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!formData.leaveTypeId || !formData.name || !formData.accrualType || !formData.accrualAmount) {
+    if (!formData.leaveTypeId || !formData.name || !formData.annualQuotaDays) {
       toast({
         title: 'Error',
         description: 'Please fill in all required fields',
@@ -170,13 +162,15 @@ export default function LeavePoliciesPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
-          accrualAmount: parseFloat(formData.accrualAmount),
-          accrualFrequency: formData.accrualFrequency ? parseInt(formData.accrualFrequency) : null,
-          maxBalance: formData.maxBalance ? parseFloat(formData.maxBalance) : null,
-          carryForwardLimit: formData.carryForwardLimit ? parseFloat(formData.carryForwardLimit) : null,
-          carryForwardExpiryMonths: formData.carryForwardExpiryMonths ? parseInt(formData.carryForwardExpiryMonths) : null,
-          encashmentLimit: formData.encashmentLimit ? parseFloat(formData.encashmentLimit) : null
+          leaveTypeId: formData.leaveTypeId,
+          name: formData.name,
+          // Hardcoded simple model: HR sets per-type yearly quota.
+          accrualType: 'YEARLY',
+          accrualAmount: parseFloat(formData.annualQuotaDays),
+          maxBalance: parseFloat(formData.annualQuotaDays),
+          allowNegativeBalance: formData.allowNegativeBalance,
+          carryForwardEnabled: false,
+          effectiveFrom: formData.effectiveFrom
         })
       })
 
@@ -194,16 +188,8 @@ export default function LeavePoliciesPage() {
       setFormData({
         leaveTypeId: '',
         name: '',
-        accrualType: 'MONTHLY',
-        accrualAmount: '',
-        accrualFrequency: '',
-        maxBalance: '',
+        annualQuotaDays: '',
         allowNegativeBalance: false,
-        carryForwardEnabled: false,
-        carryForwardLimit: '',
-        carryForwardExpiryMonths: '',
-        encashmentEnabled: false,
-        encashmentLimit: '',
         effectiveFrom: new Date().toISOString().split('T')[0]
       })
       fetchPolicies()
@@ -281,62 +267,19 @@ export default function LeavePoliciesPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Accrual Type <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.accrualType}
-                  onChange={(e) => setFormData(prev => ({ ...prev, accrualType: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="NONE">None</option>
-                  <option value="MONTHLY">Monthly</option>
-                  <option value="YEARLY">Yearly</option>
-                  <option value="CUSTOM">Custom</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Accrual Amount (days) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.accrualAmount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, accrualAmount: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              {formData.accrualType === 'CUSTOM' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Frequency (months)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.accrualFrequency}
-                    onChange={(e) => setFormData(prev => ({ ...prev, accrualFrequency: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              )}
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Max Balance (days)
+                  Annual Quota (days) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
+                  min="0"
                   step="0.5"
-                  value={formData.maxBalance}
-                  onChange={(e) => setFormData(prev => ({ ...prev, maxBalance: e.target.value }))}
+                  value={formData.annualQuotaDays}
+                  onChange={(e) => setFormData(prev => ({ ...prev, annualQuotaDays: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
                 />
               </div>
               <div>
@@ -363,65 +306,9 @@ export default function LeavePoliciesPage() {
                 />
                 <span className="text-sm text-gray-700">Allow Negative Balance</span>
               </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.carryForwardEnabled}
-                  onChange={(e) => setFormData(prev => ({ ...prev, carryForwardEnabled: e.target.checked }))}
-                  className="mr-2"
-                />
-                <span className="text-sm text-gray-700">Enable Carry Forward</span>
-              </label>
-              {formData.carryForwardEnabled && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Carry Forward Limit (days)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={formData.carryForwardLimit}
-                      onChange={(e) => setFormData(prev => ({ ...prev, carryForwardLimit: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Expiry (months)
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.carryForwardExpiryMonths}
-                      onChange={(e) => setFormData(prev => ({ ...prev, carryForwardExpiryMonths: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-              )}
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.encashmentEnabled}
-                  onChange={(e) => setFormData(prev => ({ ...prev, encashmentEnabled: e.target.checked }))}
-                  className="mr-2"
-                />
-                <span className="text-sm text-gray-700">Enable Encashment</span>
-              </label>
-              {formData.encashmentEnabled && (
-                <div className="ml-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Encashment Limit (days)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={formData.encashmentLimit}
-                    onChange={(e) => setFormData(prev => ({ ...prev, encashmentLimit: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              )}
+              <p className="text-xs text-gray-500">
+                Policy uses a simple yearly quota model: remaining = allocated - used.
+              </p>
             </div>
 
             <div className="flex justify-end gap-3">

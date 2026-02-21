@@ -35,6 +35,8 @@ export async function GET(req) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
     const status = searchParams.get('status')
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
+    const pageSize = Math.min(100, Math.max(5, parseInt(searchParams.get('pageSize') || searchParams.get('limit') || '30', 10)))
 
     // Build where clause
     const where = {}
@@ -53,7 +55,9 @@ export async function GET(req) {
       where.status = status
     }
 
-    const attendance = await prisma.dailyAttendance.findMany({
+    const [total, attendance] = await Promise.all([
+      prisma.dailyAttendance.count({ where }),
+      prisma.dailyAttendance.findMany({
       where,
       include: {
         employee: {
@@ -77,10 +81,22 @@ export async function GET(req) {
       orderBy: {
         date: 'desc'
       },
-      take: 500 // Limit results
-    })
+      take: pageSize,
+      skip: (page - 1) * pageSize
+      })
+    ])
 
-    return NextResponse.json(attendance)
+    return NextResponse.json({
+      items: attendance,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+        hasNext: page * pageSize < total,
+        hasPrev: page > 1
+      }
+    })
   } catch (error) {
     console.error('[ATTENDANCE_GET]', error)
     return new NextResponse('Internal Error', { status: 500 })

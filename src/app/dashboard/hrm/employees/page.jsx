@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import Breadcrumbs from '@/components/ui/Breadcrumbs'
 import BackButton from '@/components/ui/BackButton'
 import { toast } from '@/components/ui/Toast'
-import { PlusIcon, PencilIcon, KeyIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, KeyIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 import CredentialsModal from '@/app/dashboard/organization/employees/_components/CredentialsModal'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { ROLES } from '@/lib/constants/roles'
@@ -17,7 +17,8 @@ export default function HRMEmployeesPage() {
   const { data: session } = useSession()
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
-  const [credentialsModal, setCredentialsModal] = useState({ isOpen: false, employeeId: null, employeeName: null })
+  const [credentialsModal, setCredentialsModal] = useState({ isOpen: false, employeeId: null, employeeName: null, credentials: null })
+  const [creatingAccount, setCreatingAccount] = useState(null)
   
   const isSuperAdmin = session?.user?.role === ROLES.SUPER_ADMIN
   const isHRManager = session?.user?.role === ROLES.HR_MANAGER
@@ -61,6 +62,47 @@ export default function HRMEmployeesPage() {
       age--
     }
     return age
+  }
+
+  const handleCreateAccount = async (employeeId, employeeName) => {
+    setCreatingAccount(employeeId)
+    try {
+      const res = await fetch(`/api/organization/employees/${employeeId}/create-account`, {
+        method: 'POST'
+      })
+      if (!res.ok) {
+        const error = await res.text()
+        throw new Error(error || 'Failed to create account')
+      }
+      const data = await res.json()
+      
+      // Refresh employees list
+      await fetchEmployees()
+      
+      // If credentials are returned (super admin), show them
+      if (data.credentials && isSuperAdmin) {
+        setCredentialsModal({
+          isOpen: true,
+          employeeId: employeeId,
+          employeeName: employeeName,
+          credentials: data.credentials
+        })
+      } else {
+        toast({
+          title: 'Success',
+          description: 'User account created successfully'
+        })
+      }
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create user account',
+        variant: 'destructive'
+      })
+    } finally {
+      setCreatingAccount(null)
+    }
   }
 
   const handleNavigate = (index, item) => {
@@ -165,12 +207,27 @@ export default function HRMEmployeesPage() {
                             onClick={() => setCredentialsModal({ 
                               isOpen: true, 
                               employeeId: employee.id, 
-                              employeeName: employee.name 
+                              employeeName: employee.name,
+                              credentials: null
                             })}
                             className="text-blue-600 hover:text-blue-900"
                             title="Show Credentials"
                           >
                             <KeyIcon className="h-5 w-5" />
+                          </button>
+                        )}
+                        {canViewCredentials && !employee.user && (
+                          <button
+                            onClick={() => handleCreateAccount(employee.id, employee.name)}
+                            disabled={creatingAccount === employee.id}
+                            className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                            title="Create User Account"
+                          >
+                            {creatingAccount === employee.id ? (
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
+                            ) : (
+                              <UserPlusIcon className="h-5 w-5" />
+                            )}
                           </button>
                         )}
                         <button 
@@ -202,7 +259,8 @@ export default function HRMEmployeesPage() {
         employeeId={credentialsModal.employeeId}
         employeeName={credentialsModal.employeeName}
         isOpen={credentialsModal.isOpen}
-        onClose={() => setCredentialsModal({ isOpen: false, employeeId: null, employeeName: null })}
+        credentials={credentialsModal.credentials}
+        onClose={() => setCredentialsModal({ isOpen: false, employeeId: null, employeeName: null, credentials: null })}
       />
     </div>
   )

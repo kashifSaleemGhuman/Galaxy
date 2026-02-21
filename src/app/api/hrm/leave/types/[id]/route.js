@@ -87,12 +87,31 @@ export async function PUT(request, { params }) {
       )
     }
 
+    // Resolve tenantId from session or default tenant (needed for @@unique([tenantId, code]))
+    let tenantId = session.user.tenantId
+    if (!tenantId) {
+      let defaultTenant = await prisma.tenant.findFirst({
+        where: { domain: 'default' }
+      })
+      if (!defaultTenant) {
+        // Create a default tenant if none exists (safe fallback for single-tenant setups)
+        defaultTenant = await prisma.tenant.create({
+          data: {
+            name: 'Default Tenant',
+            domain: 'default',
+            settings: {}
+          }
+        })
+      }
+      tenantId = defaultTenant.id
+    }
+
     // If code is being changed, check for duplicates
     if (code && code !== existing.code) {
       const duplicate = await prisma.leaveType.findUnique({
         where: {
           tenantId_code: {
-            tenantId: session.user.tenantId || '',
+            tenantId,
             code: code.toUpperCase()
           }
         }

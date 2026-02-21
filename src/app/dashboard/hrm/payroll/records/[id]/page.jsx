@@ -8,7 +8,7 @@ import Breadcrumbs from '@/components/ui/Breadcrumbs'
 import BackButton from '@/components/ui/BackButton'
 import { toast } from '@/components/ui/Toast'
 import { ROLES } from '@/lib/constants/roles'
-import { DocumentArrowDownIcon, PrinterIcon } from '@heroicons/react/24/outline'
+import { DocumentArrowDownIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 
 export default function PayrollRecordDetailPage() {
   const router = useRouter()
@@ -133,6 +133,10 @@ export default function PayrollRecordDetailPage() {
           </div>
         </div>
         <div className="flex gap-3">
+          <Button variant="outline" onClick={() => router.push(`/dashboard/hrm/payroll/records/${params.id}/slip`)}>
+            <DocumentTextIcon className="h-4 w-4 mr-2" />
+            View Slip
+          </Button>
           <Button variant="outline" onClick={handleDownloadPayslip}>
             <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
             Download Payslip

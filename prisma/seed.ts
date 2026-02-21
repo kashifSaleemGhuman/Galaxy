@@ -5,16 +5,98 @@ const prisma = new PrismaClient();
 
 // Define roles
 const ROLES = {
-  SUPER_ADMIN: 'super_admin',
-  ADMIN: 'admin',
-  PURCHASE_MANAGER: 'purchase_manager',
-  PURCHASE_USER: 'purchase_user',
-  SALES_MANAGER: 'sales_manager',
-  SALES_USER: 'sales_user'
+  SUPER_ADMIN: 'SUPER_ADMIN',
+  ADMIN: 'ADMIN',
+  PURCHASE_MANAGER: 'PURCHASE_MANAGER',
+  PURCHASE_USER: 'PURCHASE_USER',
+  SALES_MANAGER: 'SALES_MANAGER',
+  SALES_USER: 'SALES_USER',
+  HR_MANAGER: 'HR_MANAGER'
 } as const;
+
+const DEFAULT_LEAVE_TYPES = [
+  {
+    name: 'Casual Leave',
+    code: 'CL',
+    description: 'Casual leave for personal reasons',
+    isPaid: true,
+    requiresApproval: true,
+    maxConsecutiveDays: 3,
+    requiresMedicalCertificate: false
+  },
+  {
+    name: 'Sick Leave',
+    code: 'SL',
+    description: 'Leave for medical reasons',
+    isPaid: true,
+    requiresApproval: true,
+    maxConsecutiveDays: null,
+    requiresMedicalCertificate: true
+  },
+  {
+    name: 'Annual Leave',
+    code: 'AL',
+    description: 'Annual vacation leave',
+    isPaid: true,
+    requiresApproval: true,
+    maxConsecutiveDays: null,
+    requiresMedicalCertificate: false
+  },
+  {
+    name: 'Emergency Leave',
+    code: 'EL',
+    description: 'Leave for emergency situations',
+    isPaid: true,
+    requiresApproval: true,
+    maxConsecutiveDays: 5,
+    requiresMedicalCertificate: false
+  },
+  {
+    name: 'Maternity Leave',
+    code: 'ML',
+    description: 'Maternity leave for expecting mothers',
+    isPaid: true,
+    requiresApproval: true,
+    maxConsecutiveDays: null,
+    requiresMedicalCertificate: true
+  },
+  {
+    name: 'Paternity Leave',
+    code: 'PL',
+    description: 'Paternity leave for new fathers',
+    isPaid: true,
+    requiresApproval: true,
+    maxConsecutiveDays: 7,
+    requiresMedicalCertificate: false
+  },
+  {
+    name: 'Unpaid Leave',
+    code: 'UL',
+    description: 'Unpaid leave for extended absence',
+    isPaid: false,
+    requiresApproval: true,
+    maxConsecutiveDays: null,
+    requiresMedicalCertificate: false
+  }
+] as const;
 
 async function main() {
   try {
+    const defaultTenant = await prisma.tenant.upsert({
+      where: { domain: 'default' },
+      update: {},
+      create: {
+        name: 'Default Company',
+        domain: 'default',
+        settings: {
+          timezone: 'UTC',
+          currency: 'USD',
+          dateFormat: 'MM/DD/YYYY',
+          features: { hrm: true }
+        }
+      }
+    });
+
     // Create demo users if they don't exist
     const demoUsers = [
       {
@@ -46,6 +128,12 @@ async function main() {
         name: 'Sales User',
         password: 'salesuser123',
         role: ROLES.SALES_USER
+      },
+      {
+        email: 'hrmanager@galaxy.com',
+        name: 'HR Manager',
+        password: 'hrmanager123',
+        role: ROLES.HR_MANAGER
       }
     ];
 
@@ -63,6 +151,7 @@ async function main() {
             name: demoUser.name,
             password: hashedPassword,
             role: demoUser.role,
+            tenantId: defaultTenant.id,
             isActive: true,
             isFirstLogin: true
           }
@@ -92,6 +181,15 @@ async function main() {
           console.log(`✅ Created demo user: ${demoUser.email}`);
         }
       } else {
+        // Keep seed idempotent, but normalize role casing for existing demo users.
+        if (userExists.role !== demoUser.role) {
+          await prisma.user.update({
+            where: { id: userExists.id },
+            data: { role: demoUser.role }
+          });
+          console.log(`🔄 Normalized role for ${demoUser.email}: ${userExists.role} -> ${demoUser.role}`);
+        }
+
         if (demoUser.role === ROLES.SUPER_ADMIN) {
           console.log('👍 Root admin already exists, skipping creation');
         } else {
@@ -130,10 +228,39 @@ async function main() {
     for (const p of products) {
       const exists = await prisma.product.findFirst({ where: { name: p.name } });
       if (!exists) {
-        await prisma.product.create({ data: p });
+        await prisma.product.create({
+          data: {
+            ...p,
+            tenantId: defaultTenant.id
+          }
+        });
         console.log(`✅ Created product: ${p.name}`);
       } else {
         console.log(`👍 Product already exists: ${p.name}`);
+      }
+    }
+
+    // Leave types for HRM setup
+    for (const leaveType of DEFAULT_LEAVE_TYPES) {
+      const existingLeaveType = await prisma.leaveType.findUnique({
+        where: {
+          tenantId_code: {
+            tenantId: defaultTenant.id,
+            code: leaveType.code
+          }
+        }
+      });
+
+      if (!existingLeaveType) {
+        await prisma.leaveType.create({
+          data: {
+            tenantId: defaultTenant.id,
+            ...leaveType
+          }
+        });
+        console.log(`✅ Created leave type: ${leaveType.name} (${leaveType.code})`);
+      } else {
+        console.log(`👍 Leave type already exists: ${leaveType.name} (${leaveType.code})`);
       }
     }
   } catch (error) {

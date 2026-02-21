@@ -21,6 +21,7 @@ import {
   CheckCircle,
   DollarSign
 } from 'lucide-react'
+import DataTable from '@/components/ui/DataTable'
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState([])

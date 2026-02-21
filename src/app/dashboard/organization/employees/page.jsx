@@ -2,16 +2,23 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
 import Breadcrumbs from '@/components/ui/Breadcrumbs'
 import { toast } from '@/components/ui/Toast'
-import Link from 'next/link'
-import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, KeyIcon, UserPlusIcon } from '@heroicons/react/24/outline'
+import CredentialsModal from './_components/CredentialsModal'
+import { ROLES } from '@/lib/constants/roles'
 
 export default function EmployeesPage() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
+  const [credentialsModal, setCredentialsModal] = useState({ isOpen: false, employeeId: null, employeeName: null, credentials: null })
+  const [creatingAccount, setCreatingAccount] = useState(null)
+  const userRole = String(session?.user?.role || '').toUpperCase()
+  const canViewCredentials = userRole === ROLES.SUPER_ADMIN || userRole === ROLES.HR_MANAGER
 
   const breadcrumbs = [
     { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
@@ -71,6 +78,45 @@ export default function EmployeesPage() {
 
   const handleNavigate = (index, item) => {
     if (item.href) router.push(item.href)
+  }
+
+  const handleCreateAccount = async (employeeId, employeeName) => {
+    setCreatingAccount(employeeId)
+    try {
+      const res = await fetch(`/api/organization/employees/${employeeId}/create-account`, {
+        method: 'POST'
+      })
+      if (!res.ok) {
+        const error = await res.text()
+        throw new Error(error || 'Failed to create account')
+      }
+
+      const data = await res.json()
+      await fetchEmployees()
+
+      if (data.credentials && userRole === ROLES.SUPER_ADMIN) {
+        setCredentialsModal({
+          isOpen: true,
+          employeeId,
+          employeeName,
+          credentials: data.credentials
+        })
+      } else {
+        toast({
+          title: 'Success',
+          description: 'User account created successfully'
+        })
+      }
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create user account',
+        variant: 'destructive'
+      })
+    } finally {
+      setCreatingAccount(null)
+    }
   }
 
   return (
@@ -165,12 +211,43 @@ export default function EmployeesPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button 
-                        onClick={() => router.push(`/dashboard/organization/employees/${employee.id}/edit`)}
-                        className="text-indigo-600 hover:text-indigo-900 mr-3"
-                      >
-                        <PencilIcon className="h-5 w-5" />
-                      </button>
+                      <div className="flex items-center justify-end space-x-2">
+                        {canViewCredentials && employee.user && (
+                          <button
+                            onClick={() => setCredentialsModal({
+                              isOpen: true,
+                              employeeId: employee.id,
+                              employeeName: employee.name,
+                              credentials: null
+                            })}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Show Credentials"
+                          >
+                            <KeyIcon className="h-5 w-5" />
+                          </button>
+                        )}
+                        {canViewCredentials && !employee.user && (
+                          <button
+                            onClick={() => handleCreateAccount(employee.id, employee.name)}
+                            disabled={creatingAccount === employee.id}
+                            className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                            title="Create User Account"
+                          >
+                            {creatingAccount === employee.id ? (
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
+                            ) : (
+                              <UserPlusIcon className="h-5 w-5" />
+                            )}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => router.push(`/dashboard/organization/employees/${employee.id}/edit`)}
+                          className="text-indigo-600 hover:text-indigo-900"
+                          title="Edit Employee"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -186,6 +263,14 @@ export default function EmployeesPage() {
           </div>
         )}
       </div>
+
+      <CredentialsModal
+        employeeId={credentialsModal.employeeId}
+        employeeName={credentialsModal.employeeName}
+        isOpen={credentialsModal.isOpen}
+        credentials={credentialsModal.credentials}
+        onClose={() => setCredentialsModal({ isOpen: false, employeeId: null, employeeName: null, credentials: null })}
+      />
     </div>
   )
 }

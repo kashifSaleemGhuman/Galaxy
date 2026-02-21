@@ -34,7 +34,7 @@ export async function GET(req, { params }) {
         payrollPeriod: true,
         salaryStructure: {
           include: {
-            components: {
+            salaryComponents: {
               orderBy: { priority: 'asc' }
             }
           }

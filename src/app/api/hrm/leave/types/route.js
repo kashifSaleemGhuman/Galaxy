@@ -93,12 +93,31 @@ export async function POST(request) {
       )
     }
 
+    // Resolve tenantId from session or default tenant
+    let tenantId = session.user.tenantId
+    if (!tenantId) {
+      let defaultTenant = await prisma.tenant.findFirst({
+        where: { domain: 'default' }
+      })
+      if (!defaultTenant) {
+        // Create a default tenant if none exists (safe fallback for single-tenant setups)
+        defaultTenant = await prisma.tenant.create({
+          data: {
+            name: 'Default Tenant',
+            domain: 'default',
+            settings: {}
+          }
+        })
+      }
+      tenantId = defaultTenant.id
+    }
+
     // Check if code already exists for this tenant
     const existing = await prisma.leaveType.findUnique({
       where: {
         tenantId_code: {
-          tenantId: session.user.tenantId || '',
-          code
+          tenantId,
+          code: code.toUpperCase()
         }
       }
     })
@@ -112,7 +131,7 @@ export async function POST(request) {
 
     const leaveType = await prisma.leaveType.create({
       data: {
-        tenantId: session.user.tenantId || '',
+        tenantId,
         name,
         code: code.toUpperCase(),
         description,

@@ -21,6 +21,9 @@ export default function AttendancePage() {
   const [pageLoading, setPageLoading] = useState(true)
   const [attendance, setAttendance] = useState([])
   const [summary, setSummary] = useState(null)
+  const [page, setPage] = useState(1)
+  const [pageSize] = useState(30)
+  const [pagination, setPagination] = useState(null)
 
   const userRole = session?.user?.role
   const isEmployee = userRole === ROLES.USER
@@ -36,12 +39,18 @@ export default function AttendancePage() {
     if (canAccess) {
       if (isEmployee) {
         fetchTodayStatus()
-        fetchAttendance()
-      } else {
-        fetchAllAttendance()
       }
     }
   }, [canAccess, isEmployee])
+
+  useEffect(() => {
+    if (!canAccess) return
+    if (isEmployee) {
+      fetchAttendance()
+    } else {
+      fetchAllAttendance()
+    }
+  }, [canAccess, isEmployee, page, pageSize])
 
   const fetchTodayStatus = async () => {
     try {
@@ -64,11 +73,12 @@ export default function AttendancePage() {
   const fetchAttendance = async () => {
     try {
       setPageLoading(true)
-      const res = await fetch('/api/hrm/attendance/my-attendance?limit=30')
+      const res = await fetch(`/api/hrm/attendance/my-attendance?page=${page}&pageSize=${pageSize}`)
       if (res.ok) {
         const data = await res.json()
         setAttendance(data.attendance || [])
         setSummary(data.summary || null)
+        setPagination(data.pagination || null)
       }
     } catch (error) {
       console.error('Error fetching attendance:', error)
@@ -80,10 +90,11 @@ export default function AttendancePage() {
   const fetchAllAttendance = async () => {
     try {
       setPageLoading(true)
-      const res = await fetch('/api/hrm/attendance?limit=30')
+      const res = await fetch(`/api/hrm/attendance?page=${page}&pageSize=${pageSize}`)
       if (res.ok) {
         const data = await res.json()
-        setAttendance(data || [])
+        setAttendance(data.items || [])
+        setPagination(data.pagination || null)
       }
     } catch (error) {
       console.error('Error fetching attendance:', error)
@@ -359,6 +370,29 @@ export default function AttendancePage() {
             </tbody>
           </table>
         </div>
+        )}
+        {pagination?.totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 bg-gray-50">
+            <div className="text-sm text-gray-600">
+              Page {pagination.page} of {pagination.totalPages} ({pagination.total} records)
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                disabled={!pagination.hasPrev}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setPage((prev) => prev + 1)}
+                disabled={!pagination.hasNext}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         )}
       </div>
 

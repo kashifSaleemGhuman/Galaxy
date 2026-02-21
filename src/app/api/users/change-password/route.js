@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { hash, compare } from 'bcryptjs';
 import prisma from '@/lib/db';
+import { encryptEmployeePassword } from '@/lib/employee-credentials';
 
 export async function POST(req) {
   try {
@@ -17,7 +18,12 @@ export async function POST(req) {
 
     // Find user in database
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+      where: { email: session.user.email },
+      include: {
+        employee: {
+          select: { id: true }
+        }
+      }
     });
 
     if (!user) {
@@ -58,6 +64,20 @@ export async function POST(req) {
           updatedAt: new Date()
         }
       });
+
+      // Keep an encrypted retrievable password for employee accounts,
+      // so super admin can view current employee login credentials.
+      if (user.employee) {
+        const encryptedCredential = encryptEmployeePassword(newPassword);
+        await tx.employeeCredential.upsert({
+          where: { userId: user.id },
+          update: encryptedCredential,
+          create: {
+            userId: user.id,
+            ...encryptedCredential
+          }
+        });
+      }
 
       // Create audit log
       await tx.auditLog.create({

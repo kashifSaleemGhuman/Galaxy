@@ -5,6 +5,7 @@
  */
 
 import { prisma } from '@/lib/db'
+import { getLeaveTypeQuotaStats } from '@/lib/leave-balance-calculator'
 
 /**
  * Validate leave request
@@ -129,20 +130,15 @@ export async function validateLeaveRequest({ employeeId, leaveTypeId, startDate,
 
     // 6. Check balance availability (if paid leave)
     if (leaveType.isPaid) {
-      const currentBalance = await getCurrentLeaveBalance(employeeId, leaveTypeId)
       const requestedDays = calculateLeaveDays(startDate, endDate)
-      
+      const quotaStats = await getLeaveTypeQuotaStats(employeeId, leaveTypeId, startDate)
+
       const policy = policyAssignment.policy
-      
-      // Allow small tolerance (0.1 days) for rounding differences
-      // This handles cases where pro-rata calculations result in slightly less than requested
-      const tolerance = 0.1
-      const effectiveBalance = currentBalance + tolerance
-      
-      if (!policy.allowNegativeBalance && effectiveBalance < requestedDays) {
+
+      if (!policy.allowNegativeBalance && quotaStats.remainingAfterPendingDays < requestedDays) {
         return { 
           valid: false, 
-          error: `Insufficient leave balance. Available: ${currentBalance.toFixed(2)} days, Requested: ${requestedDays} days` 
+          error: `Insufficient leave balance. Allocated: ${quotaStats.allocatedDays.toFixed(1)}, Used: ${quotaStats.usedDays.toFixed(1)}, Pending: ${quotaStats.pendingDays.toFixed(1)}, Remaining: ${quotaStats.remainingAfterPendingDays.toFixed(1)}, Requested: ${requestedDays}` 
         }
       }
     }
@@ -187,41 +183,6 @@ export function calculateLeaveDays(startDate, endDate) {
   }
 
   return days
-}
-
-/**
- * Get current leave balance for employee and leave type
- * @param {string} employeeId - Employee ID
- * @param {string} leaveTypeId - Leave type ID
- * @returns {Promise<number>} Current balance
- */
-async function getCurrentLeaveBalance(employeeId, leaveTypeId) {
-  try {
-    // Get the most recent balance record
-    const latestBalance = await prisma.leaveBalance.findFirst({
-      where: {
-        employeeId,
-        leaveTypeId
-      },
-      orderBy: {
-        periodEnd: 'desc'
-      }
-    })
-
-    if (!latestBalance) {
-      return 0
-    }
-
-    // Calculate current balance from latest period
-    // This is a simplified version - full calculation would consider:
-    // - Accruals since period end
-    // - Used leave since period end
-    // - Carry forward
-    return Number(latestBalance.closingBalance)
-  } catch (error) {
-    console.error('Error getting leave balance:', error)
-    return 0
-  }
 }
 
 /**

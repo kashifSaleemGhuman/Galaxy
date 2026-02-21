@@ -29,12 +29,15 @@ BEGIN
             CONSTRAINT "Location_pkey" PRIMARY KEY ("id")
         );
 
-        CREATE UNIQUE INDEX "Location_warehouseId_code_key" ON "Location"("warehouseId", "code");
+        CREATE UNIQUE INDEX IF NOT EXISTS "Location_warehouseId_code_key" ON "Location"("warehouseId", "code");
         
         -- Add foreign key constraint
-        ALTER TABLE "Location" ADD CONSTRAINT "Location_warehouseId_fkey" 
-            FOREIGN KEY ("warehouseId") REFERENCES "warehouses"("id") 
-            ON DELETE CASCADE ON UPDATE CASCADE;
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'warehouses')
+           AND NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Location_warehouseId_fkey') THEN
+            ALTER TABLE "Location" ADD CONSTRAINT "Location_warehouseId_fkey" 
+                FOREIGN KEY ("warehouseId") REFERENCES "warehouses"("id") 
+                ON DELETE CASCADE ON UPDATE CASCADE;
+        END IF;
     END IF;
 END $$;
 
@@ -81,7 +84,8 @@ BEGIN
         IF NOT EXISTS (
             SELECT 1 FROM information_schema.table_constraints 
             WHERE constraint_name = 'warehouses_managerId_fkey'
-        ) THEN
+        )
+        AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'User') THEN
             ALTER TABLE "warehouses" ADD CONSTRAINT "warehouses_managerId_fkey" 
                 FOREIGN KEY ("managerId") REFERENCES "User"("id") 
                 ON DELETE SET NULL ON UPDATE CASCADE;

@@ -182,7 +182,9 @@ export default function DashboardLayout({ children }) {
             { name: 'My Payroll', href: '/dashboard/hrm/my-payroll', current: pathname.startsWith('/dashboard/hrm/my-payroll') },
             { name: 'Attendance', href: '/dashboard/hrm/attendance', current: pathname.startsWith('/dashboard/hrm/attendance') },
             { name: 'Leave Request', href: '/dashboard/hrm/leave/request', current: pathname === '/dashboard/hrm/leave/request' },
-            { name: 'My Leave', href: '/dashboard/hrm/leave', current: pathname.startsWith('/dashboard/hrm/leave') && pathname !== '/dashboard/hrm/leave/request' }
+            { name: 'My Leave', href: '/dashboard/hrm/leave', current: pathname.startsWith('/dashboard/hrm/leave') && pathname !== '/dashboard/hrm/leave/request' },
+            { name: 'My Penalties', href: '/dashboard/hrm/my-penalties', current: pathname.startsWith('/dashboard/hrm/my-penalties') },
+            { name: 'My Requests', href: '/dashboard/hrm/my-requests', current: pathname.startsWith('/dashboard/hrm/my-requests') }
           ]
         })
       } else {
@@ -199,7 +201,9 @@ export default function DashboardLayout({ children }) {
             { name: 'Leave Management', href: '/dashboard/hrm/leave', current: pathname.startsWith('/dashboard/hrm/leave') },
             { name: 'Shifts', href: '/dashboard/hrm/shifts', current: pathname.startsWith('/dashboard/hrm/shifts') },
             { name: 'Payroll', href: '/dashboard/hrm/payroll', current: pathname.startsWith('/dashboard/hrm/payroll') },
-            { name: 'Documents', href: '/dashboard/hrm/documents', current: pathname.startsWith('/dashboard/hrm/documents') }
+            { name: 'Documents', href: '/dashboard/hrm/documents', current: pathname.startsWith('/dashboard/hrm/documents') },
+            { name: 'Penalties', href: '/dashboard/hrm/penalties', current: pathname.startsWith('/dashboard/hrm/penalties') },
+            { name: 'Employee Requests', href: '/dashboard/hrm/requests', current: pathname.startsWith('/dashboard/hrm/requests') }
           ]
         })
       }
