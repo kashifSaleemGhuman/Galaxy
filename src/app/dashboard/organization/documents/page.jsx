@@ -260,8 +260,18 @@ export default function DocumentDetailsPage() {
       return
     }
     
-    if (doc.name === 'EMERGENCY PREPARENESS PLAN') {
+    if (doc.name === 'EMERGENCY HANDBOOK') {
       router.push('/dashboard/organization/emergency-preparedness-plan')
+      return
+    }
+    
+    if (doc.name === 'EMERGENCY PREPARENESS PLAN') {
+      // This document point exists but doesn't have a dedicated page yet
+      return
+    }
+    
+    if (doc.name === 'CHEMICAL MANAGEMENT PROCEDURE') {
+      router.push('/dashboard/organization/chemical-management-procedure')
       return
     }
     

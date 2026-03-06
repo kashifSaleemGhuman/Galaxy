@@ -4,26 +4,31 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { ROLES } from '@/lib/constants/roles';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/organization
 export async function GET(req) {
   try {
-    const session = await getServerSession(authOptions);
+    let session;
+    try {
+      session = await getServerSession(authOptions);
+    } catch (authErr) {
+      console.error('[Organization GET] getServerSession error:', authErr);
+      return NextResponse.json({ error: 'Authentication error' }, { status: 500 });
+    }
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Allow all authenticated users to view organization details?
-    // Or restrict to specific roles? Usually everyone needs to see company details (e.g. for reports)
-    // But editing is admin only.
-
     const organization = await prisma.organization.findFirst({
-      orderBy: { createdAt: 'desc' } // Assuming one, or get latest
+      orderBy: { createdAt: 'desc' }
     });
 
     return NextResponse.json(organization || {});
   } catch (error) {
     console.error('Error fetching organization:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error?.message || 'Failed to fetch organization';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

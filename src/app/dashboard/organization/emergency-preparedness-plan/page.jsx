@@ -152,7 +152,7 @@ Starting at the recommended distance, Sweep the nozzle or hose from side to side
   const fetchDocumentContent = async () => {
     try {
       setLoading(true)
-      const res = await fetch('/api/organization/documents/content?documentName=EMERGENCY PREPARENESS PLAN')
+      const res = await fetch('/api/organization/documents/content?documentName=EMERGENCY HANDBOOK')
       const data = await res.json()
       
       if (res.ok) {
@@ -199,7 +199,7 @@ Starting at the recommended distance, Sweep the nozzle or hose from side to side
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          documentName: 'EMERGENCY PREPARENESS PLAN',
+          documentName: 'EMERGENCY HANDBOOK',
           content: updatedContent,
           changeDescription: `Updated ${sectionKey} section`
         })
@@ -264,7 +264,7 @@ Starting at the recommended distance, Sweep the nozzle or hose from side to side
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          documentName: 'EMERGENCY PREPARENESS PLAN',
+          documentName: 'EMERGENCY HANDBOOK',
           content: content,
           changeDescription: 'Updated Emergency Preparedness Plan'
         })
@@ -302,7 +302,7 @@ Starting at the recommended distance, Sweep the nozzle or hose from side to side
     { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
     { key: 'organization', label: 'Organization', href: '/dashboard/organization' },
     { key: 'documents', label: 'Document Details', href: '/dashboard/organization/documents' },
-    { key: 'emergency-preparedness-plan', label: 'EMERGENCY PREPARENESS PLAN', href: '#' }
+    { key: 'emergency-preparedness-plan', label: 'EMERGENCY HANDBOOK', href: '#' }
   ]
 
   const handleNavigate = (index, item) => {
@@ -382,7 +382,7 @@ Starting at the recommended distance, Sweep the nozzle or hose from side to side
               )}
             </div>
             <h2 className="text-xl font-bold text-gray-900 uppercase mt-4">
-              EMERGENCY PREPARENESS PLAN
+              EMERGENCY HANDBOOK
             </h2>
           </div>
           <div className="flex gap-2">

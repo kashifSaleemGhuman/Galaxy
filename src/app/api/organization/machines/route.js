@@ -1,19 +1,26 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getServerSession } from 'next-auth'
+import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
+    let session
+    try {
+      session = await getServerSession(authOptions)
+    } catch (authErr) {
+      console.error('[Machines GET] getServerSession error:', authErr)
+      return NextResponse.json({ error: 'Authentication error' }, { status: 500 })
+    }
     if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Ensure prisma is available before using it
     if (!prisma) {
-      console.error('[MACHINES_GET] Prisma client is undefined');
-      return new NextResponse('Database connection error', { status: 500 });
+      console.error('[MACHINES_GET] Prisma client is undefined')
+      return NextResponse.json({ error: 'Database connection error' }, { status: 500 })
     }
 
     const machines = await prisma.machine.findMany({
@@ -23,7 +30,7 @@ export async function GET() {
     return NextResponse.json(machines)
   } catch (error) {
     console.error('[MACHINES_GET]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Internal Error' }, { status: 500 })
   }
 }
 
@@ -31,13 +38,12 @@ export async function POST(req) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Ensure prisma is available before using it
     if (!prisma) {
-        console.error('[MACHINES_POST] Prisma client is undefined');
-        return new NextResponse('Database connection error', { status: 500 });
+      console.error('[MACHINES_POST] Prisma client is undefined')
+      return NextResponse.json({ error: 'Database connection error' }, { status: 500 })
     }
 
     const body = await req.json()
@@ -65,7 +71,7 @@ export async function POST(req) {
 
     // Basic validation
     if (!machineId || !name) {
-      return new NextResponse('Missing required fields', { status: 400 })
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     const machine = await prisma.machine.create({
@@ -96,9 +102,9 @@ export async function POST(req) {
   } catch (error) {
     console.error('[MACHINES_POST]', error)
     if (error.code === 'P2002') {
-      return new NextResponse('Machine ID already exists', { status: 400 })
+      return NextResponse.json({ error: 'Machine ID already exists' }, { status: 400 })
     }
-    return new NextResponse('Internal Error', { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Internal Error' }, { status: 500 })
   }
 }
 

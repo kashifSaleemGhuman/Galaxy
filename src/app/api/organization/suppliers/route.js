@@ -1,13 +1,21 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getServerSession } from 'next-auth'
+import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
+    let session
+    try {
+      session = await getServerSession(authOptions)
+    } catch (authErr) {
+      console.error('[Suppliers GET] getServerSession error:', authErr)
+      return NextResponse.json({ error: 'Authentication error' }, { status: 500 })
+    }
     if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const suppliers = await prisma.organizationSupplier.findMany({
@@ -17,7 +25,7 @@ export async function GET() {
     return NextResponse.json(suppliers)
   } catch (error) {
     console.error('[SUPPLIERS_GET]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Internal Error' }, { status: 500 })
   }
 }
 
@@ -25,7 +33,7 @@ export async function POST(req) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await req.json()
@@ -47,7 +55,7 @@ export async function POST(req) {
 
     // Basic validation
     if (!name) {
-      return new NextResponse('Name is required', { status: 400 })
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
     const supplier = await prisma.organizationSupplier.create({
@@ -71,7 +79,7 @@ export async function POST(req) {
     return NextResponse.json(supplier)
   } catch (error) {
     console.error('[SUPPLIERS_POST]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Internal Error' }, { status: 500 })
   }
 }
 

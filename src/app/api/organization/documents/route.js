@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getServerSession } from 'next-auth'
+import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 
+// Deduplicated list (Document.name is unique)
 const DEFAULT_DOCUMENTS = [
   "OPERATING PERMITS → OPERATING PERMIT REGISTER",
   "PRODUCTION DATA → RAW & WETBLUE & PRODUCTION ISSUE",
@@ -31,6 +32,7 @@ const DEFAULT_DOCUMENTS = [
   "SCRAP AGENT REGISTER",
   "HEALTH & SAFETY PROCEDURE",
   "EMERGENCY PREPARENESS PLAN",
+  "EMERGENCY HANDBOOK",
   "CHEMICAL MANAGEMENT PROCEDURE",
   "TRAFFIC MANAGEMENT",
   "TRAFFIC BANNER",
@@ -102,33 +104,45 @@ const DEFAULT_DOCUMENTS = [
   "Induction Assessment Form"
 ]
 
+// Deduplicate: Document.name is unique; skipDuplicates used when seeding
+const UNIQUE_DEFAULT_DOCUMENTS = [...new Set(DEFAULT_DOCUMENTS)]
+
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
+    let session
+    try {
+      session = await getServerSession(authOptions)
+    } catch (authErr) {
+      console.error('[Documents GET] getServerSession error:', authErr)
+      return NextResponse.json({ error: 'Authentication error' }, { status: 500 })
+    }
     if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Check if documents exist
     const count = await prisma.document.count()
 
     if (count === 0) {
-      // Seed documents
+      // Seed documents (skipDuplicates in case of race or partial prior run)
       await prisma.document.createMany({
-        data: DEFAULT_DOCUMENTS.map(name => ({ name }))
+        data: UNIQUE_DEFAULT_DOCUMENTS.map(name => ({ name })),
+        skipDuplicates: true
       })
     } else {
       // Optional: Check for missing default documents and add them
-      // This is useful if we add new defaults later
       const existing = await prisma.document.findMany({
         select: { name: true }
       })
       const existingNames = new Set(existing.map(d => d.name))
-      const missing = DEFAULT_DOCUMENTS.filter(name => !existingNames.has(name))
-      
+      const missing = UNIQUE_DEFAULT_DOCUMENTS.filter(name => !existingNames.has(name))
+
       if (missing.length > 0) {
         await prisma.document.createMany({
-          data: missing.map(name => ({ name }))
+          data: missing.map(name => ({ name })),
+          skipDuplicates: true
         })
       }
     }
@@ -140,7 +154,7 @@ export async function GET() {
     return NextResponse.json(documents)
   } catch (error) {
     console.error('[DOCUMENTS_GET]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Internal Error' }, { status: 500 })
   }
 }
 
@@ -148,7 +162,7 @@ export async function PUT(req) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Check permission (assuming admin or similar)
@@ -159,7 +173,7 @@ export async function PUT(req) {
     const { id, docNo, revDate, description } = body
 
     if (!id) {
-      return new NextResponse('Missing ID', { status: 400 })
+      return NextResponse.json({ error: 'Missing ID' }, { status: 400 })
     }
 
     const document = await prisma.document.update({
@@ -174,7 +188,7 @@ export async function PUT(req) {
     return NextResponse.json(document)
   } catch (error) {
     console.error('[DOCUMENTS_UPDATE]', error)
-    return new NextResponse('Internal Error', { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Internal Error' }, { status: 500 })
   }
 }
 

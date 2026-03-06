@@ -1,13 +1,21 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getServerSession } from 'next-auth'
+import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
+    let session
+    try {
+      session = await getServerSession(authOptions)
+    } catch (authErr) {
+      console.error('[Customers GET] getServerSession error:', authErr)
+      return NextResponse.json({ error: 'Authentication error' }, { status: 500 })
+    }
     if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const customers = await prisma.organizationCustomer.findMany({
@@ -25,7 +33,7 @@ export async function POST(req) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await req.json()
@@ -40,7 +48,7 @@ export async function POST(req) {
 
     // Basic validation
     if (!name) {
-      return new NextResponse('Name is required', { status: 400 })
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
     const customer = await prisma.organizationCustomer.create({
